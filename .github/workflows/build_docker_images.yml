@@ -16,6 +16,7 @@ on:
   push:
     paths:
     - 'data/dockerfiles/Dockerfile.*'
+    - '.github/workflows/build_docker_images.yml'
     - 'requirements*.txt'
   workflow_dispatch:
 
