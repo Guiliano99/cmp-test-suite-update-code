@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: Copyright 2025 Siemens AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
 name: Check code quality
 
 on:
@@ -64,6 +68,8 @@ jobs:
             codespell . --check-filenames --skip "*.html,*.pem,*.xml,*venv*,*fips/*.py,*/announcement.py"
 
   dependency_check:
+    # See if newer versions of our Python dependencies are available. This does
+    # not enforce anything, and only has an informational character.
     needs: prepare_env
     runs-on: ubuntu-22.04
     continue-on-error: true
@@ -96,7 +102,9 @@ jobs:
             echo "Error: CHANGELOG.md does not contain an entry for version $VERSION."
             exit 1
           fi
-
+  # ----------------------------------------------------------------------------
+  # Stage 2: these checks are more expensive and do more with the code, e.g., attempt to import dependencies,
+  # execute some logic, etc.
   pylint:
     needs: [ruff_lint, license_check, rf_style_check, spelling_check]
     runs-on: ubuntu-22.04
@@ -122,6 +130,7 @@ jobs:
   type_check:
     needs: prepare_env
     runs-on: ubuntu-22.04
+    # not enforced yet, but it is still executed to provide some info.
     continue-on-error: true
     env:
       IMAGE: ${{ needs.prepare_env.outputs.image_lc }}
