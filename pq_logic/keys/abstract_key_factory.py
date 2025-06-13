@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: Copyright 2025 Siemens AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
 """Abstract factory class for creating keys, to have a common interface for different key types."""
 
 from abc import ABC, abstractmethod
