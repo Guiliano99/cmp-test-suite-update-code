@@ -113,7 +113,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Pylint check
-        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" pylint --fail-under=9.4 resources
+        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" bash pylint --fail-under=9.4 resources
 
   unit_test:
     needs: [ruff_lint, license_check, rf_style_check, spelling_check]
@@ -124,7 +124,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run unit tests
         run: |
-          docker run --rm -v "$PWD:/workspace" -w /workspace -e OQS_INSTALL_PATH=/root/_oqs "$IMAGE" \
+          docker run --rm -v "$PWD:/workspace" -w /workspace -e OQS_INSTALL_PATH=/root/_oqs "$IMAGE" bash \
             python3 -m unittest discover -s unit_tests
 
   type_check:
