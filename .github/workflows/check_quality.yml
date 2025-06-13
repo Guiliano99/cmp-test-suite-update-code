@@ -106,17 +106,17 @@ jobs:
   # Stage 2: these checks are more expensive and do more with the code, e.g., attempt to import dependencies,
   # execute some logic, etc.
   pylint:
-    needs: [ruff_lint, license_check, rf_style_check, spelling_check]
+    needs: [prepare_env, ruff_lint, license_check, rf_style_check, spelling_check]
     runs-on: ubuntu-22.04
     env:
       IMAGE: ${{ needs.prepare_env.outputs.image_lc }}
     steps:
       - uses: actions/checkout@v4
       - name: Pylint check
-        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" bash pylint --fail-under=9.4 resources
+        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" pylint --fail-under=9.4 resources
 
   unit_test:
-    needs: [ruff_lint, license_check, rf_style_check, spelling_check]
+    needs: [prepare_env, ruff_lint, license_check, rf_style_check, spelling_check]
     runs-on: ubuntu-22.04
     env:
       IMAGE: ${{ needs.prepare_env.outputs.image_lc }}
@@ -124,7 +124,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run unit tests
         run: |
-          docker run --rm -v "$PWD:/workspace" -w /workspace -e OQS_INSTALL_PATH=/root/_oqs "$IMAGE" bash \
+          docker run --rm -v "$PWD:/workspace" -w /workspace -e OQS_INSTALL_PATH=/root/_oqs "$IMAGE" \
             python3 -m unittest discover -s unit_tests
 
   type_check:
