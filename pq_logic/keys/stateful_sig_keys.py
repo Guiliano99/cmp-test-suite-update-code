@@ -833,20 +833,20 @@ class HSSPrivateKey(PQHashStatefulSigPrivateKey):
     def _single_key_raw(self, key: LMS_Priv) -> bytes:
         """Return the private key as raw bytes for a single key."""
         return (
-                key.typecode.value.to_bytes(4, "big")
-                + key.otstypecode.value.to_bytes(4, "big")
-                + key.q.to_bytes(4, "big")
-                + key.SEED
-                + key.I
+            key.typecode.value.to_bytes(4, "big")
+            + key.otstypecode.value.to_bytes(4, "big")
+            + key.q.to_bytes(4, "big")
+            + key.SEED
+            + key.I
         )
 
     @staticmethod
     def _generate_single_key(
-            lms_type: hsslms.LMS_ALGORITHM_TYPE,
-            otstypecode: hsslms.LMOTS_ALGORITHM_TYPE,
-            seed: bytes,
-            I: bytes,  # noqa: E741
-            q: int,
+        lms_type: hsslms.LMS_ALGORITHM_TYPE,
+        otstypecode: hsslms.LMOTS_ALGORITHM_TYPE,
+        seed: bytes,
+        I: bytes,  # noqa: E741
+        q: int,
     ) -> LMS_Priv:
         """Generate a single LMS private key.
 
@@ -1002,7 +1002,7 @@ class HSSPrivateKey(PQHashStatefulSigPrivateKey):
 
     @staticmethod
     def _cast_to_key_object(
-            lms_type: hsslms.LMS_ALGORITHM_TYPE, otstypecode: LMOTS_ALGORITHM_TYPE, length: int, keys: List
+        lms_type: hsslms.LMS_ALGORITHM_TYPE, otstypecode: LMOTS_ALGORITHM_TYPE, length: int, keys: List
     ) -> HSS_Priv:
         """Cast the private key to an HSS_Priv object."""
         priv = [keys[0]]
