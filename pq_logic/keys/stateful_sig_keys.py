@@ -24,8 +24,8 @@ from hsslms import HSS_Priv, HSS_Pub, LMS_Priv
 from hsslms.utils import LMOTS_ALGORITHM_TYPE, u32str
 from pyasn1.codec.der import encoder
 from pyasn1.type import namedtype, tag, univ
-from test_lms_hss_seed_der import extract_hss_leaf_index, generate_hss_priv_key_by_name
 
+from pq_logic.keys.hss_utils import extract_hss_leaf_index
 from resources.exceptions import InvalidKeyData
 
 if importlib.util.find_spec("oqs") is not None:
@@ -1028,36 +1028,7 @@ class HSSPrivateKey(PQHashStatefulSigPrivateKey):
     @classmethod
     def from_seed(cls, seed: bytes, name: str, length: int) -> "HSSPrivateKey":
         """Create a new private key object from a seed."""
-        if len(seed) != 32:
-            raise ValueError("Seed must be 32 bytes long.")
-        lms_name, lmots_name = cls._gen_combination(name)
-        print("LMS Name:", lms_name)
-        print("LMOTS Name:", lmots_name)
-        level_names = [(lms_name.lower(), lmots_name.lower())] * length
-        keys = generate_hss_priv_key_by_name(
-            master_seed=seed,
-            level_names=level_names,
-        )
-        lms_id = lms_algorithm_type_dict[lms_name]
-        lms_type = hsslms.LMS_ALGORITHM_TYPE(lms_id)
-        keys_out = []
-        for key in keys["lms_keys"]:
-            single_key = cls._generate_single_key(
-                lms_type=lms_type,
-                otstypecode=LMOTS_ALGORITHM_TYPE(key["lmots_typecode"]),
-                seed=key["SEED"],
-                I=key["I"],
-                q=key["q"],
-            )
-            keys_out.append(single_key)
-
-        lmots_algorithm_type = LMOTS_ALGORITHM_TYPE(lmots_algorithm_type_dict[lmots_name])
-
-        priv = cls._cast_to_key_object(lms_type, lmots_algorithm_type, length, keys_out)
-
-        private_key = HSSPrivateKey(alg_name=name, length=length)
-        private_key.priv = priv
-        return private_key
+        raise NotImplementedError("HSS from_seed is not implemented yet")
 
 
 def serialize_key(self, include_public: bool = False, include_signatures: bool = False) -> bytes:
