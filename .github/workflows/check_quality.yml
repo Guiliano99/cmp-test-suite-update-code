@@ -29,10 +29,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+  
       - name: Code style (ruff)
         run: |
-          IMAGE=$(echo "${IMAGE_LC}" | tr '[:upper:]' '[:lower:]')
+          IMAGE=$(echo "${IMAGE_BASE_RAW}" | tr '[:upper:]' '[:lower:]')
           docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" ruff check
 
   license_check:
