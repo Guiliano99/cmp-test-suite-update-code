@@ -67,3 +67,13 @@ jobs:
             --build-arg BASE_IMAGE=ghcr.io/${REPO_OWNER_LC}/cmp-test-base:latest \
             --push \
             -f data/dockerfiles/Dockerfile.tests .
+
+      # This image is used to run the tests against a mock CA, which is useful
+      # for development and testing purposes.
+      - name: Build and push mock CA Docker image
+        run: |
+          docker buildx build \
+            --tag ghcr.io/${REPO_OWNER_LC}/cmp-mock-ca:latest \
+            --build-arg BASE_IMAGE=ghcr.io/${REPO_OWNER_LC}/cmp-test-base:latest \
+            --push \
+            -f data/dockerfiles/Dockerfile.mock_ca .
