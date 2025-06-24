@@ -180,6 +180,19 @@ jobs:
         run: mkdir -p reports
       - name: Start Mock CA
         run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
+      - name: Wait for Mock CA
+        run: |
+          for i in {1..30}; do
+            if nc -z 127.0.0.1 5000; then
+              echo "Mock CA is up"
+              exit 0
+            fi
+            echo "Waiting for Mock CA..."
+            sleep 1
+          done
+          echo "Mock CA failed to start"
+          docker logs mock-ca || true
+          exit 1
       - name: Run tests
         run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace --entrypoint "" "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --outputdir=reports --variable environment:mock_ca tests
       - name: Stop Mock CA
