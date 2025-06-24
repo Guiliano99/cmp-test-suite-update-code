@@ -140,3 +140,66 @@ jobs:
       - uses: actions/checkout@v4
       - name: Pyright type check
         run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" pyright
+
+  prepare_mock_ca_env:
+    runs-on: ubuntu-22.04
+    outputs:
+      mock_ca_image: ${{ steps.setenv.outputs.mock_ca_image }}
+    steps:
+      - name: Set lowercase mock CA image
+        id: setenv
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          MOCK_CA_IMAGE="ghcr.io/${OWNER_LC}/cmp-mock-ca:latest"
+          echo "mock_ca_image=$MOCK_CA_IMAGE" >> $GITHUB_OUTPUT
+
+  run_tests:
+    needs:
+      - prepare_mock_ca_env
+      - prepare_env
+      - unit_test
+    runs-on: ubuntu-22.04
+    env:
+      IMAGE: ${{ needs.prepare_test_env.outputs.test_image }}
+      MOCK_CA_IMAGE: ${{ needs.prepare_mock_ca_env.outputs.mock_ca_image }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start Mock CA
+        run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
+      - name: Run tests
+        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --outputdir=reports --variable environment:mock_ca tests
+      - name: Stop Mock CA
+        if: always()
+        run: docker stop mock-ca
+
+      - name: Start Mock CA
+        run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
+      - name: Run verbose tests
+        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace "$IMAGE" robot --pythonpath=./ --outputdir=reports --variable environment:mock_ca tests
+      - name: Stop Mock CA
+        if: always()
+        run: docker stop mock-ca
+
+      - name: Start Mock CA
+        run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
+      - name: Run PQ/Hybrid tests
+        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --outputdir=reports --variable environment:mock_ca tests_pq_and_hybrid
+      - name: Stop Mock CA
+        if: always()
+        run: docker stop mock-ca
+
+      - name: Start Mock CA
+        run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
+      - name: Run mock CA tests
+        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --outputdir=reports --variable environment:mock_ca tests_mock_ca
+      - name: Stop Mock CA
+        if: always()
+        run: docker stop mock-ca
+
+      - name: Start Mock CA
+        run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
+      - name: Run client tests
+        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --outputdir=reports --variable environment:mock_ca client_tests
+      - name: Stop Mock CA
+        if: always()
+        run: docker stop mock-ca
