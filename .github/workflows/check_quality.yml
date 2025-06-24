@@ -169,7 +169,6 @@ jobs:
     needs:
       - prepare_mock_ca_env
       - prepare_test_env
-      - prepare_env
       - unit_test
     runs-on: ubuntu-22.04
     env:
