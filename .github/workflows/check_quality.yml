@@ -182,7 +182,8 @@ jobs:
         run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --variable environment:mock_ca tests
       - name: Stop Mock CA
         if: always()
-        run: docker stop mock-ca
+        run: docker stop mock-ca || true
+
 
       - name: Start Mock CA
         run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
@@ -190,7 +191,7 @@ jobs:
         run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace "$IMAGE" robot --pythonpath=./ --variable environment:mock_ca tests
       - name: Stop Mock CA
         if: always()
-        run: docker stop mock-ca
+        run: docker stop mock-ca || true
 
       - name: Start Mock CA
         run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
@@ -198,7 +199,7 @@ jobs:
         run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --variable environment:mock_ca tests_pq_and_hybrid
       - name: Stop Mock CA
         if: always()
-        run: docker stop mock-ca
+        run: docker stop mock-ca || true
 
       - name: Start Mock CA
         run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
@@ -206,7 +207,7 @@ jobs:
         run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --variable environment:mock_ca tests_mock_ca
       - name: Stop Mock CA
         if: always()
-        run: docker stop mock-ca
+        run: docker stop mock-ca || true
 
       - name: Start Mock CA
         run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
@@ -214,4 +215,4 @@ jobs:
         run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --variable environment:mock_ca client_tests
       - name: Stop Mock CA
         if: always()
-        run: docker stop mock-ca
+        run: docker stop mock-ca || true
