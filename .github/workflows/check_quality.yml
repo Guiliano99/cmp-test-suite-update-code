@@ -153,9 +153,22 @@ jobs:
           MOCK_CA_IMAGE="ghcr.io/${OWNER_LC}/cmp-mock-ca:latest"
           echo "mock_ca_image=$MOCK_CA_IMAGE" >> $GITHUB_OUTPUT
 
+  prepare_test_env:
+    runs-on: ubuntu-22.04
+    outputs:
+      test_image: ${{ steps.setenv.outputs.test_image }}
+    steps:
+      - name: Set lowercase test image
+        id: setenv
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          TEST_IMAGE="ghcr.io/${OWNER_LC}/cmp-test:latest"
+          echo "test_image=$TEST_IMAGE" >> $GITHUB_OUTPUT 
+
   run_tests:
     needs:
       - prepare_mock_ca_env
+      - prepare_test_env
       - prepare_env
       - unit_test
     runs-on: ubuntu-22.04
