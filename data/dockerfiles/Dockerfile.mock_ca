@@ -5,4 +5,4 @@ WORKDIR /app
 
 COPY . /app
 
-CMD ["sh", "-c", "python3", "./mock_ca/ca_handler.py", "--host", "0.0.0.0"]
+CMD ["python3", "./mock_ca/ca_handler.py", "--host", "0.0.0.0"]
