@@ -207,6 +207,7 @@ jobs:
 
       - name: Wait for Mock CA
         run: |
+          sleep 5
           for i in {1..30}; do
             if nc -z 0.0.0.0 5000; then
               echo "Mock CA is up"
@@ -229,30 +230,6 @@ jobs:
         run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
       - name: Run mock CA tests
         run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace --entrypoint "" "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --outputdir=reports --variable environment:mock_ca tests_mock_ca
-      - name: Stop Mock CA
-        if: always()
-        run: docker stop mock-ca
-
-      - name: Start Mock CA
-        run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
-
-      - name: Wait for Mock CA
-        run: |
-          sleep 5
-          for i in {1..30}; do
-            if nc -z 0.0.0.0 5000; then
-              echo "Mock CA is up"
-              exit 0
-            fi
-            echo "Waiting for Mock CA..."
-            sleep 1
-          done
-          echo "Mock CA failed to start"
-          docker logs mock-ca || true
-          exit 1  
-
-      - name: Run client tests
-        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace --entrypoint "" "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --outputdir=reports --variable environment:mock_ca client_tests
       - name: Stop Mock CA
         if: always()
         run: docker stop mock-ca
