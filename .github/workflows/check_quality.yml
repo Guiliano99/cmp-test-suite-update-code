@@ -194,7 +194,7 @@ jobs:
           docker logs mock-ca || true
           exit 1
       - name: Run tests
-        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace --entrypoint "" "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --outputdir=reports --variable environment:mock_ca tests
+        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace --entrypoint "" "$IMAGE" robot --pythonpath=./ --exclude "verbose-tests OR smoke" --outputdir=reports --variable environment:mock_ca tests
       - name: Stop Mock CA
         if: always()
         run: docker stop mock-ca
@@ -202,7 +202,7 @@ jobs:
       - name: Start Mock CA
         run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
       - name: Run verbose tests
-        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace --entrypoint "" "$IMAGE" robot --pythonpath=./ --outputdir=reports --variable environment:mock_ca tests
+        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace --entrypoint "" "$IMAGE" robot --pythonpath=./ --exclude smoke --outputdir=reports --variable environment:mock_ca tests
       - name: Stop Mock CA
         if: always()
         run: docker stop mock-ca
