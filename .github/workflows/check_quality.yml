@@ -238,6 +238,7 @@ jobs:
 
       - name: Wait for Mock CA
         run: |
+          sleep 5
           for i in {1..30}; do
             if nc -z 0.0.0.0 5000; then
               echo "Mock CA is up"
