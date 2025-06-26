@@ -5,9 +5,9 @@
 safety>= 3.3.1, < 4.0.0
 pylint>= 3.3.7, < 4.0.0
 black>= 25.0.0, < 26.0.0
-ruff>= 0.11.12, < 1.0.0
-robotframework-robocop==6.3.0
+ruff>= 0.11.13, < 1.0.0
+robotframework-robocop==6.4.0
 robotframework-tidy==4.17.0
-pyright==1.1.401
+pyright==1.1.402
 codespell==2.4.1
 reuse==5.0.2

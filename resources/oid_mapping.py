@@ -21,6 +21,7 @@ from pyasn1_alt_modules.rfc5480 import id_dsa_with_sha256
 from robot.api.deco import not_keyword
 
 from pq_logic.keys.abstract_pq import PQSignaturePrivateKey
+from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPrivateKey
 from pq_logic.tmp_oids import (
     COMPOSITE_SIG06_PREHASH_OID_2_HASH,
 )
@@ -213,6 +214,9 @@ def get_alg_oid_from_key_hash(
 
     if isinstance(key, CompositeSig06PrivateKey):
         alg_oid = key.get_oid(use_pss=use_rsa_pss)
+
+    if isinstance(key, PQHashStatefulSigPrivateKey):
+        return key.get_oid()
 
     if alg_oid is not None:
         return alg_oid
