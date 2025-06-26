@@ -34,10 +34,9 @@ from robot.api.deco import keyword, not_keyword
 
 from pq_logic.keys.abstract_pq import PQSignaturePrivateKey, PQSignaturePublicKey
 from pq_logic.keys.abstract_wrapper_keys import HybridKEMPublicKey, KEMPublicKey
-from pq_logic.keys.composite_sig03 import CompositeSig03PrivateKey, CompositeSig03PublicKey
-from pq_logic.keys.composite_sig04 import CompositeSig04PrivateKey, CompositeSig04PublicKey
+from pq_logic.keys.composite_kem07 import CompositeKEM07PublicKey
+from pq_logic.keys.composite_sig06 import CompositeSig06PrivateKey, CompositeSig06PublicKey
 from pq_logic.pq_utils import get_kem_oid_from_key, is_kem_public_key
-from pq_logic.tmp_oids import CMS_COMPOSITE03_OID_2_HASH
 from resources import (
     asn1utils,
     certbuildutils,
@@ -1468,7 +1467,9 @@ def _handle_kem_encapsulation(
 
     kem_pub_key = ensure_is_kem_pub_key(kem_pub_key)
 
-    if hybrid_key_recip is None:
+    if isinstance(kem_pub_key, CompositeKEM07PublicKey):
+        shared_secret, kemct = kem_pub_key.encaps(private_key=hybrid_key_recip, use_in_cms=True)
+    elif hybrid_key_recip is None:
         shared_secret, kemct = kem_pub_key.encaps()
     elif isinstance(kem_pub_key, HybridKEMPublicKey):
         shared_secret, kemct = kem_pub_key.encaps(hybrid_key_recip)
@@ -2205,11 +2206,8 @@ def get_digest_from_key_hash(
     if isinstance(key, (ed448.Ed448PrivateKey, ed448.Ed448PublicKey)):
         return "shake256"
 
-    if isinstance(key, (CompositeSig04PrivateKey, CompositeSig04PublicKey)):
+    if isinstance(key, (CompositeSig06PrivateKey, CompositeSig06PublicKey)):
         return "sha512"
-
-    if isinstance(key, (CompositeSig03PrivateKey, CompositeSig03PublicKey)):
-        return CMS_COMPOSITE03_OID_2_HASH[key.get_oid(use_pss=False, pre_hash=False)]
 
     return "sha512"
 
