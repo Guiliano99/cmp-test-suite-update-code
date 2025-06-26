@@ -233,7 +233,7 @@ jobs:
           exit 1
 
       - name: Run PQ/Hybrid tests
-        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace --entrypoint "" "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --outputdir=reports --variable environment:mock_ca tests_pq_and_hybrid  tests_mock_ca
+        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace --entrypoint "" "$IMAGE" robot --pythonpath=./ --exclude "verbose-tests AND NOT composite-sig" --outputdir=reports --variable environment:mock_ca tests_pq_and_hybrid  tests_mock_ca
 
       - name: Stop Mock CA
         if: always()
