@@ -203,6 +203,13 @@ jobs:
         if: always()
         run: docker stop mock-ca
 
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cmp-test-reports
+          path: reports
+
   run_pq_hybrid_tests:
     needs: [prepare_mock_ca_env, prepare_test_env, unit_test, run_cmp_tests]
     runs-on: ubuntu-22.04
@@ -238,3 +245,12 @@ jobs:
       - name: Stop Mock CA
         if: always()
         run: docker stop mock-ca
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cmp-test-pq-hybrid-reports
+          path: reports
+
+
