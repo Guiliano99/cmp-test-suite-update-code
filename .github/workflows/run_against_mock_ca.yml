@@ -5,39 +5,163 @@
 name: Run against MockCA
 
 on:
-  workflow_run:
-    workflows: ["Check code quality"]
-    types:
-      - completed
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  prepare_env:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+  prepare_mock_ca_env:
     runs-on: ubuntu-22.04
     outputs:
-      image_lc: ${{ steps.setenv.outputs.image_lc }}
+      mock_ca_image: ${{ steps.setenv.outputs.mock_ca_image }}
     steps:
-      - name: Set lowercase image name
+      - name: Set lowercase mock CA image
         id: setenv
         run: |
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          IMAGE_LC="ghcr.io/${OWNER_LC}/cmp-mock-ca:latest"
-          echo "image_lc=$IMAGE_LC" >> $GITHUB_OUTPUT
+          MOCK_CA_IMAGE="ghcr.io/${OWNER_LC}/cmp-mock-ca:latest"
+          echo "mock_ca_image=$MOCK_CA_IMAGE" >> $GITHUB_OUTPUT
 
-  run_tests:
-    needs: prepare_env
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+  prepare_test_env:
+    runs-on: ubuntu-22.04
+    outputs:
+      test_image: ${{ steps.setenv.outputs.test_image }}
+    steps:
+      - name: Set lowercase test image
+        id: setenv
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          TEST_IMAGE="ghcr.io/${OWNER_LC}/cmp-test:latest"
+          echo "test_image=$TEST_IMAGE" >> $GITHUB_OUTPUT 
+
+  run_cmp_tests:
+    needs:
+      - prepare_mock_ca_env
+      - prepare_test_env
     runs-on: ubuntu-22.04
     env:
-      IMAGE: ${{ needs.prepare_env.outputs.image_lc }}
+      IMAGE: ${{ needs.prepare_test_env.outputs.test_image }}
+      MOCK_CA_IMAGE: ${{ needs.prepare_mock_ca_env.outputs.mock_ca_image }}
     steps:
       - uses: actions/checkout@v4
-      - name: Run tests
-        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --outputdir=reports --variable environment:mock_ca tests
+      - name: Prepare reports directory
+        run: mkdir -p reports
+
+      - name: Start Mock CA
+        run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
+
+      - name: Wait for Mock CA
+        run: |
+          sleep 5
+          for i in {1..30}; do
+            if nc -z 127.0.0.1 5000; then
+              echo "Mock CA is up"
+              exit 0
+            fi
+            echo "Waiting for Mock CA..."
+            sleep 1
+          done
+          echo "Mock CA failed to start"
+          docker logs mock-ca || true
+          exit 1
+
       - name: Run verbose tests
-        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" robot --pythonpath=./ --outputdir=reports --variable environment:mock_ca tests
+        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace --entrypoint "" "$IMAGE" robot --pythonpath=./ --exclude smoke --outputdir=reports --variable environment:mock_ca tests
+      - name: Stop Mock CA
+        if: always()
+        run: docker stop mock-ca
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cmp-test-reports
+          path: reports
+
+  run_pq_hybrid_tests:
+    needs: [ prepare_mock_ca_env, prepare_test_env]
+    runs-on: ubuntu-22.04
+    env:
+      IMAGE: ${{ needs.prepare_test_env.outputs.test_image }}
+      MOCK_CA_IMAGE: ${{ needs.prepare_mock_ca_env.outputs.mock_ca_image }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare reports directory
+        run: mkdir -p reports
+
+      - name: Start Mock CA
+        run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
+
+      - name: Wait for Mock CA
+        run: |
+          sleep 5
+          for i in {1..30}; do
+            if nc -z 0.0.0.0 5000; then
+              echo "Mock CA is up"
+              exit 0
+            fi
+            echo "Waiting for Mock CA..."
+            sleep 1
+          done
+          echo "Mock CA failed to start"
+          docker logs mock-ca || true
+          exit 1
+
       - name: Run PQ/Hybrid tests
-        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --outputdir=reports --variable environment:mock_ca tests_pq_and_hybrid
-      - name: Run mock CA tests
-        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" robot --pythonpath=./ --exclude verbose-tests --outputdir=reports --variable environment:mock_ca tests_mock_ca
+        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace --entrypoint "" "$IMAGE" robot --pythonpath=./ --exclude "verbose-testsNOTcomposite-sig" --outputdir=reports --variable environment:mock_ca tests_pq_and_hybrid  tests_mock_ca
+
+      - name: Stop Mock CA
+        if: always()
+        run: docker stop mock-ca
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cmp-test-pq-hybrid-reports
+          path: reports
+
+  run_verbose_pq_hybrid_tests:
+    needs: [ prepare_mock_ca_env, prepare_test_env]
+    runs-on: ubuntu-22.04
+    env:
+      IMAGE: ${{ needs.prepare_test_env.outputs.test_image }}
+      MOCK_CA_IMAGE: ${{ needs.prepare_mock_ca_env.outputs.mock_ca_image }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare reports directory
+        run: mkdir -p reports
+
+      - name: Start Mock CA
+        run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
+
+      - name: Wait for Mock CA
+        run: |
+          sleep 5
+          for i in {1..30}; do
+            if nc -z 0.0.0.0 5000; then
+              echo "Mock CA is up"
+              exit 0
+            fi
+            echo "Waiting for Mock CA..."
+            sleep 1
+          done
+          echo "Mock CA failed to start"
+          docker logs mock-ca || true
+          exit 1
+
+      - name: Run PQ/Hybrid verbose tests
+        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace --entrypoint "" "$IMAGE" robot --pythonpath=./ --include "verbose-testsNOTcomposite-sig" --outputdir=reports --variable environment:mock_ca tests_pq_and_hybrid  tests_mock_ca
+
+      - name: Stop Mock CA
+        if: always()
+        run: docker stop mock-ca
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cmp-test-pq-hybrid-verbose-reports
+          path: reports
