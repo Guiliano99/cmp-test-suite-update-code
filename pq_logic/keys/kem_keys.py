@@ -335,6 +335,18 @@ class McEliecePrivateKey(PQKEMPrivateKey):
         """
         return McEliecePublicKey(public_key=self._public_key_bytes, alg_name=self.name)
 
+    def _initialize_key(self):
+        """Initialize the KEM method, defaults to liboqs."""
+        # chooses to use the fast version of McEliece,
+        # if available, otherwise uses the default one.
+
+        if oqs is None:
+            raise ImportError("oqs module is not installed. Cannot initialize McEliece.")
+
+        try:
+            self._kem_method = oqs.KeyEncapsulation(self._other_name + "f")
+        except Exception:  # pylint: disable=broad-except
+            self._kem_method = oqs.KeyEncapsulation(self._other_name)
 
 ##########################
 # SNTRUP761
