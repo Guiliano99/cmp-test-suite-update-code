@@ -124,7 +124,10 @@ class CertReqHandler:
         self.xwing_key = xwing_key
         self.must_be_protected = True
         self.check_time = True
-        self.allowed_interval = 500
+        # To increase the allowed time interval for testing purposes,
+        # set it to a higher value (e.g., 620 seconds).
+        # Chempat with McEliece is slow and needs more time.
+        self.allowed_interval = 620
         self.allow_same_key_cert_req = False
         self.allow_same_key_kur = False
         self.sender = "CN=Mock-CA"

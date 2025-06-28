@@ -170,8 +170,8 @@ ${CRL_CERT_IDP}  data/unittest/dsa_certificate.pem
 ${OLD_ROOT_CERT}   ${None}
 ${CERT_PROFILE}    base
 
-# Sets the allowed time interval between request and response to 300 seconds.
-${ALLOWED_TIME_INTERVAL}   ${300}
+# Sets the allowed time interval between request and response to 630 seconds.
+${ALLOWED_TIME_INTERVAL}   ${630}
 
 # Certificate revocation checks.
 ${ALLOW_CRL_CHECK}   ${False}
