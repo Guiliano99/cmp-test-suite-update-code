@@ -1,0 +1,8 @@
+ARG BASE_IMAGE=cmptest-base:latest
+FROM ${BASE_IMAGE}
+
+WORKDIR /app
+
+COPY . /app
+
+CMD ["python3", "./mock_ca/ca_handler.py", "--host", "0.0.0.0"]
