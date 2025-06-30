@@ -90,3 +90,5 @@ for body_name in ALL_REQUEST_BODY_NAMES:
             print("Finished Key: ", f"{alg.lower()}_{body_name}_{reason}")
 
         print("Finished algorithm", alg.lower(), "for body name", body_name)
+
+print("All XMSS keys generated successfully.")
