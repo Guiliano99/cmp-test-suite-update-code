@@ -73,6 +73,8 @@ def _select_algorithms(algs, num_batches, batch_num):
 selected_algs = _select_algorithms(all_algs, args.num_batches, args.batch)
 print("All available algorithms:", all_algs)
 print("Algorithms selected for this batch:", selected_algs)
+import oqs
+print("Available STFL algorithms:", oqs.get_enabled_stateful_sig_mechanisms())
 
 for body_name in ALL_REQUEST_BODY_NAMES:
     for alg in selected_algs:
