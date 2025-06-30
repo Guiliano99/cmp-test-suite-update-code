@@ -142,7 +142,7 @@ jobs:
         run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" pyright
 
   test_stfl:
-    needs: [prepare_env, ruff_lint, license_check, rf_style_check, spelling_check]
+    needs: [prepare_env]
     runs-on: ubuntu-22.04
     env:
       IMAGE: ${{ needs.prepare_env.outputs.image_lc }}
