@@ -146,20 +146,77 @@ jobs:
           IMAGE_LC="ghcr.io/${OWNER_LC}/cmp-test-dev:latest"
           echo "image_lc=$IMAGE_LC" >> $GITHUB_OUTPUT
 
-  generate_xmss_keys:
+  generate_xmss_keys_batch1:
     needs: prepare_env
     runs-on: ubuntu-22.04
     env:
       IMAGE: ${{ needs.prepare_env.outputs.image_lc }}
     steps:
       - uses: actions/checkout@v4
-      - name: Prepare reports directory
-        run: mkdir -p data/keys/xmss_xmssmt_key_verbose
-      - name: Generate XMSS keys
-        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" python3 generate_xmss_keys.py
-
-      - name: Upload reports
+      - name: Generate XMSS keys (batch 1)
+        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" python3 generate_xmss_keys.py --batch 1 --num-batches 5
+      - name: Upload XMSS keys
         uses: actions/upload-artifact@v4
         with:
-          name: cmp-test-reports
-          path: reports
+          name: xmss-keys-batch-1
+          path: data/keys/xmss_xmssmt_key_verbose
+
+  generate_xmss_keys_batch2:
+    needs: prepare_env
+    runs-on: ubuntu-22.04
+    env:
+      IMAGE: ${{ needs.prepare_env.outputs.image_lc }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate XMSS keys (batch 2)
+        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" python3 generate_xmss_keys.py --batch 2 --num-batches 5
+      - name: Upload XMSS keys
+        uses: actions/upload-artifact@v4
+        with:
+          name: xmss-keys-batch-2
+          path: data/keys/xmss_xmssmt_key_verbose
+
+  generate_xmss_keys_batch3:
+    needs: prepare_env
+    runs-on: ubuntu-22.04
+    env:
+      IMAGE: ${{ needs.prepare_env.outputs.image_lc }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate XMSS keys (batch 3)
+        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" python3 generate_xmss_keys.py --batch 3 --num-batches 5
+      - name: Upload XMSS keys
+        uses: actions/upload-artifact@v4
+        with:
+          name: xmss-keys-batch-3
+          path: data/keys/xmss_xmssmt_key_verbose
+
+  generate_xmss_keys_batch4:
+    needs: prepare_env
+    runs-on: ubuntu-22.04
+    env:
+      IMAGE: ${{ needs.prepare_env.outputs.image_lc }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate XMSS keys (batch 4)
+        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" python3 generate_xmss_keys.py --batch 4 --num-batches 5
+      - name: Upload XMSS keys
+        uses: actions/upload-artifact@v4
+        with:
+          name: xmss-keys-batch-4
+          path: data/keys/xmss_xmssmt_key_verbose
+
+  generate_xmss_keys_batch5:
+    needs: prepare_env
+    runs-on: ubuntu-22.04
+    env:
+      IMAGE: ${{ needs.prepare_env.outputs.image_lc }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate XMSS keys (batch 5)
+        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" python3 generate_xmss_keys.py --batch 5 --num-batches 5
+      - name: Upload XMSS keys
+        uses: actions/upload-artifact@v4
+        with:
+          name: xmss-keys-batch-5
+          path: data/keys/xmss_xmssmt_key_verbose
