@@ -1,7 +1,6 @@
 name: run_against_mock_ca.yml
 on:
   push:
-  pull_request:
   workflow_dispatch:
 
 jobs:
