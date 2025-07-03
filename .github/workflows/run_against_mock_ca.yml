@@ -74,7 +74,7 @@ jobs:
         run: docker stop mock-ca
 
   run_pq_hybrid_tests:
-    needs: [prepare_mock_ca_env, prepare_test_env, run_cmp_tests]
+    needs: [prepare_mock_ca_env, prepare_test_env]
     runs-on: ubuntu-22.04
     env:
       IMAGE: ${{ needs.prepare_test_env.outputs.test_image }}
