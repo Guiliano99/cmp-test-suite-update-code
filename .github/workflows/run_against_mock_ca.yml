@@ -108,9 +108,54 @@ jobs:
       - name: Upload reports
         uses: actions/upload-artifact@v4
         with:
-          name: cmp-pq-hybrid-verbose-test-reports
+          name: cmp-pq-hybrid-test-reports
           path: reports
 
       - name: Stop Mock CA
         if: always()
         run: docker stop mock-ca
+
+
+  run_verbose_pq_hybrid_tests:
+    needs: [ prepare_mock_ca_env, prepare_test_env ]
+    runs-on: ubuntu-22.04
+    env:
+      IMAGE: ${{ needs.prepare_test_env.outputs.test_image }}
+      MOCK_CA_IMAGE: ${{ needs.prepare_mock_ca_env.outputs.mock_ca_image }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare reports directory
+        run: mkdir -p reports
+
+      - name: Start Mock CA
+        run: docker run -d --rm --name mock-ca -p 5000:5000 "$MOCK_CA_IMAGE"
+
+      - name: Wait for Mock CA
+        run: |
+          sleep 5
+          for i in {1..30}; do
+            if nc -z 0.0.0.0 5000; then
+              echo "Mock CA is up"
+              exit 0
+            fi
+            echo "Waiting for Mock CA..."
+            sleep 1
+          done
+          echo "Mock CA failed to start"
+          docker logs mock-ca || true
+          exit 1
+
+      - name: Run PQ/Hybrid verbose tests
+        run: docker run --rm --network host -v "$PWD:/workspace" -w /workspace --entrypoint "" "$IMAGE" robot --pythonpath=./ --include "verbose-testsNOTcomposite-sig" --outputdir=reports --variable environment:mock_ca tests_pq_and_hybrid  tests_mock_ca
+
+      - name: Stop Mock CA
+        if: always()
+        run: docker stop mock-ca
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cmp-test-pq-hybrid-verbose-reports
+          path: reports
+
