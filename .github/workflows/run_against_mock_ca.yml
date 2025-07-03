@@ -1,9 +1,9 @@
 name: run_against_mock_ca.yml
 on:
   push:
-    branches: [main]
+    branches: [*]
   pull_request:
-    branches: [main]
+    branches: [*]
   workflow_dispatch:
 
 jobs:
