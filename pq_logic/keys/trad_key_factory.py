@@ -145,37 +145,52 @@ def generate_trad_key(algorithm="rsa", **params) -> TradPrivateKey:  # noqa: D41
     """
     algorithm = algorithm.lower()
 
-    if algorithm == "bad_rsa_key":
-        from cryptography.hazmat.bindings._rust import (  # pylint: disable=import-outside-toplevel
-            openssl as rust_openssl,
+    def _bad_rsa(_):
+        from cryptography.hazmat.bindings._rust import (
+            openssl as rust_openssl,  # pylint: disable=import-outside-toplevel
         )
 
-        private_key = rust_openssl.rsa.generate_private_key(65537, 512)  # type: ignore
+        return rust_openssl.rsa.generate_private_key(65537, 512)  # type: ignore
 
-    elif algorithm == "rsa":
+    def _rsa(params):
         length = int(params.get("length") or 2048)
-        private_key = rsa.generate_private_key(public_exponent=65537, key_size=length)
+        return rsa.generate_private_key(public_exponent=65537, key_size=length)
 
-    elif algorithm == "dsa":
+    def _dsa(params):
         length = int(params.get("length", 2048))
-        private_key = dsa.generate_private_key(key_size=length)
+        return dsa.generate_private_key(key_size=length)
 
-    elif algorithm in {"ed25519", "ed448", "x25519", "x448", "ecdh", "ecdsa", "ecc", "ec"}:
+    def _ecc(name, params):
         curve = params.get("curve", "secp256r1")
-        private_key = generate_ec_key(algorithm, curve)
+        return generate_ec_key(name, curve)
 
-    elif algorithm == "dh":
-        private_key = _generate_dh_private_key(
+    def _dh(params):
+        return _generate_dh_private_key(
             p=params.get("p"),
             g=params.get("g", 2),
             secret_scalar=params.get("secret_scalar"),
             length=int(params.get("length", 2048)),
         )
 
-    else:
+    generators = {
+        "bad_rsa_key": _bad_rsa,
+        "rsa": _rsa,
+        "dsa": _dsa,
+        "dh": _dh,
+        "ed25519": lambda _: ed25519.Ed25519PrivateKey.generate(),
+        "ed448": lambda _: ed448.Ed448PrivateKey.generate(),
+        "x25519": lambda _: x25519.X25519PrivateKey.generate(),
+        "x448": lambda _: x448.X448PrivateKey.generate(),
+        "ecdh": lambda p: _ecc("ecdh", p),
+        "ecdsa": lambda p: _ecc("ecdsa", p),
+        "ecc": lambda p: _ecc("ecc", p),
+        "ec": lambda p: _ecc("ec", p),
+    }
+
+    if algorithm not in generators:
         raise ValueError(f"Unsupported algorithm: {algorithm}")
 
-    return private_key
+    return generators[algorithm](params)
 
 
 def _prepare_one_asym_key(
@@ -312,30 +327,23 @@ def _load_raw_public_key(trad_name: Union[str, univ.ObjectIdentifier], public_ke
     :return: The loaded public key.
     :raises ValueError: If the key is not supported.
     """
-    if trad_name in ["x25519", rfc9481.id_X25519]:
-        if len(public_key_bytes) != 32:
-            raise InvalidKeyData(
-                f"The X25519 public key has an invalid length. Expected: 32 bytes, got: {len(public_key_bytes)} bytes."
-            )
-        return x25519.X25519PublicKey.from_public_bytes(public_key_bytes)
-    if trad_name in ["x448", rfc9481.id_X448]:
-        if len(public_key_bytes) != 56:
-            raise InvalidKeyData(
-                f"The X448 public key has an invalid length. Expected: 56 bytes, got: {len(public_key_bytes)} bytes."
-            )
-        return x448.X448PublicKey.from_public_bytes(public_key_bytes)
-    if trad_name in ["ed25519", rfc9481.id_Ed25519]:
-        if len(public_key_bytes) != 32:
-            raise InvalidKeyData(
-                f"The Ed25519 public key has an invalid length. Expected: 32 bytes, got: {len(public_key_bytes)} bytes."
-            )
-        return ed25519.Ed25519PublicKey.from_public_bytes(public_key_bytes)
-    if trad_name in ["ed448", rfc9481.id_Ed448]:
-        if len(public_key_bytes) != 57:
-            raise InvalidKeyData(
-                f"The Ed448 public key has an invalid length. Expected: 57 bytes, got: {len(public_key_bytes)} bytes."
-            )
-        return ed448.Ed448PublicKey.from_public_bytes(public_key_bytes)
+    mappings = {
+        "x25519": (x25519.X25519PublicKey, 32, rfc9481.id_X25519),
+        "x448": (x448.X448PublicKey, 56, rfc9481.id_X448),
+        "ed25519": (ed25519.Ed25519PublicKey, 32, rfc9481.id_Ed25519),
+        "ed448": (ed448.Ed448PublicKey, 57, rfc9481.id_Ed448),
+    }
+
+    for name, (cls, length, oid) in mappings.items():
+        if trad_name in [name, oid]:
+            if len(public_key_bytes) != length:
+                raise InvalidKeyData(
+                    (
+                        f"The {name.upper()} public key has an invalid length. "
+                        f"Expected: {length} bytes, got: {len(public_key_bytes)} bytes."
+                    )
+                )
+            return cls.from_public_bytes(public_key_bytes)
 
     raise ValueError(f"Unsupported raw algorithm name: {trad_name}")
 

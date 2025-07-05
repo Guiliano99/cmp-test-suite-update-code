@@ -6,7 +6,7 @@
 
 import importlib.util
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 
 from pyasn1_alt_modules import rfc5280, rfc5958
 
@@ -34,6 +34,27 @@ else:
 
 class PQStatefulSigFactory(AbstractKeyFactory):
     """Factory class for creating stateful PQ keys."""
+
+    _sig_prefix_2_priv_class: Dict[str, Type[PQHashStatefulSigPrivateKey]] = {
+        "xmss": XMSSPrivateKey,
+        "xmssmt": XMSSMTPrivateKey,
+        "hss": HSSPrivateKey,
+    }
+    _sig_prefix_2_pub_class: Dict[str, Type[PQHashStatefulSigPublicKey]] = {
+        "xmss": XMSSPublicKey,
+        "xmssmt": XMSSMTPublicKey,
+        "hss": HSSPublicKey,
+    }
+
+    @classmethod
+    def _get_prefix(cls, name: str) -> str:
+        """Return the prefix for the given algorithm."""
+        for prefix in cls._sig_prefix_2_priv_class:
+            if name.startswith(prefix):
+                return prefix
+        raise ValueError(
+            f"Unsupported algorithm: {name}. Supported algorithms are: {cls.supported_algorithms()}"
+        )
 
     @staticmethod
     def generate_key_by_name(algorithm: str) -> PrivateKey:
@@ -71,42 +92,20 @@ class PQStatefulSigFactory(AbstractKeyFactory):
 
     @staticmethod
     def generate_pq_stateful_key(algorithm: str, **kwargs) -> PQHashStatefulSigPrivateKey:
-        """Generate a stateful PQ object based on the specified type.
+        """Generate a stateful PQ object based on the specified type."""
+        prefix = PQStatefulSigFactory._get_prefix(algorithm)
+        algorithms = PQStatefulSigFactory.supported_algorithms() + [prefix]
+        if algorithm not in algorithms:
+            msg = (
+                f"Unsupported {prefix.upper()} algorithm: {algorithm}. "
+                f"Supported algorithms are: {PQStatefulSigFactory.get_algorithms_by_family()[prefix]}"
+            )
+            raise ValueError(msg)
 
-        :param algorithm: The algorithm to use for the PQ.
-        :return: An instance of the specified PQ type.
-        """
-        if algorithm.startswith("xmss-") or algorithm == "xmss":
-            if algorithm not in PQStatefulSigFactory.supported_algorithms() + ["xmss"]:
-                msg = (
-                    f"Unsupported XMSS algorithm: {algorithm}. "
-                    f"Supported algorithms are: {PQStatefulSigFactory.get_algorithms_by_family()['xmss']}"
-                )
-                raise ValueError(msg)
-            return XMSSPrivateKey(algorithm)
-
-        if algorithm.startswith("xmssmt-") or algorithm == "xmssmt":
-            if algorithm not in PQStatefulSigFactory.supported_algorithms() + ["xmssmt"]:
-                msg = (
-                    f"Unsupported XMSSMT algorithm: {algorithm}. "
-                    f"Supported algorithms are: {PQStatefulSigFactory.get_algorithms_by_family()['xmssmt']}"
-                )
-                raise ValueError(msg)
-            return XMSSMTPrivateKey(algorithm)
-
-        if algorithm.startswith("hss"):
-            if algorithm not in PQStatefulSigFactory.supported_algorithms() + ["hss"]:
-                msg = (
-                    f"Unsupported HSS algorithm: {algorithm}. "
-                    f"Supported algorithms are: {PQStatefulSigFactory.get_algorithms_by_family()['lms']}"
-                )
-                raise ValueError(msg)
-            return HSSPrivateKey(algorithm, length=int(kwargs.get("length", 1)))
-
-        raise ValueError(
-            f"Unsupported algorithm: {algorithm}. "
-            f"Supported algorithms are: {PQStatefulSigFactory.supported_algorithms()}"
-        )
+        cls = PQStatefulSigFactory._sig_prefix_2_priv_class[prefix]
+        if prefix == "hss":
+            return cls(algorithm, length=int(kwargs.get("length", 1)))  # type: ignore
+        return cls(algorithm)  # type: ignore
 
     @staticmethod
     def load_public_key_from_spki(spki: rfc5280.SubjectPublicKeyInfo) -> PQHashStatefulSigPublicKey:
@@ -118,14 +117,10 @@ class PQStatefulSigFactory(AbstractKeyFactory):
         oid = spki["algorithm"]["algorithm"]
         public_key_bytes = spki["subjectPublicKey"].asOctets()
         algorithm = PQ_STATEFUL_HASH_SIG_OID_2_NAME[oid]
-        if algorithm == "xmss":
-            return XMSSPublicKey.from_public_bytes(public_key_bytes)
-        if algorithm == "xmssmt":
-            return XMSSMTPublicKey.from_public_bytes(public_key_bytes)
-        if algorithm == "hss":
-            return HSSPublicKey.from_public_bytes(public_key_bytes)
+        prefix = PQStatefulSigFactory._get_prefix(algorithm)
 
-        raise ValueError(f"Unsupported algorithm in SPKI: {algorithm}")
+        pub_cls = PQStatefulSigFactory._sig_prefix_2_pub_class[prefix]
+        return pub_cls.from_public_bytes(public_key_bytes)  # type: ignore
 
     @staticmethod
     def _load_private_key_from_pkcs8(
@@ -140,18 +135,10 @@ class PQStatefulSigFactory(AbstractKeyFactory):
         :param public_key_bytes: Optional raw bytes of the public key.
         """
         alg_name = PQ_STATEFUL_HASH_SIG_OID_2_NAME[alg_id["algorithm"]]
-        if alg_name.startswith("xmss-"):
-            private_key = XMSSPrivateKey.from_private_bytes(private_key_bytes)
-        elif alg_name.startswith("xmssmt-"):
-            private_key = XMSSMTPrivateKey.from_private_bytes(private_key_bytes)
-        elif alg_name.startswith("hss"):
-            private_key = HSSPrivateKey.from_private_bytes(private_key_bytes)
-        else:
-            raise ValueError(
-                f"Unsupported algorithm: {alg_name}. "
-                f"Supported algorithms are: {PQStatefulSigFactory.supported_algorithms()}"
-            )
-        return private_key.__class__(private_key.name, private_key_bytes, public_key_bytes)
+        prefix = PQStatefulSigFactory._get_prefix(alg_name)
+        cls = PQStatefulSigFactory._sig_prefix_2_priv_class[prefix]
+        key = cls.from_private_bytes(private_key_bytes)  # type: ignore
+        return cls(key.name, private_key_bytes, public_key_bytes)  # type: ignore
 
     @staticmethod
     def load_private_key_from_one_asym_key(one_asym_key: rfc5958.OneAsymmetricKey) -> PQHashStatefulSigPrivateKey:
@@ -166,20 +153,18 @@ class PQStatefulSigFactory(AbstractKeyFactory):
         private_key_bytes = one_asym_key["privateKey"].asOctets()
         if one_asym_key["publicKey"].isValue:
             public_key_bytes = one_asym_key["publicKey"].asOctets()
-        if algorithm == "xmss":
-            private_key = XMSSPrivateKey.from_private_bytes(private_key_bytes)
-            if public_key_bytes:
-                return XMSSPrivateKey(private_key.name, private_key_bytes, public_key_bytes)
-            return private_key
-        if algorithm == "xmssmt":
-            private_key = XMSSMTPrivateKey.from_private_bytes(private_key_bytes)
-            if public_key_bytes:
-                return XMSSMTPrivateKey(private_key.name, private_key_bytes, public_key_bytes)
-            return private_key
-        if algorithm == "hss":
-            raise NotImplementedError("HSS private key loading from OneAsymmetricKey is not implemented yet.")
 
-        raise ValueError(f"Unsupported algorithm in OneAsymmetricKey: {algorithm}")
+        prefix = PQStatefulSigFactory._get_prefix(algorithm)
+        if prefix == "hss":
+            raise NotImplementedError(
+                "HSS private key loading from OneAsymmetricKey is not implemented yet."
+            )
+
+        cls = PQStatefulSigFactory._sig_prefix_2_priv_class[prefix]
+        key = cls.from_private_bytes(private_key_bytes)  # type: ignore
+        if public_key_bytes:
+            return cls(key.name, private_key_bytes, public_key_bytes)  # type: ignore
+        return key
 
     @staticmethod
     def _prepare_invalid_private_key(
