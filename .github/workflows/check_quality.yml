@@ -106,6 +106,7 @@ jobs:
   # Stage 2: these checks are more expensive and do more with the code, e.g., attempt to import dependencies,
   # execute some logic, etc.
   pylint:
+    # needs must include prepare_env, as it is used to set the image name.
     needs: [prepare_env, ruff_lint, license_check, rf_style_check, spelling_check]
     runs-on: ubuntu-22.04
     env:
@@ -116,6 +117,7 @@ jobs:
         run: docker run --rm -v "$PWD:/workspace" -w /workspace "$IMAGE" pylint --fail-under=9.4 resources
 
   unit_test:
+    # needs must include prepare_env, as it is used to set the image name.
     needs: [prepare_env, ruff_lint, license_check, rf_style_check, spelling_check]
     runs-on: ubuntu-22.04
     env:

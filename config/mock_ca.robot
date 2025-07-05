@@ -121,7 +121,7 @@ ${ALLOW_CMP_EKU_EXTENSION}  ${True}
 #Indicating if the PKIFailInfo must be set correctly.
 ${FAILINFO_MUST_BE_CORRECT}   ${True}
 # For messageTime check.
-${MAX_ALLOW_TIME_INTERVAL_RECEIVED}  ${-501}
+${MAX_ALLOW_TIME_INTERVAL_RECEIVED}  ${-630}
 
 # DSA is not allowed by RFC9483.
 ${DSA_KEY}         data/keys/private-key-dsa.pem

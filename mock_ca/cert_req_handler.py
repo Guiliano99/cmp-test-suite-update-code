@@ -124,7 +124,9 @@ class CertReqHandler:
         self.xwing_key = xwing_key
         self.must_be_protected = True
         self.check_time = True
-        self.allowed_interval = 500
+        # The McElice Chempat keys are more costly to use,
+        # so we allow the time interval to be larger.
+        self.allowed_interval = 620
         self.allow_same_key_cert_req = False
         self.allow_same_key_kur = False
         self.sender = "CN=Mock-CA"
