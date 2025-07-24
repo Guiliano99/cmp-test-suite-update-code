@@ -4,6 +4,8 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+      timezone: "UTC"
+      time: "04:00"
     open-pull-requests-limit: 1
     allow:
       - dependency-type: "direct"
@@ -20,6 +22,8 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+      timezone: "UTC"
+      time: "04:00"
     open-pull-requests-limit: 1
     target-branch: "main"
     labels:
