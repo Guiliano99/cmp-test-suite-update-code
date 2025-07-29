@@ -35,6 +35,8 @@ RUN curl -fsSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz
     echo "${OPENSSL_DIR}/lib" > /etc/ld.so.conf.d/openssl.conf && ldconfig && \
     rm -rf /tmp/openssl*
 
+RUN /usr/local/openssl/bin/openssl version
+
 # 3. Python: upgrade pip, build cryptography from source, then other deps
 WORKDIR /app
 COPY requirements.txt .
