@@ -55,7 +55,7 @@ from cryptography.hazmat.backends.openssl import backend
 import subprocess, ssl, platform
 print("Kernel          :", platform.uname().release)
 print("Python          :", platform.python_version())
-print("System OpenSSL  :", subprocess.check_output(["openssl","version"]).decode().strip())
+print("System OpenSSL  :", subprocess.check_output(["/usr/local/openssl/bin/openssl", "version"]).decode().strip())
 print("cryptography    :", backend.openssl_version_text())
 print("ssl module      :", ssl.OPENSSL_VERSION)
 PY
