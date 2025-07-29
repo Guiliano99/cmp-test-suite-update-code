@@ -4,28 +4,63 @@
 # To experiment locally, build it with:
 # `docker build -t cmptest-base -f data/dockerfiles/Dockerfile.base .`
 
+
+########################################################################
+# CMP test‑suite base image – OpenSSL 3.5.1 + liboqs + Python tooling
+########################################################################
+
 FROM ubuntu:22.04
 
+ARG OPENSSL_VERSION=3.5.1                  # latest as of 2025‑07‑01
+ENV OPENSSL_DIR=/usr/local/openssl
+ENV PATH="${OPENSSL_DIR}/bin:${PATH}
+
+# 1. OS packages needed to compile everything (Rust ≥1.74 for cryptography)
 RUN apt-get update && \
-    apt-get install -y python3 python3-pip openssl libssl-dev cmake git && \
-    apt-get clean
+    DEBIAN_FRONTEND=noninteractive \
+    apt-get install -y --no-install-recommends \
+      build-essential curl perl zlib1g-dev \
+      python3 python3-pip python3-dev \
+      rustc cargo \
+      cmake git libffi-dev ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
+# 2. Build and install OpenSSL 3.5.1
+RUN curl -fsSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" -o /tmp/openssl.tar.gz && \
+    tar -xf /tmp/openssl.tar.gz -C /tmp && \
+    cd "/tmp/openssl-${OPENSSL_VERSION}" && \
+    ./Configure --prefix="${OPENSSL_DIR}" --openssldir="${OPENSSL_DIR}" \
+        linux-x86_64 shared -fPIC -Wl,-Bsymbolic-functions && \
+    make -j"$(nproc)" && make install_sw && \
+    echo "${OPENSSL_DIR}/lib" > /etc/ld.so.conf.d/openssl.conf && ldconfig && \
+    rm -rf /tmp/openssl*
+
+# 3. Python: upgrade pip, build cryptography from source, then other deps
 WORKDIR /app
-
-COPY requirements.txt /app/requirements.txt
+COPY requirements.txt .
 RUN pip3 install --upgrade pip && \
-    pip3 install -r /app/requirements.txt
+    OPENSSL_DIR="${OPENSSL_DIR}" pip3 install --no-binary cryptography cryptography && \
+    pip3 install -r requirements.txt
 
-# Build and install liboqs-python
-RUN git clone --depth=1 https://github.com/Guiliano99/liboqs-python-stateful-sig && \
-    pip3 install ./liboqs-python-stateful-sig && \
-    python3 -c "import oqs"  # Trigger the build of liboqs, by importing it
+# 4. Build and install liboqs‑python (triggers liboqs C build)
+RUN git clone --depth=1 https://github.com/open-quantum-safe/liboqs-python && \
+    pip3 install ./liboqs-python && \
+    python3 -c "import oqs; print('liboqs OK –', oqs.__version__)"
 
-# Remove unnecessary packages after we're done
-RUN apt-get remove -y cmake git && \
-    apt-get autoremove -y && \
+# 5. Tiny helper to verify which OpenSSL is actually in use
+RUN cat <<'PY' > /usr/local/bin/print_versions.py
+from cryptography.hazmat.backends.openssl import backend
+import subprocess, ssl, platform
+print("Kernel          :", platform.uname().release)
+print("Python          :", platform.python_version())
+print("System OpenSSL  :", subprocess.check_output(["openssl","version"]).decode().strip())
+print("cryptography    :", backend.openssl_version_text())
+print("ssl module      :", ssl.OPENSSL_VERSION)
+PY
+RUN chmod +x /usr/local/bin/print_versions.py
+
+# 6. Optional clean‑up to slim the image (keeps runtime libs)
+RUN apt-get purge -y --auto-remove build-essential cmake git rustc cargo && \
     apt-get clean
 
-# By default we just print some environment information, which might be useful
-# for troubleshooting.
-CMD ["sh", "-c", "uname -a && python3 --version && openssl version && pip3 freeze"]
+CMD ["sh", "-c", "/usr/local/bin/print_versions.py && pip3 freeze | grep -E 'cryptography|oqs'"]
