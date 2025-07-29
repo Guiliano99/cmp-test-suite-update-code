@@ -42,14 +42,12 @@ RUN pip3 install --upgrade pip && \
     OPENSSL_DIR="${OPENSSL_DIR}" pip3 install --no-binary cryptography cryptography && \
     pip3 install -r requirements.txt
 
-RUN apt-get update && apt-get install -y libssl-dev
-
 # 4. Build and install liboqs‑python (triggers liboqs C build)
+RUN apt-get update && apt-get install -y libssl-dev
 RUN git clone --depth=1 https://github.com/open-quantum-safe/liboqs-python \
     && pip3 install ./liboqs-python \
-    && python3-DOPENSSL_ROOT_DIR=/usr/lib/ssl && \
-    pip3 install ./liboqs-python && \
-    python3 -c "import oqs; print('liboqs OK –', oqs.__version__)"
+    && python3 -c "import oqs; print('liboqs OK –', oqs.__version__)"
+
 
 # 5. Tiny helper to verify which OpenSSL is actually in use
 RUN cat <<'PY' > /usr/local/bin/print_versions.py
