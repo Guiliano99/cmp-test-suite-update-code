@@ -60,6 +60,8 @@ print("cryptography    :", backend.openssl_version_text())
 print("ssl module      :", ssl.OPENSSL_VERSION)
 PY
 RUN chmod +x /usr/local/bin/print_versions.py
+# Print the versions of the installed components by default
+RUN /usr/local/bin/print_versions.py
 
 # 6. Optional clean‑up to slim the image (keeps runtime libs)
 RUN apt-get purge -y --auto-remove build-essential cmake git rustc cargo && \
