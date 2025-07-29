@@ -46,7 +46,7 @@ RUN pip3 install --upgrade pip && \
 RUN apt-get update && apt-get install -y libssl-dev
 RUN git clone --depth=1 https://github.com/open-quantum-safe/liboqs-python \
     && pip3 install ./liboqs-python \
-    && python3 -c "import oqs; print('liboqs OK –', oqs.__version__)"
+    && python3 -c "import oqs; print('liboqs OK –', oqs.oqs_version())"
 
 
 # 5. Tiny helper to verify which OpenSSL is actually in use
