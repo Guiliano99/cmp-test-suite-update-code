@@ -13,7 +13,7 @@ FROM ubuntu:22.04
 
 ARG OPENSSL_VERSION=3.5.1                  # latest as of 2025‑07‑01
 ENV OPENSSL_DIR=/usr/local/openssl
-ENV PATH="${OPENSSL_DIR}/bin:${PATH}
+ENV PATH="${OPENSSL_DIR}/bin:${PATH}"
 
 # 1. OS packages needed to compile everything (Rust ≥1.74 for cryptography)
 RUN apt-get update && \
