@@ -6,12 +6,12 @@
 
 
 ########################################################################
-# CMP test‑suite base image – OpenSSL 3.5.1 + liboqs + Python tooling
+# CMP test‑suite base image – OpenSSL 3.5.1 (latest) + liboqs + Python tooling
 ########################################################################
 
 FROM ubuntu:22.04
 
-ARG OPENSSL_VERSION=3.5.1                  # latest as of 2025‑07‑01
+ARG OPENSSL_VERSION=3.5.1                  # latest release: 2025‑07‑01
 ENV OPENSSL_DIR=/usr/local/openssl
 ENV PATH="${OPENSSL_DIR}/bin:${PATH}"
 
@@ -42,8 +42,12 @@ RUN pip3 install --upgrade pip && \
     OPENSSL_DIR="${OPENSSL_DIR}" pip3 install --no-binary cryptography cryptography && \
     pip3 install -r requirements.txt
 
+RUN apt-get update && apt-get install -y libssl-dev
+
 # 4. Build and install liboqs‑python (triggers liboqs C build)
-RUN git clone --depth=1 https://github.com/open-quantum-safe/liboqs-python && \
+RUN git clone --depth=1 https://github.com/open-quantum-safe/liboqs-python \
+    && pip3 install ./liboqs-python \
+    && python3-DOPENSSL_ROOT_DIR=/usr/lib/ssl && \
     pip3 install ./liboqs-python && \
     python3 -c "import oqs; print('liboqs OK –', oqs.__version__)"
 
