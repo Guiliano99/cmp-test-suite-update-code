@@ -61,6 +61,7 @@ print("ssl module      :", ssl.OPENSSL_VERSION)
 PY
 RUN chmod +x /usr/local/bin/print_versions.py
 # Print the versions of the installed components by default
+RUN ls -l /usr/local/openssl/bin/openssl && /usr/local/openssl/bin/openssl version
 RUN python3 /usr/local/bin/print_versions.py
 
 # 6. Optional clean‑up to slim the image (keeps runtime libs)
