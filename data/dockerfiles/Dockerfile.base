@@ -12,7 +12,7 @@
 FROM ubuntu:22.04
 
 ARG OPENSSL_VERSION=3.5.1                  # latest release: 2025‑07‑01
-ENV OPENSSL_DIR=/usr/local/openssl
+ENV OPENSSL_DIR=/usr/local
 ENV PATH="${OPENSSL_DIR}/bin:${PATH}"
 
 RUN apt-get update && apt-get install -f && apt-get remove -y libssl3
@@ -28,10 +28,23 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 
-ENV LD_LIBRARY_PATH=/usr/local/openssl/lib:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 
 
 # 2. Build and install OpenSSL 3.5.1
+RUN curl -fsSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" -o /tmp/openssl.tar.gz && \
+    if command -v sha256sum >/dev/null; then \
+        curl -fsSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz.sha256" -o /tmp/openssl.tar.gz.sha256 && \
+        sha256sum -c /tmp/openssl.tar.gz.sha256; \
+    fi && \
+    tar -xf /tmp/openssl.tar.gz -C /tmp && \
+    cd "/tmp/openssl-${OPENSSL_VERSION}" && \
+    ./Configure linux-x86_64 --prefix="${OPENSSL_DIR}" --openssldir="/usr/local/ssl" && \
+    make -j"$(nproc)" && make install && \
+    echo "${OPENSSL_DIR}/lib" > /etc/ld.so.conf.d/openssl.conf && ldconfig && \
+    rm -rf /tmp/openssl* && \
+    openssl version -a
+
 RUN curl -fsSL "https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz" -o /tmp/openssl.tar.gz && \
     tar -xf /tmp/openssl.tar.gz -C /tmp && \
     cd "/tmp/openssl-${OPENSSL_VERSION}" && \
@@ -63,13 +76,13 @@ from cryptography.hazmat.backends.openssl import backend
 import subprocess, ssl, platform
 print("Kernel          :", platform.uname().release)
 print("Python          :", platform.python_version())
-print("System OpenSSL  :", subprocess.check_output(["/usr/local/openssl/bin/openssl", "version"]).decode().strip())
+print("System OpenSSL  :", subprocess.check_output(["/usr/local/bin/openssl", "version"]).decode().strip())
 print("cryptography    :", backend.openssl_version_text())
 print("ssl module      :", ssl.OPENSSL_VERSION)
 PY
 RUN chmod +x /usr/local/bin/print_versions.py
 # Print the versions of the installed components by default
-RUN ls -l /usr/local/openssl/bin/openssl && /usr/local/openssl/bin/openssl version
+RUN ls -l /usr/local/bin/openssl && /usr/local/bin/openssl version
 RUN python3 /usr/local/bin/print_versions.py
 
 # 6. Optional clean‑up to slim the image (keeps runtime libs)
