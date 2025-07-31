@@ -13,7 +13,7 @@ FROM ubuntu:22.04
 ARG OPENSSL_VERSION=3.5.1                # 2025-07-01
 ENV OPENSSL_PREFIX=/opt/openssl-${OPENSSL_VERSION}
 ENV PATH="${OPENSSL_PREFIX}/bin:${PATH}"
-ENV LD_LIBRARY_PATH="${OPENSSL_PREFIX}/lib:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH=/opt/openssl-${OPENSSL_VERSION}/lib
 
 #######################################################################
 # 1) System packages needed for the build
@@ -69,16 +69,22 @@ PY
 # 5) Clean-up to slim the final image
 #######################################################################
 RUN apt-get purge -y --auto-remove build-essential cmake git rustc cargo && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 #######################################################################
-# 6) Default command: show versions at container start-up
+# 6) Add a helper that prints the actual OpenSSL being used
 #######################################################################
-CMD python3 - <<'PY'
+RUN cat >/usr/local/bin/print_openssl_versions.py <<'PY'
+#!/usr/bin/env python3
 from cryptography.hazmat.backends.openssl import backend
 import ssl, subprocess
 print("cryptography      :", backend.openssl_version_text())
 print("ssl module        :", ssl.OPENSSL_VERSION)
 print("openssl (CLI)     :", subprocess.check_output(["openssl","version"]).decode().strip())
 PY
+RUN chmod +x /usr/local/bin/print_openssl_versions.py
+
+#######################################################################
+# 7) Default command: show versions at container start-up
+#######################################################################
+CMD ["python3", "/usr/local/bin/print_openssl_versions.py"]
