@@ -16,9 +16,10 @@ ENV OPENSSL_DIR=/usr/local
 ENV PATH="${OPENSSL_DIR}/bin:${PATH}"
 
 RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install -y adduser ca-certificates libpam-runtime libpam-modules \
-    && apt-get remove -y libssl3
+      && apt-get upgrade -y \
+      && apt-get --fix-broken install -y \
+      && apt-get install -y adduser ca-certificates libpam-runtime libpam-modules \
+      && apt-get remove -y libssl3
 
 # 1. OS packages needed to compile everything (Rust ≥1.74 for cryptography)
 RUN apt-get update && \
