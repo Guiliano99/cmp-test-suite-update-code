@@ -15,7 +15,10 @@ ARG OPENSSL_VERSION=3.5.1                  # latest release: 2025‑07‑01
 ENV OPENSSL_DIR=/usr/local
 ENV PATH="${OPENSSL_DIR}/bin:${PATH}"
 
-RUN apt-get update && apt-get install -f && apt-get remove -y libssl3
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y adduser ca-certificates libpam-runtime libpam-modules \
+    && apt-get remove -y libssl3
 
 # 1. OS packages needed to compile everything (Rust ≥1.74 for cryptography)
 RUN apt-get update && \
