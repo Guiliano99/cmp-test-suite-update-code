@@ -10,10 +10,11 @@
 ########################################################################
 FROM ubuntu:22.04
 
-ARG OPENSSL_VERSION=3.5.1                # 2025-07-01
+ARG OPENSSL_VERSION=3.5.1                # 2025-07-01 (Latest LTS)
 ENV OPENSSL_PREFIX=/opt/openssl-${OPENSSL_VERSION}
 ENV PATH="${OPENSSL_PREFIX}/bin:${PATH}"
-ENV LD_LIBRARY_PATH=/opt/openssl-${OPENSSL_VERSION}/lib
+ENV LD_LIBRARY_PATH="${OPENSSL_PREFIX}/lib64:${OPENSSL_PREFIX}/lib"
+ENV PKG_CONFIG_PATH="${OPENSSL_PREFIX}/lib64/pkgconfig:${OPENSSL_PREFIX}/lib/pkgconfig"
 
 #######################################################################
 # 1) System packages needed for the build
@@ -23,9 +24,9 @@ RUN apt-get update && \
         build-essential curl perl zlib1g-dev \
         python3 python3-dev python3-pip \
         cmake git libffi-dev ca-certificates \
-        rustc cargo && \
-    apt-get remove -y libssl3 && \
+        rustc cargo pkg-config && \
     rm -rf /var/lib/apt/lists/*
+
 
 #######################################################################
 # 2) Build OpenSSL ${OPENSSL_VERSION} (shared, PIC)
@@ -35,21 +36,28 @@ RUN curl -fsSL https://www.openssl.org/source/openssl-${OPENSSL_VERSION}.tar.gz 
     tar -xf /tmp/openssl.tar.gz -C /tmp && \
     cd /tmp/openssl-${OPENSSL_VERSION} && \
     ./Configure linux-x86_64 --prefix="${OPENSSL_PREFIX}" \
-        --openssldir="${OPENSSL_PREFIX}" shared -fPIC && \
-    make -j"$(nproc)" install_sw install_ssldirs && \
-    echo "${OPENSSL_PREFIX}/lib" > /etc/ld.so.conf.d/openssl.conf && ldconfig && \
+        --openssldir="${OPENSSL_PREFIX}" shared -fPIC \
+        enable-fips && \
+    make -j"$(nproc)" && \
+    make install && \
+    echo "${OPENSSL_PREFIX}/lib64" > /etc/ld.so.conf.d/openssl.conf && \
+    echo "${OPENSSL_PREFIX}/lib" >> /etc/ld.so.conf.d/openssl.conf && \
+    ldconfig && \
     rm -rf /tmp/openssl*
 
-RUN openssl version -a  # sanity check
+# Test the installation
+RUN ls -la ${OPENSSL_PREFIX}/lib64/ && \
+    LD_LIBRARY_PATH="${OPENSSL_PREFIX}/lib64" ${OPENSSL_PREFIX}/bin/openssl version -a
 
 #######################################################################
 # 3) Python tooling
 #######################################################################
 WORKDIR /app
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir --upgrade pip && \
+RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel && \
     CFLAGS="-I${OPENSSL_PREFIX}/include" \
-    LDFLAGS="-L${OPENSSL_PREFIX}/lib" \
+    LDFLAGS="-L${OPENSSL_PREFIX}/lib64 -L${OPENSSL_PREFIX}/lib -Wl,-rpath,${OPENSSL_PREFIX}/lib64 -Wl,-rpath,${OPENSSL_PREFIX}/lib" \
+    PKG_CONFIG_PATH="${OPENSSL_PREFIX}/lib64/pkgconfig:${OPENSSL_PREFIX}/lib/pkgconfig" \
       pip3 install --no-binary :all: cryptography && \
     pip3 install --no-cache-dir -r requirements.txt
 
@@ -57,7 +65,12 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
 # 4) Build and install liboqs-python (pulls & builds liboqs C)
 #######################################################################
 RUN git clone --depth 1 https://github.com/open-quantum-safe/liboqs-python && \
-    pip3 install ./liboqs-python && \
+    cd liboqs-python && \
+    PKG_CONFIG_PATH="${OPENSSL_PREFIX}/lib64/pkgconfig:${OPENSSL_PREFIX}/lib/pkgconfig" \
+    CFLAGS="-I${OPENSSL_PREFIX}/include" \
+    LDFLAGS="-L${OPENSSL_PREFIX}/lib64 -L${OPENSSL_PREFIX}/lib -Wl,-rpath,${OPENSSL_PREFIX}/lib64 -Wl,-rpath,${OPENSSL_PREFIX}/lib" \
+    pip3 install . && \
+    cd .. && rm -rf liboqs-python && \
     python3 - <<'PY'
 import oqs, ssl, subprocess
 print("✔ liboqs-python →", oqs.oqs_version())
@@ -69,7 +82,7 @@ PY
 # 5) Clean-up to slim the final image
 #######################################################################
 RUN apt-get purge -y --auto-remove build-essential cmake git rustc cargo && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 #######################################################################
 # 6) Add a helper that prints the actual OpenSSL being used
@@ -81,10 +94,15 @@ import ssl, subprocess
 print("cryptography      :", backend.openssl_version_text())
 print("ssl module        :", ssl.OPENSSL_VERSION)
 print("openssl (CLI)     :", subprocess.check_output(["openssl","version"]).decode().strip())
+print("\nFor comprehensive post-quantum cryptography testing, run:")
+print("python3 /app/scripts/test_openssl_pqc.py")
 PY
 RUN chmod +x /usr/local/bin/print_openssl_versions.py
 
+# Copy the comprehensive PQC test script
+COPY scripts/test_openssl_pqc.py /app/scripts/
+
 #######################################################################
-# 7) Default command: show versions at container start-up
+# 7) Default command: run comprehensive post-quantum cryptography tests
 #######################################################################
-CMD ["python3", "/usr/local/bin/print_openssl_versions.py"]
+CMD ["python3", "/app/scripts/test_openssl_pqc.py"]
