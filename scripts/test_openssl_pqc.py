@@ -37,11 +37,11 @@ Exit Codes:
     2: Critical OpenSSL functionality is broken
 """
 
+import os
 import ssl
 import subprocess
-import tempfile
-import os
 import sys
+import tempfile
 
 
 def print_section(title):
@@ -401,7 +401,7 @@ def list_available_algorithms():
 
 
 def main():
-    """Main test function."""
+    """Test the OpenSSL post-quantum cryptography features."""
     print("OpenSSL Post-Quantum Cryptography Test Suite")
     print("=" * 60)
 
