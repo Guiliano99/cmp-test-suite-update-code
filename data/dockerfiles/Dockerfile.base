@@ -6,11 +6,11 @@
 
 
 ########################################################################
-# CMP test-suite base image – OpenSSL 3.5.1 + liboqs-python + tooling
+# CMP test-suite base image – OpenSSL 3.5.2 + liboqs-python + tooling
 ########################################################################
 FROM ubuntu:22.04
 
-ARG OPENSSL_VERSION=3.5.1                # 2025-07-01 (Latest LTS)
+ARG OPENSSL_VERSION=3.5.2                # 2025-07-11 (Latest LTS)
 ENV OPENSSL_PREFIX=/opt/openssl-${OPENSSL_VERSION}
 ENV PATH="${OPENSSL_PREFIX}/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${OPENSSL_PREFIX}/lib64:${OPENSSL_PREFIX}/lib"
