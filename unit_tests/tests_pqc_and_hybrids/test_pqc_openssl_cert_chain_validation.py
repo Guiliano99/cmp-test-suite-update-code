@@ -81,7 +81,7 @@ class TestVerifyPQCertChainOpenSSL(unittest.TestCase):
         WHEN the chain is validated using OpenSSL,
         THEN the validation should succeed or skip if not supported.
         """
-        chain = self._build_chain(["slh-dsa-sha2-256f", "slh-dsa-sha2-256f", "mlh-dsa-44"])
+        chain = self._build_chain(["slh-dsa-sha2-256f", "slh-dsa-sha2-256f", "ml-dsa-44"])
         self._verify_or_skip(chain, "SLH-DSA")
 
     def test_verify_ml_kem_chain(self) -> None:
