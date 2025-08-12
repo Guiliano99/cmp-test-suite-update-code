@@ -13,10 +13,6 @@ name: After Merge Workflow
 on:
   pull_request:
     types: [closed]
-  workflow_run:
-    workflows: ['Build and push base docker images']
-    types: [completed]
-    branches: [main]
 
 permissions:
   contents: read
