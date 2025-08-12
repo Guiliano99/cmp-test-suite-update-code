@@ -102,16 +102,19 @@ jobs:
           VERSION=$(tr -d ' \t\n\r' < VERSION)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build and push
+      # Some accounts did not use a lowercase repository owner, so we need to ensure
+      # that the repository owner is always in lowercase to be able to build the images.
+      - name: Set lowercase GitHub owner
+        run: echo "REPO_OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
+
+      - name: Build and push dev Docker image
         env:
-          OWNER_LC: ${{ github.repository_owner }}
           VERSION: ${{ steps.get_version.outputs.version }}
         run: |
-          OWNER_LC=$(echo "$OWNER_LC" | tr '[:upper:]' '[:lower:]')
           docker buildx build \
-            -t ghcr.io/${OWNER_LC}/mock-ca:${{ github.sha }} \
-            -t ghcr.io/${OWNER_LC}/mock-ca:latest \
-            -t ghcr.io/${OWNER_LC}/mock-ca:${VERSION} \
+            --tag ghcr.io/${REPO_OWNER_LC}/cmp-mock-ca:latest \
+            -t ghcr.io/${OWNER_LC}/cmp-mock-ca:${VERSION} \
+            --build-arg BASE_IMAGE=ghcr.io/${REPO_OWNER_LC}/cmp-mock-ca:latest \
             --push \
             -f data/dockerfiles/Dockerfile.mock_ca .
 
