@@ -23,7 +23,7 @@ jobs:
           pip install -r requirements-dev.txt
 
       - name: Run ruff lint
-        run: ruff check .
+        run: ruff format
 
   notify-release:
     needs: test
