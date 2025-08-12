@@ -1,0 +1,67 @@
+# SPDX-FileCopyrightText: Copyright 2025 Siemens AG
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This workflow builds and pushes the Mock-CA Docker image after a pull request
+# is merged into the main branch. This is useful for ensuring that the
+# latest changes are reflected in the Docker image used for testing the CMP-Test-Suite itself.
+# It is triggered only when a pull request is closed and merged, not just closed.
+# The image is tagged with the commit SHA, latest, and the version specified in the VERSION file.
+
+name: After Merge Workflow
+
+on:
+  pull_request:
+    types: [closed]        # Trigger only when a PR is closed
+    branches: ["*"]
+
+# Prevents overlapping runs for the same repo/PR combo
+concurrency:
+  # Unique concurrency group name: combines a fixed prefix,
+  # the repository name, and the PR number.
+  # Example: after-merge-myuser/myrepo-42
+  group: after-merge-${{ github.repository }}-${{ github.event.pull_request.number }}
+  # If a new run starts in the same group, cancel any currently
+  # running jobs in that group so only the latest run continues.
+  cancel-in-progress: true
+
+jobs:
+  build_mock_ca_image_and_push:
+    name: Build & push Mock-CA image
+    runs-on: ubuntu-24.04
+    if: github.event.pull_request.merged == true  # Only run if PR was merged, not just closed
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}           # Could also use github.repository_owner
+          password: ${{ secrets.GITHUB_TOKEN }}   # Token with packages:write permission
+
+      - name: Read version from VERSION file
+        id: get_version
+        run: |
+          # Remove whitespace/newlines and save as output variable "version"
+          VERSION=$(cat VERSION | tr -d ' \t\n\r')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build and push Mock-CA image
+        env:
+          OWNER_LC: ${{ github.repository_owner }}
+          VERSION: ${{ steps.get_version.outputs.version }}
+        run: |
+          # Lowercase the owner name for GHCR
+          OWNER_LC=$(echo "$OWNER_LC" | tr '[:upper:]' '[:lower:]')
+          docker buildx build \
+            -t ghcr.io/${OWNER_LC}/mock-ca:${{ github.sha }} \
+            -t ghcr.io/${OWNER_LC}/mock-ca:latest \
+            -t ghcr.io/${OWNER_LC}/mock-ca:${VERSION} \
+            --push \
+            -f data/dockerfiles/Dockerfile.mock_ca .
