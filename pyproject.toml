@@ -4,11 +4,11 @@
 
 [project]
 name = "cmp-test-suite"
-version = "0.0.3"
+version = "0.0.4"
 description = "CMP test suite"
 
 [tool.bumpversion]
-current_version = "0.0.3"
+current_version = "0.0.4"
 commit = true
 tag = true
 
