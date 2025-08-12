@@ -4,6 +4,10 @@ on:
   push:
     branches: ["*"]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (optional)'
+        required: false
 
 jobs:
   test:
@@ -33,6 +37,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Trigger Release Workflow
         run: |
+          if [ -n "$VERSION_INPUT" ]; then
+          gh workflow run release.yml -f version="$VERSION_INPUT"
+          else
           gh workflow run release.yml
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION_INPUT: ${{ inputs.version }}

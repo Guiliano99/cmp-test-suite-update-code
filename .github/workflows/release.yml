@@ -2,6 +2,10 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (optional)'
+        required: false
   workflow_run:
     workflows: ['Pre-Release']
     types: [completed]
@@ -23,11 +27,31 @@ jobs:
       - name: Install bump-my-version
         run: pip install bump-my-version
 
-      - name: Bump version
+      - name: Set or bump version
         id: bump
         run: |
           bump-my-version bump patch
+          if [ -n "${{ inputs.version }}" ]; then
+            bump-my-version set "${{ inputs.version }}"
+          else
+            bump-my-version bump patch
+          fi
           echo "new_version=$(cat VERSION)" >> $GITHUB_OUTPUT
+
+      - name: Verify changelog
+        run: |
+          NEW_VERSION="${{ steps.bump.outputs.new_version }}"
+          if ! grep -q "^# ${NEW_VERSION}" CHANGELOG.md; then
+            echo "CHANGELOG.md missing entry for version ${NEW_VERSION}"
+            exit 1
+          fi
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            if ! git diff --name-only "$PREV_TAG" HEAD^ | grep -q '^CHANGELOG.md$'; then
+              echo "CHANGELOG.md was not modified since $PREV_TAG"
+              exit 1
+            fi
+          fi
 
       - name: Push changes and tags
         run: git push origin main --tags
