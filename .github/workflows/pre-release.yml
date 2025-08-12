@@ -30,7 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     if: success()
     steps:
-      - uses: benc-uk/workflow-dispatch@v1
-        with:
-          workflow: Release
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
+      - name: Trigger Release Workflow
+        run: |
+          gh workflow run release.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
