@@ -10,14 +10,34 @@ on:
     workflows: ['Pre-Release']
     types: [completed]
 
+permissions:
+  contents: write
+
 jobs:
   release:
+    # Run if manually dispatched OR if Pre-Release succeeded on main
+    if: >-
+      ${{ github.event_name == 'workflow_dispatch' ||
+          (github.event_name == 'workflow_run' &&
+           github.event.workflow_run.conclusion == 'success' &&
+           github.event.workflow_run.head_branch == 'main') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          # For workflow_run, ensure we checkout the branch that triggered Pre-Release
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref }}
+
+      - name: Determine target branch
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "TARGET_BRANCH=${{ github.event.workflow_run.head_branch }}" >> $GITHUB_ENV
+          else
+            echo "TARGET_BRANCH=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+          fi
 
       - name: Configure Git
         run: |
@@ -30,7 +50,6 @@ jobs:
       - name: Set or bump version
         id: bump
         run: |
-          bump-my-version bump patch
           if [ -n "${{ inputs.version }}" ]; then
             bump-my-version set "${{ inputs.version }}"
           else
@@ -54,20 +73,22 @@ jobs:
           fi
 
       - name: Push changes and tags
-        run: git push origin main --tags
+        run: |
+          # Push commit to the same branch and include tags
+          git push origin HEAD:$TARGET_BRANCH --follow-tags
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.bump.outputs.new_version }}
-          release_name: Release v${{ steps.bump.outputs.new_version }}
+          name: Release v${{ steps.bump.outputs.new_version }}
           body: |
             ## Changes in v${{ steps.bump.outputs.new_version }}
-            
+
             Automated release created by GitHub Actions.
-            
-            See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
+
+            See CHANGELOG.md for detailed changes.
           draft: false
           prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

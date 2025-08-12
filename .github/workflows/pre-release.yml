@@ -25,23 +25,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
+          # Ensure the latest ruff is used regardless of constraints
+          pip install --upgrade ruff
 
-      - name: Run ruff lint
-        run: ruff format
-
-  notify-release:
-    needs: test
-    runs-on: ubuntu-latest
-    if: success()
-    steps:
-      - uses: actions/checkout@v4
-      - name: Trigger Release Workflow
+      - name: Run ruff formatting check (no changes)
         run: |
-          if [ -n "$VERSION_INPUT" ]; then
-          gh workflow run .github/workflows/release.yml -f version="$VERSION_INPUT"
-          else
-          gh workflow run release.yml
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION_INPUT: ${{ inputs.version }}
+          ruff --version
+          ruff format --check
