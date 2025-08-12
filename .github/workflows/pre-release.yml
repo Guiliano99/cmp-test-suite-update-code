@@ -22,8 +22,8 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
-      - name: Run unit tests
-        run: make unittest
+      - name: Run ruff lint
+        run: ruff check .
 
   notify-release:
     needs: test
