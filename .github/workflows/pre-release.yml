@@ -38,7 +38,7 @@ jobs:
       - name: Trigger Release Workflow
         run: |
           if [ -n "$VERSION_INPUT" ]; then
-          gh workflow run release.yml -f version="$VERSION_INPUT"
+          gh workflow run .github/workflows/release.yml -f version="$VERSION_INPUT"
           else
           gh workflow run release.yml
           fi
