@@ -1,0 +1,18 @@
+# This Dockerfile is used to build a container for the mock CA service.
+# It builds on top of the base image and sets up the environment for running the
+# mock CA handler script.
+# By default it attempts to use the locally stored image, but you can also rely
+# on an external image registry if you specify another base when building:
+# `docker build --build-arg BASE_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER}/cmp-test-base:latest -f data/dockerfiles/Dockerfile.mock_ca .`
+# To experiment locally, build it with:
+# `docker build -t cmptest-mock-ca -f data/dockerfiles/Dockerfile.mock_ca .`
+# Run it with `docker run --rm -it -p 5000:5000 cmptest-mock-ca`
+# This Dockerfile is used to build a container for the mock CA service.
+ARG BASE_IMAGE=cmptest-base:latest
+FROM ${BASE_IMAGE}
+
+WORKDIR /app
+
+COPY . /app
+
+CMD ["python3", "./mock_ca/ca_handler.py", "--host", "0.0.0.0"]
