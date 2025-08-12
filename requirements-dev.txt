@@ -11,3 +11,4 @@ robotframework-tidy==4.17.0
 pyright==1.1.401
 codespell==2.4.1
 reuse==5.0.2
+bump-my-version==1.2.1

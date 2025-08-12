@@ -2,6 +2,24 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+[project]
+name = "cmp-test-suite"
+version = "0.0.2"
+description = "CMP test suite"
+
+[tool.bumpversion]
+current_version = "0.0.2"
+commit = true
+tag = true
+
+[[tool.bumpversion.files]]
+filename = "VERSION"
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = "version = \"{current_version}\""
+replace = "version = \"{new_version}\""
+
 [tool.robotidy]
 diff = true
 overwrite = false
