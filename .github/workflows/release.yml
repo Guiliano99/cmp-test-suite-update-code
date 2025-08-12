@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Pre-Release']
+    types: [completed]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install bump-my-version
+        run: pip install bump-my-version
+
+      - name: Bump version
+        id: bump
+        run: |
+          bump-my-version bump patch
+          echo "new_version=$(cat VERSION)" >> $GITHUB_OUTPUT
+
+      - name: Push changes and tags
+        run: git push origin main --tags
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.bump.outputs.new_version }}
+          release_name: Release v${{ steps.bump.outputs.new_version }}
+          body: |
+            ## Changes in v${{ steps.bump.outputs.new_version }}
+            
+            Automated release created by GitHub Actions.
+            
+            See [CHANGELOG.md](CHANGELOG.md) for detailed changes.
+          draft: false
+          prerelease: false
