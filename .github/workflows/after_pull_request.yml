@@ -33,8 +33,9 @@ jobs:
   build_mock_ca_image_and_push:
     name: Build & push Mock-CA image
     runs-on: ubuntu-24.04
-    if: github.event.pull_request.merged == true  # Only run if PR was merged, not just closed
-
+    if: >
+      github.event_name == 'pull_request' && github.event.pull_request.merged == true
+      || github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
