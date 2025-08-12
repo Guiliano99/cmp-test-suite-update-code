@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""The AnnouncementHandler for the Mock CA."""
+"""The AnnouncementHandler for the Mock CA. This is a test."""
 
 from typing import List, Optional, Union
 
