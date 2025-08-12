@@ -109,7 +109,6 @@ jobs:
         run: |
           docker buildx build \
             --tag ghcr.io/${REPO_OWNER_LC}/cmp-mock-ca:latest \
-            -t ghcr.io/${OWNER_LC}/cmp-mock-ca:${VERSION} \
             --build-arg BASE_IMAGE=ghcr.io/${REPO_OWNER_LC}/cmp-mock-ca:latest \
             --push \
             -f data/dockerfiles/Dockerfile.mock_ca .
