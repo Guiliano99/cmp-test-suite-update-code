@@ -20,6 +20,10 @@ on:
       - 'requirements*.txt'
   workflow_dispatch:
 
+concurrency:
+    group: 'build-docker-images'
+    cancel-in-progress: true
+
 jobs:
   build_and_push:
     runs-on: ubuntu-22.04
@@ -48,6 +52,11 @@ jobs:
             --tag ghcr.io/${REPO_OWNER_LC}/cmp-test-base:latest \
             --push \
             -f data/dockerfiles/Dockerfile.base .
+
+      - name: Test base Docker image OpenSSL PQC functionality
+        run: |
+          echo "Testing OpenSSL post-quantum cryptography functionality..."
+          docker run --rm ghcr.io/${REPO_OWNER_LC}/cmp-test-base:latest python3 /app/scripts/test_verify_openssl_pqc.py      
 
       - name: Build and push dev Docker image
         run: |
