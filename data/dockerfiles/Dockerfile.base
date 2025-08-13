@@ -79,11 +79,10 @@ print("✔ ssl module     →", ssl.OPENSSL_VERSION)
 print("✔ openssl cli    →", subprocess.check_output(["openssl","version"]).decode().strip())
 PY
 
-#######################################################################
-# 5) Clean-up to slim the final image
-#######################################################################
-RUN apt-get purge -y --auto-remove build-essential cmake git rustc cargo && \
-    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Build and install liboqs-python
+RUN git clone --depth=1 https://github.com/open-quantum-safe/liboqs && \
+    pip3 install ./liboqs-python && \
+    python3 -c "import oqs"  # Trigger the build of liboqs, by importing it
 
 #######################################################################
 # 6) Add a helper that prints the actual OpenSSL being used
