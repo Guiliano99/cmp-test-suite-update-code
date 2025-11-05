@@ -44,6 +44,12 @@ inside [pq_stateful_sig_alg.robot](tests_pq_and_hybrid/pq_stateful_sig_alg.robot
 
 (if applicable)
 
+## Implementation Notes
+
+- `pyhsslms` supports the new shake variants, but not the key generation for height > 9.
+- `hsslms` does support key generation for height > 9, but not the shake variants.
+- `liboqs-python`: does only support the verification of HSS signatures. But not signing and the shake variants.
+
 ## References
 - RFC 8554 — Leighton-Micali Hash-Based Signatures.
 - RFC 9802 — Use of the HSS and XMSS Hash-Based Signature Algorithms in Internet X.509 PKI.
