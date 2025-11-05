@@ -12,6 +12,20 @@ from pyasn1.type import char, constraint, namedtype, tag, univ
 from pyasn1_alt_modules import rfc5280, rfc9480
 
 
+class PrivateKeyPossessionStatement(univ.Sequence):
+    """ASN.1 structure for the RFC 9883 privateKeyPossessionStatement attribute.
+
+    PrivateKeyPossessionStatement ::= SEQUENCE {
+        signer          IssuerAndSerialNumber,
+        cert            CMPCertificate OPTIONAL
+    }
+    """
+
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType("signer", rfc5652.IssuerAndSerialNumber()),
+        namedtype.OptionalNamedType("cert", rfc9480.CMPCertificate()),
+    )
+
 class OIDs(univ.SequenceOf):
     """Defines the ASN.1 structure for the `KeyPairParamRep`.
 

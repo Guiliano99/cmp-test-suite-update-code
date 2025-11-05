@@ -847,8 +847,6 @@ ALL_KNOWN_OIDS_2_NAME["id_ecMQV"] = rfc6664.id_ecMQV
 ALL_KNOWN_OIDS_2_NAME.update(ALL_SIG_ALG_OID_2_NAME)
 ALL_KNOWN_OIDS_2_NAME.update(EXTENSION_OID_2_NAME)
 ALL_KNOWN_OIDS_2_NAME.update(COMPOSITE_KEM07_OID_2_NAME)
-ALL_KNOWN_NAMES_2_OID = {y: x for x, y in ALL_KNOWN_OIDS_2_NAME.items()}
-
 
 ENC_KEY_AGREEMENT_TYPES_OID_2_NAME = {
     rfc9481.rsaEncryption: "rsa",
@@ -937,3 +935,11 @@ CERT_ATTR_OID_2_CORRECT_STRUCTURE = {
     id_at_streetAddress: X520StreetAddress(),
     id_at_organizationIdentifier: X520OrganizationIdentifier(),
 }
+
+# As of RFC 9883
+ID_AT_STATEMENT_OF_POSSESSION = univ.ObjectIdentifier("1.3.6.1.4.1.22112.2.1")
+ID_REGCTRL_STATEMENT_OF_POSSESSION = ID_AT_STATEMENT_OF_POSSESSION
+
+ALL_KNOWN_OIDS_2_NAME.update({ID_AT_STATEMENT_OF_POSSESSION: "id_statementOfPossession"})
+
+ALL_KNOWN_NAMES_2_OID = {y: x for x, y in ALL_KNOWN_OIDS_2_NAME.items()}
