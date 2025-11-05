@@ -9,7 +9,7 @@ Will be removed as soon as the draft becomes an RFC.
 
 from pkilint.itu.x520_name import ub_business_category, ub_postal_code, ub_street_address
 from pyasn1.type import char, constraint, namedtype, tag, univ
-from pyasn1_alt_modules import rfc5280, rfc9480
+from pyasn1_alt_modules import rfc5280, rfc5652, rfc9480
 
 
 class PrivateKeyPossessionStatement(univ.Sequence):
@@ -25,6 +25,7 @@ class PrivateKeyPossessionStatement(univ.Sequence):
         namedtype.NamedType("signer", rfc5652.IssuerAndSerialNumber()),
         namedtype.OptionalNamedType("cert", rfc9480.CMPCertificate()),
     )
+
 
 class OIDs(univ.SequenceOf):
     """Defines the ASN.1 structure for the `KeyPairParamRep`.
