@@ -1560,6 +1560,36 @@ def csr_add_extensions(  # noqa D417 undocumented-param
     return csr
 
 
+@keyword(name="CSR Add Attributes")
+def csr_add_attributes(  # noqa D417 undocumented-param
+    csr: rfc6402.CertificationRequest,
+    attributes: Union[rfc5652.Attribute, Sequence[rfc5652.Attribute]],
+) -> rfc6402.CertificationRequest:
+    """Append one or multiple attributes to the CSR `certificationRequestInfo`.
+
+    Arguments:
+    ---------
+        - `csr`: The `CertificationRequest` object to which the attribute(s) will be added.
+        - `attributes`: A single `Attribute` or a sequence of `Attribute` objects to add.
+
+    Returns:
+    -------
+        - The updated `CertificationRequest` with the attributes added.
+
+    Examples:
+    --------
+    | ${updated_csr}= | CSR Add Attributes | csr=${csr} | attributes=${attribute_list} |
+
+    """
+    if isinstance(attributes, rfc5652.Attribute):
+        attributes = [attributes]
+
+    for attribute in attributes:
+        csr["certificationRequestInfo"]["attributes"].append(attribute)
+
+    return csr
+
+
 @not_keyword
 def prepare_single_value_attr(attr_type: univ.ObjectIdentifier, attr_value: Any) -> rfc5652.Attribute:
     """Prepare an attribute for a CSR.
