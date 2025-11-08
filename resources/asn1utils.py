@@ -677,6 +677,7 @@ def try_decode_pyasn1(
     :param for_nested: If True, the function will return the decoded data and not the rest of the data.
     :param verbose: If `True`, the remainder of the data will be included in the error message.
     :return: The decoded PyASN1 object.
+    :raises BadAsn1Data: If decoding fails.
     """
     from resources.cmputils import parse_pkimessage  # pylint: disable=import-outside-toplevel
 
