@@ -29,11 +29,13 @@ from resources import (
     copyasn1utils,
     cryptoutils,
     keyutils,
+    oidutils,
     prepare_alg_ids,
     prepareutils,
     typingutils,
     utils,
 )
+from resources.asn1_structures import PrivateKeyPossessionStatement
 from resources.asn1utils import get_all_asn1_named_value_names, get_set_bitstring_names, try_decode_pyasn1
 from resources.certextractutils import get_extension
 from resources.convertutils import pyasn1_time_obj_to_py_datetime, str_to_bytes
@@ -1644,6 +1646,48 @@ def prepare_private_key_possession_statement(
         statement["cert"] = signer_cert
 
     return statement
+
+
+@keyword(name="Prepare PrivateKeyPossessionStatement Attribute")
+def prepare_private_key_possession_statement_attribute(  # noqa D417 undocumented-param
+    signer_cert: Optional[rfc9480.CMPCertificate] = None,
+    issuer_and_serial: Optional[rfc5652.IssuerAndSerialNumber] = None,
+    include_cert: bool = True,
+) -> rfc5652.Attribute:
+    """Prepare the `privateKeyPossessionStatement` attribute for a CSR.
+
+    Prepare a `privateKeyPossessionStatement` attribute to include in a CSR, indicating possession of the private key
+    corresponding to the public key in the certificate. The statement can include the signer's certificate and
+    IssuerAndSerialNumber structure, with options to modify certain fields for testing purposes.
+
+    Arguments:
+    ---------
+    - `signer_cert`: The signer's certificate to include in the statement. Defaults to `None`.
+    - `issuer_and_serial`: An optional `IssuerAndSerialNumber` structure. If not provided, it will be created from the
+    `signer_cert`. Defaults to `None`.
+    - `include_cert`: Whether to include the signer's certificate in the statement. Defaults to `True`.
+
+    Returns:
+    -------
+    - The populated `Attribute` structure representing the `privateKeyPossessionStatement`.
+
+    Raises:
+    ------
+    - `ValueError`: If neither `signer_cert` nor `issuer_and_serial` is provided.
+
+    Examples:
+    --------
+    | ${attr}= | Prepare PrivateKeyPossessionStatement Attribute | signer_cert=${cert} |
+    | ${attr}= | Prepare PrivateKeyPossessionStatement Attribute | issuer_and_serial=${ias} |
+
+    """
+    statement = prepare_private_key_possession_statement(
+        signer_cert=signer_cert,
+        issuer_and_serial=issuer_and_serial,
+        include_cert=include_cert,
+    )
+
+    return prepare_single_value_attr(oidutils.ID_AT_STATEMENT_OF_POSSESSION, statement)
 
 
 # TODO add function to prepare RelativeDistinguishedName structure
