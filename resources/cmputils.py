@@ -26,6 +26,7 @@ from pyasn1_alt_modules import (
     rfc4210,
     rfc4211,
     rfc5280,
+    rfc5652,
     rfc6402,
     rfc9480,
 )
@@ -49,7 +50,13 @@ from resources import (
     protectionutils,
     utils,
 )
-from resources.asn1_structures import CertProfileValueAsn1, KemCiphertextInfoAsn1, PKIMessagesTMP, PKIMessageTMP
+from resources.asn1_structures import (
+    CertProfileValueAsn1,
+    KemCiphertextInfoAsn1,
+    PKIMessagesTMP,
+    PKIMessageTMP,
+    PrivateKeyPossessionStatement,
+)
 from resources.asn1utils import try_decode_pyasn1
 from resources.convertutils import copy_asn1_certificate, str_to_bytes
 from resources.exceptions import BadAsn1Data, BadCertTemplate, BadDataFormat, BadRequest
@@ -1747,6 +1754,28 @@ def validate_reg_info_utf8_pairs(  # noqa D417 undocumented-param
         return _parse_utf8_pairs(utf8_pairs_out)
     except Exception as e:
         raise BadAsn1Data(f"Failed to decode/unquote UTF8Pairs: {e}") from e
+
+
+def _find_cert_from_issuer_and_serial_number(
+    signer: rfc5652.IssuerAndSerialNumber,
+    certs: List[rfc9480.CMPCertificate],
+) -> Optional[rfc9480.CMPCertificate]:
+    """Find the certificate matching the issuer and serial number.
+
+    :param signer: The GeneralName of the signer.
+    :param certs: The list of certificates to search.
+    :return: The matching certificate if found, otherwise `None`.
+    """
+    issuer_name = signer["issuer"]
+    serial_number = signer["serialNumber"]
+
+    for cert in certs:
+        cert_issuer = cert["tbsCertificate"]["issuer"]
+        cert_serial_number = cert["tbsCertificate"]["serialNumber"]
+        if issuer_name == cert_issuer and serial_number == cert_serial_number:
+            return cert
+
+    return None
 
 
 @not_keyword
