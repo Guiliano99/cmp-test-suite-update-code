@@ -2203,6 +2203,21 @@ def verify_csr_signature(  # noqa: D417 Missing argument descriptions in the doc
         raise BadPOP("The signature verification failed.") from e
 
 
+def _get_cert_from_possession_statement(csr: rfc6402.CertificationRequest) -> rfc5280.Certificate:
+    """Retrieve the certificate from the PrivateKeyPossessionStatement in the CSR.
+
+    :param csr: The CertificationRequest object containing the possession statement.
+    :return: The certificate included in the possession statement.
+    :raises ValueError: If the possession statement attribute is missing or does not contain a certificate.
+    """
+    priv_obj = _get_private_key_possession_statement(csr)
+
+    if not priv_obj["cert"].isValue:
+        raise BadRequest("Possession Statement Attribute does not contain a certificate")
+
+    return priv_obj["cert"]
+
+
 def _write_temp_cert(cert_to_write: rfc9480.CMPCertificate) -> str:
     """Write a certificate object to a temporary PEM file.
 
