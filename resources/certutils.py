@@ -29,7 +29,7 @@ from pkilint.pkix import certificate, extension, name
 from pkilint.validation import ValidationFindingSeverity
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import univ
-from pyasn1_alt_modules import rfc5280, rfc6402, rfc9480
+from pyasn1_alt_modules import rfc5280, rfc6402, rfc9480, rfc9883
 from robot.api.deco import keyword, not_keyword
 
 from pq_logic.keys.abstract_pq import PQSignaturePublicKey
@@ -51,11 +51,13 @@ from resources import (
     utils,
 )
 from resources.asn1_structures import PKIMessageTMP
+from resources.asn1utils import try_decode_pyasn1
 from resources.convertutils import ensure_is_kem_pub_key, ensure_is_verify_key
 from resources.exceptions import (
     BadAsn1Data,
     BadKeyUsage,
     BadPOP,
+    BadRequest,
     BadSigAlgID,
     CertRevoked,
     SignerNotTrusted,
@@ -2205,6 +2207,50 @@ def verify_csr_signature(  # noqa: D417 Missing argument descriptions in the doc
         )
     except InvalidSignature as e:
         raise BadPOP("The signature verification failed.") from e
+
+
+def _get_private_key_possession_statement(csr: rfc6402.CertificationRequest) -> rfc9883.PrivateKeyPossessionStatement:
+    """Retrieve the PrivateKeyPossessionStatement from the CSR.
+
+    :param csr: The CertificationRequest object containing the possession statement.
+    :return: The PrivateKeyPossessionStatement object.
+    :raises ValueError: If the possession statement attribute is missing.
+    """
+    csr_obj, _ = decoder.decode(encoder.encode(csr), asn1Spec=rfc6402.CertificationRequest())
+    attrs = csr_obj["certificationRequestInfo"]["attributes"]
+
+    value = None
+    for attr in attrs:
+        if attr["attrType"] == rfc9883.id_statementOfPossession:
+            if len(attr["attrValues"]) == 0:
+                raise ValueError("Possession Statement Attribute has no values")
+            if len(attr["attrValues"]) > 1:
+                raise ValueError("Possession Statement Attribute has multiple values")
+            value = attr["attrValues"][0]
+
+    if value is None:
+        raise ValueError("Possession Statement Attribute not found in CSR")
+
+    priv_obj, remainder = try_decode_pyasn1(value, rfc9883.PrivateKeyPossessionStatement())  # type: rfc9883.PrivateKeyPossessionStatement, bytes
+    if remainder != b"":
+        raise BadAsn1Data("PrivateKeyPossessionStatement")
+
+    return priv_obj
+
+
+def _get_cert_from_possession_statement(csr: rfc6402.CertificationRequest) -> rfc5280.Certificate:
+    """Retrieve the certificate from the PrivateKeyPossessionStatement in the CSR.
+
+    :param csr: The CertificationRequest object containing the possession statement.
+    :return: The certificate included in the possession statement.
+    :raises ValueError: If the possession statement attribute is missing or does not contain a certificate.
+    """
+    priv_obj = _get_private_key_possession_statement(csr)
+
+    if not priv_obj["cert"].isValue:
+        raise BadRequest("Possession Statement Attribute does not contain a certificate")
+
+    return priv_obj["cert"]
 
 
 def _write_temp_cert(cert_to_write: rfc9480.CMPCertificate) -> str:
