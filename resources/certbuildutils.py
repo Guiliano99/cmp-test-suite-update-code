@@ -1604,6 +1604,48 @@ def prepare_single_value_attr(attr_type: univ.ObjectIdentifier, attr_value: Any)
     return attr
 
 
+@not_keyword
+def prepare_private_key_possession_statement(
+    signer_cert: Optional[rfc9480.CMPCertificate] = None,
+    issuer_and_serial: Optional[rfc5652.IssuerAndSerialNumber] = None,
+    include_cert: bool = True,
+    modify_serial_number: bool = False,
+    modify_issuer: bool = False,
+    issuer: Optional[str] = None,
+    serial_number: Optional[Union[str, int]] = None,
+) -> PrivateKeyPossessionStatement:
+    """Prepare the RFC 9883 `PrivateKeyPossessionStatement` structure.
+
+    :param signer_cert: The signer's certificate to include in the statement. Defaults to `None`.
+    :param issuer_and_serial: An optional `IssuerAndSerialNumber` structure. If not provided, it \
+    will be created from the `signer_cert`, `issuer`, and `serial_number` parameters.
+    :param include_cert: Whether to include the signer's certificate in the statement. Defaults to `True`.
+    :param modify_serial_number: Whether to modify the serial number for testing purposes. Defaults to `False`.
+    :param modify_issuer: Whether to modify the issuer for testing purposes. Defaults to `False`.
+    :param issuer: The issuer name in OpenSSL notation, used if `issuer_and_serial` is not provided. Defaults to `None`.
+    :param serial_number: The serial number, used if `issuer_and_serial` is not provided. Defaults to `None`.
+    :return: The populated `PrivateKeyPossessionStatement` structure.
+    """
+    if issuer_and_serial is None:
+        if signer_cert is None and (issuer is None or serial_number is None):
+            raise ValueError("Either `signer_cert` or both `issuer` and `serial_number` must be provided.")
+        issuer_and_serial = prepare_issuer_and_serial_number(
+            cert=signer_cert,
+            modify_serial_number=modify_serial_number,
+            modify_issuer=modify_issuer,
+            issuer=issuer,
+            serial_number=serial_number,
+        )
+
+    statement = PrivateKeyPossessionStatement()
+    statement["signer"] = issuer_and_serial
+
+    if include_cert and signer_cert is not None:
+        statement["cert"] = signer_cert
+
+    return statement
+
+
 # TODO add function to prepare RelativeDistinguishedName structure
 
 
