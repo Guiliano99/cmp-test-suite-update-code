@@ -2203,6 +2203,35 @@ def verify_csr_signature(  # noqa: D417 Missing argument descriptions in the doc
         raise BadPOP("The signature verification failed.") from e
 
 
+def _get_private_key_possession_statement(csr: rfc6402.CertificationRequest) -> PrivateKeyPossessionStatement:
+    """Retrieve the PrivateKeyPossessionStatement from the CSR.
+
+    :param csr: The CertificationRequest object containing the possession statement.
+    :return: The PrivateKeyPossessionStatement object.
+    :raises ValueError: If the possession statement attribute is missing.
+    """
+    csr_obj, _ = decoder.decode(encoder.encode(csr), asn1Spec=rfc6402.CertificationRequest())
+    attrs = csr_obj["certificationRequestInfo"]["attributes"]
+
+    value = None
+    for attr in attrs:
+        if attr["attrType"] == oidutils.ID_AT_STATEMENT_OF_POSSESSION:
+            if len(attr["attrValues"]) == 0:
+                raise ValueError("Possession Statement Attribute has no values")
+            if len(attr["attrValues"]) > 1:
+                raise ValueError("Possession Statement Attribute has multiple values")
+            value = attr["attrValues"][0]
+
+    if value is None:
+        raise ValueError("Possession Statement Attribute not found in CSR")
+
+    priv_obj, remainder = try_decode_pyasn1(value, PrivateKeyPossessionStatement())  # type: PrivateKeyPossessionStatement, bytes
+    if remainder != b"":
+        raise BadAsn1Data("PrivateKeyPossessionStatement")
+
+    return priv_obj
+
+
 def _get_cert_from_possession_statement(csr: rfc6402.CertificationRequest) -> rfc5280.Certificate:
     """Retrieve the certificate from the PrivateKeyPossessionStatement in the CSR.
 
