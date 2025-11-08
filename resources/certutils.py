@@ -2247,6 +2247,48 @@ def _get_cert_from_possession_statement(csr: rfc6402.CertificationRequest) -> rf
     return priv_obj["cert"]
 
 
+@keyword(name="Validate PrivateKeyPossessionStatement Signature")
+def verify_possession_statement_signature(  # noqa: D417 Missing argument descriptions in the docstring
+    csr: rfc6402.CertificationRequest, signature_cert: Optional[rfc9480.CMPCertificate] = None
+) -> None:
+    """Verify the signature of a PrivateKeyPossessionStatement in a CSR according to RFC 9883.
+
+    Arguments:
+    ---------
+    - `csr`: The CertificationRequest object containing the possession statement.
+    - `signature_cert`: Optional certificate to use for signature verification. If not provided,
+      the certificate will be extracted from the possession statement.
+
+    Raises:
+    ------
+    - `BadAsn1Data`: If the CSR cannot be decoded.
+    - `ValueError`: If the possession statement attribute is missing or invalid.
+    - `BadPOP`: If the signature verification fails.
+
+    Examples:
+    --------
+    | Validate PrivateKeyPossessionStatement Signature | ${csr} |
+    | Validate PrivateKeyPossessionStatement Signature | ${csr} | ${signature_cert} |
+
+    """
+    if signature_cert is None:
+        signature_cert = _get_cert_from_possession_statement(csr)
+
+    der_data = encoder.encode(signature_cert["tbsCertificate"]["subjectPublicKeyInfo"])
+    public_key_sig = load_public_key_from_der(der_data)
+    verify_key = ensure_is_verify_key(public_key_sig)
+
+    signature = csr["signature"].asOctets()
+    alg_id = csr["signatureAlgorithm"]
+    data = encoder.encode(csr["certificationRequestInfo"])
+    try:
+        protectionutils.verify_signature_with_alg_id(
+            public_key=verify_key, alg_id=alg_id, signature=signature, data=data
+        )
+    except InvalidSignature as e:
+        raise BadPOP("The signature verification failed.") from e
+
+
 def _write_temp_cert(cert_to_write: rfc9480.CMPCertificate) -> str:
     """Write a certificate object to a temporary PEM file.
 
