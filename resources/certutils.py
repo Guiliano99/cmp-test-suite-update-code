@@ -45,16 +45,18 @@ from resources import (
     cryptoutils,
     keyutils,
     oid_mapping,
+    oidutils,
     protectionutils,
     typingutils,
     utils,
 )
-from resources.asn1_structures import PKIMessageTMP
+from resources.asn1_structures import PKIMessageTMP, PrivateKeyPossessionStatement
 from resources.convertutils import ensure_is_kem_pub_key, ensure_is_verify_key
 from resources.exceptions import (
     BadAsn1Data,
     BadKeyUsage,
     BadPOP,
+    BadRequest,
     BadSigAlgID,
     CertRevoked,
     SignerNotTrusted,
@@ -2225,7 +2227,7 @@ def _get_private_key_possession_statement(csr: rfc6402.CertificationRequest) -> 
     if value is None:
         raise ValueError("Possession Statement Attribute not found in CSR")
 
-    priv_obj, remainder = try_decode_pyasn1(value, PrivateKeyPossessionStatement())  # type: PrivateKeyPossessionStatement, bytes
+    priv_obj, remainder = asn1utils.try_decode_pyasn1(value, PrivateKeyPossessionStatement())  # type: PrivateKeyPossessionStatement, bytes
     if remainder != b"":
         raise BadAsn1Data("PrivateKeyPossessionStatement")
 
