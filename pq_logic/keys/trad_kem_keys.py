@@ -47,8 +47,14 @@ class RSAEncapKey(TradKEMPublicKey):
         :param spki: The SubjectPublicKeyInfo bytes.
         :return: The RSAEncapKey instance.
         """
-        spki["algorithm"]["algorithm"] = rfc9481.rsaEncryption
+        # First, needs to modify the algorithm OID to rsaEncryption to load the key,
+        # this is needed, to not modify the original `SubjectPublicKeyInfo` structure.
         der_data = encoder.encode(spki)
+        obj, _ = decoder.decode(der_data, asn1Spec=rfc5280.SubjectPublicKeyInfo())
+        obj["algorithm"]["algorithm"] = rfc9481.rsaEncryption
+        obj["algorithm"]["parameters"] = univ.Null("")
+
+        der_data = encoder.encode(obj)
         public_key = serialization.load_der_public_key(der_data)
 
         if not isinstance(public_key, rsa.RSAPublicKey):
