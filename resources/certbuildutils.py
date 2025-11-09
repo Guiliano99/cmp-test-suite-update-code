@@ -1605,6 +1605,20 @@ def prepare_single_value_attr(attr_type: univ.ObjectIdentifier, attr_value: Any)
     attr["attrValues"][0] = encoder.encode(attr_value)
     return attr
 
+@not_keyword
+def csr_contains_attribute(
+    csr: rfc6402.CertificationRequest, attr_oid: univ.ObjectIdentifier
+) -> bool:
+    """Check if a CSR contains an attribute with the specified OID.
+
+    :param csr: The `CertificationRequest` object to check.
+    :param attr_oid: The Object Identifier (OID) of the attribute to look for.
+    :return: `True` if the attribute is found, `False` otherwise.
+    """
+    for attribute in csr["certificationRequestInfo"]["attributes"]:
+        if attribute["attrType"] == attr_oid:
+            return True
+    return False
 
 @not_keyword
 def prepare_private_key_possession_statement(
