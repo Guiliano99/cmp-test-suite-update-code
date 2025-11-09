@@ -1755,8 +1755,8 @@ def validate_reg_info_utf8_pairs(  # noqa D417 undocumented-param
     except Exception as e:
         raise BadAsn1Data(f"Failed to decode/unquote UTF8Pairs: {e}") from e
 
-
-def _find_cert_from_issuer_and_serial_number(
+@not_keyword
+def find_cert_from_issuer_and_serial_number(
     signer: rfc5652.IssuerAndSerialNumber,
     certs: List[rfc9480.CMPCertificate],
 ) -> Optional[rfc9480.CMPCertificate]:
