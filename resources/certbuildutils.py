@@ -1574,6 +1574,20 @@ def prepare_single_value_attr(attr_type: univ.ObjectIdentifier, attr_value: Any)
     return attr
 
 
+@not_keyword
+def csr_contains_attribute(csr: rfc6402.CertificationRequest, attr_oid: univ.ObjectIdentifier) -> bool:
+    """Check if a CSR contains an attribute with the specified OID.
+
+    :param csr: The `CertificationRequest` object to check.
+    :param attr_oid: The Object Identifier (OID) of the attribute to look for.
+    :return: `True` if the attribute is found, `False` otherwise.
+    """
+    for attribute in csr["certificationRequestInfo"]["attributes"]:
+        if attribute["attrType"] == attr_oid:
+            return True
+    return False
+
+
 # TODO add function to prepare RelativeDistinguishedName structure
 
 
