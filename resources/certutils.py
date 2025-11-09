@@ -51,6 +51,7 @@ from resources import (
     utils,
 )
 from resources.asn1_structures import PKIMessageTMP, PrivateKeyPossessionStatement
+from resources.cmputils import find_cert_from_issuer_and_serial_number
 from resources.convertutils import ensure_is_kem_pub_key, ensure_is_verify_key
 from resources.exceptions import (
     BadAsn1Data,
@@ -2205,7 +2206,7 @@ def verify_csr_signature(  # noqa: D417 Missing argument descriptions in the doc
         raise BadPOP("The signature verification failed.") from e
 
 
-def _get_private_key_possession_statement(csr: rfc6402.CertificationRequest) -> PrivateKeyPossessionStatement:
+def _get_csr_private_key_possession_statement(csr: rfc6402.CertificationRequest) -> PrivateKeyPossessionStatement:
     """Retrieve the PrivateKeyPossessionStatement from the CSR.
 
     :param csr: The CertificationRequest object containing the possession statement.
@@ -2241,7 +2242,7 @@ def _get_cert_from_possession_statement(csr: rfc6402.CertificationRequest) -> rf
     :return: The certificate included in the possession statement.
     :raises ValueError: If the possession statement attribute is missing or does not contain a certificate.
     """
-    priv_obj = _get_private_key_possession_statement(csr)
+    priv_obj = _get_csr_private_key_possession_statement(csr)
 
     if not priv_obj["cert"].isValue:
         raise BadRequest("Possession Statement Attribute does not contain a certificate")
@@ -2249,7 +2250,7 @@ def _get_cert_from_possession_statement(csr: rfc6402.CertificationRequest) -> rf
     return priv_obj["cert"]
 
 
-@keyword(name="Validate PrivateKeyPossessionStatement Signature")
+@keyword(name="Verify PrivateKeyPossessionStatement Signature")
 def verify_possession_statement_signature(  # noqa: D417 Missing argument descriptions in the docstring
     csr: rfc6402.CertificationRequest, signature_cert: Optional[rfc9480.CMPCertificate] = None
 ) -> None:
@@ -2269,8 +2270,8 @@ def verify_possession_statement_signature(  # noqa: D417 Missing argument descri
 
     Examples:
     --------
-    | Validate PrivateKeyPossessionStatement Signature | ${csr} |
-    | Validate PrivateKeyPossessionStatement Signature | ${csr} | ${signature_cert} |
+    | Verify PrivateKeyPossessionStatement Signature | ${csr} |
+    | Verify PrivateKeyPossessionStatement Signature | ${csr} | ${signature_cert} |
 
     """
     if signature_cert is None:
@@ -2278,7 +2279,10 @@ def verify_possession_statement_signature(  # noqa: D417 Missing argument descri
 
     der_data = encoder.encode(signature_cert["tbsCertificate"]["subjectPublicKeyInfo"])
     public_key_sig = load_public_key_from_der(der_data)
-    verify_key = ensure_is_verify_key(public_key_sig)
+    try:
+        verify_key = ensure_is_verify_key(public_key_sig)
+    except ValueError as e:
+        raise BadRequest(f"Unsupported public key type in possession statement certificate. Got: type={type(public_key_sig)}") from e
 
     signature = csr["signature"].asOctets()
     alg_id = csr["signatureAlgorithm"]
