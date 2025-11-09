@@ -1,13 +1,13 @@
+import os
 import unittest
 
 from pyasn1.codec.der import encoder
-
-from resources import cmputils, prepareutils, convertutils
-from resources.keyutils import load_private_key_from_file
-from resources.asn1utils import try_decode_pyasn1
+from pyasn1.type import tag
 from pyasn1_alt_modules import rfc4211
-from resources import prepare_alg_ids
-import os
+
+from resources import cmputils, convertutils, prepare_alg_ids, prepareutils
+from resources.asn1utils import try_decode_pyasn1
+from resources.keyutils import load_private_key_from_file
 
 
 class TestPreparePopoSigningKeyInput(unittest.TestCase):
@@ -44,21 +44,21 @@ class TestPreparePopoSigningKeyInput(unittest.TestCase):
         )
 
         der_data = encoder.encode(popo_ski)
-        decoded_popo_ski, rest = try_decode_pyasn1(der_data, rfc4211.POPOSigningKeyInput())
+        decoded_popo_ski, rest = try_decode_pyasn1(der_data, rfc4211.POPOSigningKeyInput().subtype(
+            implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)))
         self.assertEqual(rest, b"")
         self.assertEqual(encoder.encode(decoded_popo_ski), der_data)
 
     def test_prepare_poposigningkeyinput_pkmac_without_sender(self):
-        """
-        GIVEN a public key and PKMAC algorithm and value but no sender
-        WHEN preparing the POPOSigningKeyInput,
+        """GIVEN a public key and PKMAC algorithm/value but no sender
+        WHEN preparing the POPOSigningKeyInput
         THEN authInfo contains a populated publicKeyMAC and publicKey matches the provided key.
         """
         alg_id = prepare_alg_ids.prepare_alg_id("hmac-sha256")
         mac_bytes = os.urandom(10)
-        popo_ski = cmputils.prepare_poposigningkeyinput(public_key=self.rsa_pub,
-                                                        pkmac_value_alg_id=alg_id,
-                                                        pkmac_value=mac_bytes)
+        popo_ski = cmputils.prepare_poposigningkeyinput(
+            public_key=self.rsa_pub, pkmac_value_alg_id=alg_id, pkmac_value=mac_bytes
+        )
 
         self.assertIsInstance(popo_ski, rfc4211.POPOSigningKeyInput)
         self.assertTrue(popo_ski["authInfo"]["publicKeyMAC"].isValue)
@@ -70,9 +70,11 @@ class TestPreparePopoSigningKeyInput(unittest.TestCase):
         self.assertEqual(encoder.encode(popo_ski["publicKey"]), encoder.encode(expected_spki))
         # Round-trip DER encode/decode
         der_data = encoder.encode(popo_ski)
-        decoded, rest = try_decode_pyasn1(der_data, rfc4211.POPOSigningKeyInput())
+        decoded, rest = try_decode_pyasn1(der_data, rfc4211.POPOSigningKeyInput().subtype(
+            implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)))
         self.assertEqual(rest, b"")
         self.assertEqual(encoder.encode(decoded), der_data)
+
 
 if __name__ == "__main__":
     unittest.main()
