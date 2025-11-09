@@ -8,7 +8,7 @@ Which can be used to verify if the server returned the correct status, `grantedW
 """
 
 import logging
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from pyasn1.codec.der import encoder
@@ -441,6 +441,40 @@ def compare_alg_id_without_tag(  # noqa D417 undocumented-param
         return params_first == params_second
 
     return False
+
+
+@keyword(name="Compare SubjectPublicKeyInfo Without Tag")
+def compare_spki_without_tag(  # noqa D417 undocumented-params
+    first: rfc5280.SubjectPublicKeyInfo, second: rfc5280.SubjectPublicKeyInfo
+) -> Tuple[bool, str]:
+    """Compare `SubjectPublicKeyInfo` without considering the tag.
+
+    Arguments:
+    ---------
+        - `first`: The first `SubjectPublicKeyInfo` to compare.
+        - `second`: The second `SubjectPublicKeyInfo` to compare.
+
+    Returns:
+    -------
+        - `True` if both the algorithm and subjectPublicKey match, `False` otherwise.
+        - An error message indicating the reason for mismatch, if any, else an empty string.
+
+    Examples:
+    --------
+    | ${result}= | Compare SubjectPublicKeyInfo Without Tag | ${first} | ${second} |
+
+    """
+    _may_name_first = may_return_oid_to_name(first["algorithm"]["algorithm"])
+    _may_name_second = may_return_oid_to_name(second["algorithm"]["algorithm"])
+    err_msg = f"SubjectPublicKeyInfo mismatch for algorithm {_may_name_first} and {_may_name_second}."
+    if not compare_alg_id_without_tag(first["algorithm"], second["algorithm"]):
+        return False, err_msg
+
+    if first["subjectPublicKey"].asOctets() != second["subjectPublicKey"].asOctets():
+        err_msg += " SubjectPublicKey bitstring does not match."
+        return False, err_msg
+
+    return True, ""
 
 
 @keyword(name="Compare GeneralName And Name")
