@@ -1805,12 +1805,14 @@ def validate_reg_info_field(
 
     return alt_req, utf8_pairs
 
+
 @keyword(name="Prepare POPOSigningKeyInput")
-def prepare_poposigningkeyinput(public_key: PublicKey,
-                                sender: Optional[str] = None,
-                                pkmac_value_alg_id: Optional[rfc9480.AlgorithmIdentifier] = None,
-                                pkmac_value: Optional[bytes] = None
-                                ) -> rfc4211.POPOSigningKeyInput:
+def prepare_poposigningkeyinput(  # noqa D417 undocumented-params
+    public_key: PublicKey,
+    sender: Optional[str] = None,
+    pkmac_value_alg_id: Optional[rfc9480.AlgorithmIdentifier] = None,
+    pkmac_value: Optional[bytes] = None,
+) -> rfc4211.POPOSigningKeyInput:
     """Prepare the POPOSigningKeyInput structure.
 
     Arguments:
@@ -1827,21 +1829,25 @@ def prepare_poposigningkeyinput(public_key: PublicKey,
     Examples:
     --------
     | ${popo_signing_key_input}= | Prepare POPOSigningKeyInput | sender=${sender} | public_key=${public_key} |
-    | ${popo_signing_key_input}= | Prepare POPOSigningKeyInput | public_key=${public_key} | pkmac_value_alg_id=${alg_id} | pkmac_value=${pkmac} |
+    | ${popo_signing_key_input}= | Prepare POPOSigningKeyInput | public_key=${public_key} | \
+    pkmac_value_alg_id=${alg_id} | pkmac_value=${pkmac} |
 
     """
-
     if sender is None and (pkmac_value is None or pkmac_value_alg_id is None):
         raise ValueError("Either `sender` or both `pkmac_value` and `pkmac_value_alg_id` must be provided.")
 
     if public_key is None:
         raise ValueError("The `public_key` must be provided to prepare the `POPOSigningKeyInput`.")
 
-    popo_signing_key_input = rfc4211.POPOSigningKeyInput()
+    popo_signing_key_input = rfc4211.POPOSigningKeyInput().subtype(
+        implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)
+    )
 
     if sender is not None:
         name_obj = prepareutils.prepare_name(sender, 4)
-        general_name = rfc9480.GeneralName().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0))
+        general_name = rfc9480.GeneralName().subtype(
+            implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)
+        )
         general_name = general_name.setComponentByName("directoryName", name_obj)
         popo_signing_key_input["authInfo"]["sender"] = general_name
     else:
@@ -1889,7 +1895,10 @@ def _prepare_poposigningkey(
             sender_out = [f"{x}={y}" for x, y in sender.items()]
             sender = ",".join(sender_out)
 
-        popo_key["poposkInput"] = poposk_input or prepare_poposigningkeyinput(sender=sender, public_key=signing_key.public_key())
+        poposk_input = poposk_input or prepare_poposigningkeyinput(sender=sender, public_key=signing_key.public_key())
+
+    if poposk_input is not None:
+        popo_key["poposkInput"] = poposk_input
 
     if not (signing_key or alg_oid):
         raise ValueError(
@@ -1919,6 +1928,7 @@ def prepare_popo(  # noqa D417 undocumented-param
     sender: Optional[str] = None,
     use_encr_cert: bool = True,
     use_key_enc: Optional[bool] = True,
+    poposk_input: Optional[rfc4211.POPOSigningKeyInput] = None,
 ) -> rfc4211.ProofOfPossession:
     """Prepare the `ProofOfPossession` (POPO) structure for a certificate request.
 
@@ -1943,6 +1953,7 @@ def prepare_popo(  # noqa D417 undocumented-param
         (which *MUST* be absent.)
         - `use_encr_cert`: Indicates if the certificate request is for a keyAgreement or keyEncipherment key.
         _ `use_key_enc`: Indicates if the certificate request is for a keyEncipherment key.
+        - `poposk_input`: The `POPOSigningKeyInput` structure to use directly. Defaults to `None`.
 
     Returns:
     -------
@@ -1975,7 +1986,12 @@ def prepare_popo(  # noqa D417 undocumented-param
         return popo
 
     popo_key = _prepare_poposigningkey(
-        alg_oid=alg_oid, signing_key=signing_key, sender=sender, signature=signature, hash_alg=hash_alg
+        alg_oid=alg_oid,
+        signing_key=signing_key,
+        sender=sender,
+        signature=signature,
+        hash_alg=hash_alg,
+        poposk_input=poposk_input,
     )
     popo["signature"] = popo_key
     return popo
@@ -2108,6 +2124,8 @@ def prepare_signature_popo(  # noqa: D417 undocumented-param
     use_rsa_pss: bool = False,
     add_params_rand_val: bool = False,
     sender: Optional[str] = None,
+    poposk_input: Optional[rfc4211.POPOSigningKeyInput] = None,
+    sign_poposk_input: bool = False,
 ) -> rfc4211.ProofOfPossession:
     """Prepare Proof-of-Possession for a certificate request.
 
@@ -2122,6 +2140,9 @@ def prepare_signature_popo(  # noqa: D417 undocumented-param
         - `add_params_rand_val`: If `True`, the random value will be added to the parameters field of the signature
         alg id. Defaults to `False`.
         - `sender`: The sender information for `POPOSigningKeyInput`, which **MUST** be absent. Defaults to `None`.
+        - `poposk_input`: The `POPOSigningKeyInput` structure to use directly. Defaults to `None`.
+        - `sign_poposk_input`: If `True`, the `poposk_input` will be signed instead of the full `cert_request`. Relevant
+        for RFC 9883. Defaults to `False`.
 
     Returns:
     -------
@@ -2133,6 +2154,14 @@ def prepare_signature_popo(  # noqa: D417 undocumented-param
 
     """
     der_cert_request = encoder.encode(cert_request)
+    if sender is not None:
+        poposk_input = poposk_input or prepare_poposigningkeyinput(sender=sender, public_key=signing_key.public_key())
+
+    if sign_poposk_input:
+        if poposk_input is None:
+            raise ValueError("`poposk_input` must be provided when `sign_poposk_input` is True.")
+        der_cert_request = encoder.encode(poposk_input)
+
     signature = cryptoutils.sign_data(
         data=der_cert_request,
         key=signing_key,
@@ -2147,10 +2176,6 @@ def prepare_signature_popo(  # noqa: D417 undocumented-param
         use_rsa_pss=use_rsa_pss,
         add_params_rand_val=add_params_rand_val,
     )
-
-    poposk_input = None
-    if sender is not None:
-        poposk_input = prepare_poposigningkeyinput(sender=sender, public_key=signing_key.public_key())
 
     popo = prepare_sig_popo_structure(
         alg_id=alg_id,
