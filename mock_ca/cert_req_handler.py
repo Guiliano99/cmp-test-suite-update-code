@@ -29,7 +29,7 @@ from resources.ca_ra_utils import (
     set_ca_header_fields,
     validate_cert_req_id_nums,
 )
-from resources.certbuildutils import prepare_extensions
+from resources.certbuildutils import csr_contains_attribute, prepare_extensions
 from resources.certutils import (
     build_cmp_chain_from_pkimessage,
     check_is_cert_signer,
@@ -47,11 +47,13 @@ from resources.checkutils import (
     validate_wrong_integrity,
 )
 from resources.cmputils import (
+    add_text_to_pkimessage_statusstring,
     build_cmp_error_message,
     find_oid_in_general_info,
     get_cmp_message_type,
     get_pkistatusinfo,
     patch_generalinfo,
+    validate_csr_private_key_pop_statement,
 )
 from resources.convertutils import ensure_is_verify_key
 from resources.copyasn1utils import copy_name
@@ -74,6 +76,7 @@ from resources.exceptions import (
     WrongIntegrity,
 )
 from resources.keyutils import load_public_key_from_cert_template
+from resources.oidutils import ID_AT_STATEMENT_OF_POSSESSION
 from resources.protectionutils import (
     get_protection_type_from_pkimessage,
     validate_orig_pkimessage,
@@ -425,6 +428,9 @@ class CertReqHandler:
         :param verify_ra_verified: If the `raVerified` fields should be validated. Defaults to `True`
         :return: The response `PKIMessage`.
         """
+        if csr_contains_attribute(pki_message["body"]["p10cr"], ID_AT_STATEMENT_OF_POSSESSION):
+            return self._process_rfc9883_p10cr(pki_message, verify_ra_verified=verify_ra_verified)
+
         logging.debug("CertReqHandler: Processing P10CR message")
         self.state.cert_state_db.check_request_for_compromised_key(pki_message)
 
@@ -444,6 +450,50 @@ class CertReqHandler:
             include_ski=True,
             verify_ra_verified=verify_ra_verified,
         )
+        return self.process_after_request(
+            request=pki_message,
+            response=response,
+            certs=[cert],
+        )
+
+    def _process_rfc9883_p10cr(self, pki_message: PKIMessageTMP, verify_ra_verified: bool = True):
+        """Process an RFC 9883 CSR PKIMessage.
+
+        :param pki_message: The received `PKIMessage`.
+        :param verify_ra_verified: If the `raVerified` fields should be validated. Defaults to `True`
+        :return: The response `PKIMessage`.
+        """
+        logging.debug("CertReqHandler: Processing RFC 9883 P10CR message")
+        self.state.cert_state_db.check_request_for_compromised_key(pki_message)
+
+        for_mac = self._get_for_mac(request=pki_message)
+
+        signer_certificate = validate_csr_private_key_pop_statement(
+            csr=pki_message["body"]["p10cr"],
+            signer_cert=self.state.issued_certs,
+            strict_subject_check=self._rfc9883_validation_config.private_key_possession_strict_subject_check,
+            allow_different_san=self._rfc9883_validation_config.private_key_possession_allow_diff_san,
+        )
+        # TODO validate signer certificate with OpenSSL
+
+        response, cert = build_cp_from_p10cr(
+            request=pki_message,
+            set_header_fields=True,
+            ca_key=self.ca_key,
+            ca_cert=self.ca_cert,
+            implicit_confirm=False,
+            extensions=self.extensions,
+            sender=self.sender,
+            for_mac=for_mac,
+            include_csr_extensions=False,
+            include_ski=True,
+            verify_ra_verified=verify_ra_verified,
+        )
+        response = add_text_to_pkimessage_statusstring(
+            pki_message=response,
+            text="Processed RFC 9883 PrivateKeyPossessionStatement request.",
+        )
+
         return self.process_after_request(
             request=pki_message,
             response=response,
@@ -497,7 +547,6 @@ class CertReqHandler:
 
         else:
             verify_hybrid_pkimessage_protection(pki_message=pki_message)
-
             response, certs = build_kup_from_kur(
                 request=pki_message,
                 implicit_confirm=False,
