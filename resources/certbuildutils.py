@@ -213,7 +213,7 @@ def _parse_common_name(
 @keyword(name="Build CSR")
 def build_csr(  # noqa D417 undocumented-param
     signing_key: SignKey,
-    common_name: Union[str, rfc9480.Name] = "CN=Hans Mustermann",
+    common_name: Union[str, rfc9480.Name, rfc9480.CMPCertificate] = "CN=Hans Mustermann",
     extensions: Optional[rfc9480.Extensions] = None,
     hash_alg: Union[None, str] = "sha256",
     use_rsa_pss: bool = False,
