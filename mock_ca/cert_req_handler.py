@@ -10,6 +10,7 @@ from typing import List, Optional
 from pyasn1.codec.der import encoder
 from pyasn1_alt_modules import rfc9480, rfc9481
 
+from mock_ca.db_config_vars import RFC9883ValidationConfig
 from mock_ca.mock_fun import MockCAState
 from mock_ca.operation_dbs import NonSigningKeyCertsAndKeys, StatefulSigState
 from mock_ca.stfl_validator import STFLPKIMessageValidator
@@ -152,6 +153,11 @@ class CertReqHandler:
             regToken="SuperSecretRegToken",
             authenticator="MaidenName",
         )
+        self._rfc9883_validation_config = RFC9883ValidationConfig(
+            private_key_possession_strict_subject_check=True,
+            private_key_possession_allow_diff_san=False,
+            allow_missing_cert_in_possession_statement=False,
+        )
         self.issuing_params.update(
             {
                 "kga_cert_chain": self.kga_cert_chain,
@@ -163,6 +169,7 @@ class CertReqHandler:
                 "ca_cert": self.ca_cert,
                 "ca_key": self.ca_key,
                 "extra_issuing_data": self.extra_issuing_data,
+                **self._rfc9883_validation_config.to_dict(),
             }
         )
 
