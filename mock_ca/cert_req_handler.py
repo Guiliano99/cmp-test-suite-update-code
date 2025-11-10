@@ -363,6 +363,7 @@ class CertReqHandler:
             implicit_confirm=False,
             verify_ra_verified=verify_ra_verified,
             for_mac=for_mac,
+            issued_certs=self.state.issued_certs,
             **self.issuing_params,
         )
 
@@ -412,6 +413,7 @@ class CertReqHandler:
             extensions=self.extensions,
             sender=self.sender,
             for_mac=for_mac,
+            issued_certs=self.state.issued_certs,
             verify_ra_verified=verify_ra_verified,
         )
 
