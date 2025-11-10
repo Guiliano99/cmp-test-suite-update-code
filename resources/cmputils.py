@@ -2075,6 +2075,36 @@ def validate_private_key_pop_statement_csr(
         raise BadCertTemplate("The CSR public key must not be a signing key.")
 
 
+def _find_and_get_private_key_pop_statement(  # noqa D417 undocumented-param
+    cert_req_msg: rfc4211.CertReqMsg,
+) -> Optional[PrivateKeyPossessionStatement]:
+    """Find adn return the PrivateKeyPossessionStatement inside the CertReqMsg.
+
+    :param cert_req_msg: The CertReqMsg to search.
+    :return: The PrivateKeyPossessionStatement if found, otherwise `None`.
+    """
+    if not cert_req_msg["regInfo"].isValue:
+        return None
+
+    for entry in cert_req_msg["regInfo"]:
+        if entry["type"] == oidutils.ID_REGCTRL_STATEMENT_OF_POSSESSION:
+            if isinstance(entry["value"], PrivateKeyPossessionStatement):
+                return entry["value"]  # type: PrivateKeyPossessionStatement
+            private_key_pop, rest = decoder.decode(
+                entry["value"].asOctets(),  # type: ignore
+                asn1Spec=PrivateKeyPossessionStatement(),
+            )
+            private_key_pop: PrivateKeyPossessionStatement
+            if rest != b"":
+                raise BadAsn1Data(
+                    "The `PrivateKeyPossessionStatement` inside the `regInfo` field contains trailing data.",
+                    overwrite=True,
+                )
+            return private_key_pop
+
+    return None
+
+
 @not_keyword
 def validate_reg_info_field(
     cert_reg_msg: rfc4211.CertReqMsg,
