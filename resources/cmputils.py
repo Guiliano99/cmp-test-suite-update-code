@@ -2280,6 +2280,151 @@ def validate_private_key_pop_statement_cmrf(  # noqa D417 undocumented-params
 
 
 @not_keyword
+def validate_poposk_input_for_rfc9883(
+    poposk_input: rfc4211.POPOSigningKeyInput,
+    cert_template: rfc4211.CertTemplate,
+    signer_cert: rfc9480.CMPCertificate,
+    strict_subject_check: bool = True,
+) -> None:
+    """Validate the POPOSigningKeyInput inside the POPOSigningKey.
+
+    :param poposk_input: The POPOSigningKeyInput to validate.
+    :param cert_template: The CertTemplate containing the public key to validate against.
+    :param signer_cert: The signer's certificate.
+    :param strict_subject_check: Whether the subject must be the same as in the signer certificate. Defaults to `True`.
+    :raises BadRequest: If the POPOSigningKeyInput is invalid.
+    """
+    # Validate sender
+    # RFC 9883 requires sender CHOICE.
+    if not poposk_input["authInfo"]["sender"].isValue:
+        raise BadRequest(
+            "The `sender` field is missing in the `POPOSigningKeyInput`, "
+            "for a CMRF with an `PrivateKeyPossessionStatement`."
+        )
+
+    sender = poposk_input["authInfo"]["sender"]
+    expected_name = signer_cert["tbsCertificate"]["subject"]
+
+    if sender.getName() != "directoryName":
+        # Is not a criteria for matching the sender to the cert subject,
+        # but should be used for better interoperability.
+        raise BadRequest(
+            "The `sender` field in the `POPOSigningKeyInput` must be of "
+            "type `directoryName` for a CMRF with an `PrivateKeyPossessionStatement`."
+        )
+
+    if sender["directoryName"] != expected_name:
+        # SHOULD be set to the subject of the certificate.
+        if strict_subject_check:
+            raise BadRequest(
+                "The `sender` field in the `POPOSigningKeyInput` does not match the signer's certificate subject."
+            )
+        logging.warning(
+            "The `sender` field in the `POPOSigningKeyInput` does not match the signer's certificate subject."
+        )
+
+    # Validate public key
+    # RFC 9883 Section 5: publicKey MUST contain a copy of the public key from certTemplate
+    if not poposk_input["publicKey"].isValue:
+        raise BadRequest("The `publicKey` field is missing in the `POPOSigningKeyInput`.")
+
+    if not cert_template["publicKey"].isValue:
+        raise BadCertTemplate(
+            "The `publicKey` field is missing in the CertTemplate, for `PrivateKeyPossessionStatement` request."
+        )
+
+    public_key_info = poposk_input["publicKey"]
+    cert_temp_public_key = cert_template["publicKey"]
+
+    result, err_msg = compareutils.compare_spki_without_tag(public_key_info, cert_temp_public_key)
+    if not result:
+        raise BadCertTemplate(
+            f"The `publicKey` in the `POPOSigningKeyInput` does not match the CertTemplate public key.\n{err_msg}",
+            failinfo="badCertTemplate,badRequest",
+        )
+
+
+@keyword(name="Validate PrivateKeyPossessionStatement Signature")
+def validate_private_key_pop_statement_popo(  # noqa D417 undocumented-params
+    cert_reg_msg: rfc4211.CertReqMsg,
+    signer_cert: rfc9480.CMPCertificate,
+) -> None:
+    """Validate the POPOSigningKey inside the PrivateKeyPossessionStatement.
+
+    Arguments:
+    ---------
+    - `cert_req_msg`: The CertReqMsg to validate.
+    - `signer_cert`: The signer's certificate.
+
+    Raises:
+    ------
+    - `BadRequest`: If the POPOSigningKey is invalid.
+    - `BadPOP`: If the signature validation fails.
+
+
+    Examples:
+    --------
+    | Validate PrivateKeyPossessionStatement Signature | ${cert_req_msg} | ${signer_cert} |
+
+    """
+    if not cert_reg_msg["popo"].isValue:
+        raise BadRequest(
+            "The `popo` field is missing in the CertReqMsg, for the CMRF with a `PrivateKeyPossessionStatement`."
+        )
+
+    popo = cert_reg_msg["popo"]
+    if not popo.getName() == "signature":
+        raise BadRequest(
+            "The `popo` field must be of type `POPOSigningKey` for the CMRF with a `PrivateKeyPossessionStatement`."
+        )
+
+    if not popo["signature"]["poposkInput"].isValue:
+        raise BadRequest(
+            "The `poposkInput` field is missing in the `POPOSigningKey` "
+            "for the CMRF with a `PrivateKeyPossessionStatement`."
+        )
+
+    validate_poposk_input_for_rfc9883(
+        poposk_input=popo["signature"]["poposkInput"],
+        cert_template=cert_reg_msg["certReq"]["certTemplate"],
+        signer_cert=signer_cert,
+    )
+
+    # TODO should be fixed for CMP, as the "poposkInput" is not allowed to be used,
+    # according to RFC 9483 Section 4.1.1. Enrolling an End Entity to a New PKI
+
+    # The signed bytes are the DER encoding of POPOSigningKeyInput (when present)
+    signed_data = encoder.encode(popo["signature"]["poposkInput"])
+    loaded_public_key = certutils.load_public_key_from_cert(signer_cert)
+    signature = cert_reg_msg["popo"]["signature"]["signature"].asOctets()
+    alg_id = cert_reg_msg["popo"]["signature"]["algorithmIdentifier"]
+
+    try:
+        verify_key = ensure_is_verify_key(
+            loaded_public_key,
+        )
+    except ValueError as e:
+        raise BadPOP(
+            f"The public key in the signer certificate is not "
+            f"suitable public key for signature verification. Got: {type(loaded_public_key)}."
+        ) from e
+
+    # RFC 9883 Section 5: The algorithmIdentifier must identify a signature algorithm that
+    # can be validated with the public key in the signer certificate, and the
+    # signature over the poposkInput MUST validate with that public key.
+    try:
+        protectionutils.verify_signature_with_alg_id(
+            alg_id=alg_id, signature=signature, public_key=verify_key, data=signed_data
+        )
+    except InvalidSignature as e:
+        raise BadPOP("The PrivateKeyPossessionStatement request signature validation failed.") from e
+    except (BadSigAlgID, BadSigAlgIDParams) as e:
+        raise BadPOP(
+            "The signature algorithm identifier in the PrivateKeyPossessionStatement request is invalid."
+        ) from e
+
+
+@not_keyword
 def validate_reg_info_field(
     cert_reg_msg: rfc4211.CertReqMsg,
     alt_reg_must_be_present: bool = False,
