@@ -556,7 +556,10 @@ def load_public_key_from_spki(data: Union[bytes, rfc5280.SubjectPublicKeyInfo]) 
 
     # Just to ensure we have a copy and not a reference,
     # so that the original `SubjectPublicKeyInfo` object is not modified.
-    spki_copy = copyasn1utils.copy_subject_public_key_info(rfc5280.SubjectPublicKeyInfo(), data)
+    spki_copy = copyasn1utils.copy_subject_public_key_info(
+        rfc5280.SubjectPublicKeyInfo(),
+        data,  # type: ignore
+    )
     return pq_logic.combined_factory.CombinedKeyFactory.load_public_key_from_spki(spki=spki_copy)
 
 

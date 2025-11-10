@@ -2228,7 +2228,8 @@ def _get_csr_private_key_possession_statement(csr: rfc6402.CertificationRequest)
     if value is None:
         raise ValueError("Possession Statement Attribute not found in CSR")
 
-    priv_obj, remainder = asn1utils.try_decode_pyasn1(value, PrivateKeyPossessionStatement())  # type: PrivateKeyPossessionStatement, bytes
+    priv_obj, remainder = asn1utils.try_decode_pyasn1(value, PrivateKeyPossessionStatement())  # type: ignore
+    priv_obj: PrivateKeyPossessionStatement
     if remainder != b"":
         raise BadAsn1Data("PrivateKeyPossessionStatement")
 
