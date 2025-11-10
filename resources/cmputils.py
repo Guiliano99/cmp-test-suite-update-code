@@ -1919,6 +1919,43 @@ def validate_private_key_pop_statement_cert_template(
         raise BadCertTemplate("The PrivateKeyPossessionStatement CertTemplate public key must not be a signing key.")
 
 
+def _validate_san_against_signer_cert(
+    extensions: rfc9480.Extensions,
+    signer_cert: rfc9480.CMPCertificate,
+    allow_different_san: bool,
+    name_str: str,
+) -> None:
+    """Validate the SubjectAltName of the CertTemplate or CSR against the signer certificate.
+
+    :param extensions: The extensions to validate.
+    :param signer_cert: The signer's certificate.
+    :param name_str: The name of the structure being validated (e.g., "CertTemplate" or "CSR").
+    :raises BadCertTemplate: If the SAN does not match the signer's certificate.
+    """
+    signer_san = certextractutils.get_extension(
+        signer_cert["tbsCertificate"]["extensions"], rfc5280.id_ce_subjectAltName
+    )
+    template_san = certextractutils.get_extension(extensions, rfc5280.id_ce_subjectAltName)
+    if signer_san is None and template_san is None:
+        return
+
+    if allow_different_san:
+        return
+
+    err_msg = f"The {name_str} does not contain a SubjectAltName extension, but the signer's certificate does."
+    if signer_san is None and template_san is not None:
+        raise BadCertTemplate(err_msg)
+
+    err_msg2 = f"The signer's certificate does not contain a SubjectAltName extension, but the {name_str} does."
+    if signer_san is not None and template_san is None:
+        raise BadCertTemplate(err_msg2)
+
+    if signer_san["extnValue"].asOctets() != template_san["extnValue"].asOctets():  # type: ignore
+        raise BadCertTemplate(
+            f"The SubjectAltName inside the {name_str} does not match the signer's certificate SubjectAltName."
+        )
+
+
 def _validate_san_and_subject_for_priv_key_pop_statement(
     subject: rfc9480.Name,
     extensions: rfc9480.Extensions,
