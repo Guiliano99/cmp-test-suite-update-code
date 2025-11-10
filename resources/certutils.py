@@ -2213,7 +2213,13 @@ def get_csr_private_key_possession_statement(csr: rfc6402.CertificationRequest) 
     :return: The PrivateKeyPossessionStatement object.
     :raises ValueError: If the possession statement attribute is missing.
     """
-    csr_obj, _ = decoder.decode(encoder.encode(csr), asn1Spec=rfc6402.CertificationRequest())
+    # A P10cr message is tagged, to remove this tagging.
+    tmp_csr = rfc6402.CertificationRequest()
+    tmp_csr["certificationRequestInfo"] = csr["certificationRequestInfo"]
+    tmp_csr["signatureAlgorithm"] = csr["signatureAlgorithm"]
+    tmp_csr["signature"] = csr["signature"]
+
+    csr_obj, _ = decoder.decode(encoder.encode(tmp_csr), asn1Spec=rfc6402.CertificationRequest())
     attrs = csr_obj["certificationRequestInfo"]["attributes"]
 
     value = None
