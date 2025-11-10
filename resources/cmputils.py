@@ -1867,6 +1867,85 @@ def _validate_cert_against_issuer_and_ser_num(
         )
 
 
+def _validate_san_and_subject_for_priv_key_pop_statement(
+    subject: rfc9480.Name,
+    extensions: rfc9480.Extensions,
+    signer_cert: rfc9480.CMPCertificate,
+    name_str: str,
+    strict_subject_check: bool = True,
+    *,
+    allow_different_san: bool = True,
+) -> None:
+    """Validate the subject and SubjectAltName of the CertTemplate or CSR against the signer certificate.
+
+    :param subject: The subject to validate against.
+    :param extensions: The extensions to validate against.
+    :param signer_cert: The signer's certificate.
+    :param name_str: The name of the structure being validated (e.g., "CertTemplate" or "CSR").
+    :param strict_subject_check: Whether the subject and SAN must be the same as in the signer certificate.
+    :param allow_different_san: Whether to allow different SANs when the subject is not a NULL-DN.
+    :raises BadCertTemplate: If the subject or SAN does not match the signer's certificate.
+    """
+    signer_subject = signer_cert["tbsCertificate"]["subject"]
+
+    if subject.isValue and not compareutils.is_null_dn(subject):
+        if subject != signer_subject:
+            err_msg_sub = f"The subject in the {name_str} does not match the signer's certificate subject."
+            if strict_subject_check:
+                raise BadCertTemplate(err_msg_sub)
+            logging.info(err_msg_sub)
+
+        _validate_san_against_signer_cert(
+            extensions=extensions, signer_cert=signer_cert, allow_different_san=allow_different_san, name_str=name_str
+        )
+
+    elif not compareutils.is_null_dn(signer_subject):
+        err_msg_sub = (
+            f"The {name_str} does not contain a subject, but the signer's certificate subject is not a NULL-DN."
+        )
+        if strict_subject_check:
+            raise BadCertTemplate(err_msg_sub)
+        logging.info(err_msg_sub)
+        return
+
+    if compareutils.is_null_dn(signer_subject):
+        signer_san = certextractutils.get_extension(
+            signer_cert["tbsCertificate"]["extensions"], rfc5280.id_ce_subjectAltName
+        )
+        template_san = certextractutils.get_extension(extensions, rfc5280.id_ce_subjectAltName)
+
+        if signer_san is None and template_san is None:
+            raise BadCertTemplate(
+                f"The signer's certificate and the {name_str} subject is "
+                f"a NULL-DN and the SubjectAltName is missing in both."
+            )
+
+        if signer_san is None and template_san is not None:
+            err_msg_san = (
+                f"The signer's certificate does not contain a SubjectAltName extension, but the {name_str} does."
+            )
+            if strict_subject_check:
+                raise BadCertTemplate(err_msg_san)
+            logging.info(err_msg_san)
+            return
+
+        if template_san is None and signer_san is not None:
+            err_msg_san = (
+                f"The {name_str} does not contain a SubjectAltName extension, but the signer's certificate does."
+            )
+            if strict_subject_check:
+                raise BadCertTemplate(err_msg_san)
+            logging.info(err_msg_san)
+            return
+
+        _validate_san_against_signer_cert(
+            extensions=extensions,
+            signer_cert=signer_cert,
+            allow_different_san=False,
+            name_str=name_str,
+        )
+
+
 @not_keyword
 def validate_reg_info_field(
     cert_reg_msg: rfc4211.CertReqMsg,
