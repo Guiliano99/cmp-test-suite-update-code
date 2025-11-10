@@ -2036,6 +2036,46 @@ def _validate_san_and_subject_for_priv_key_pop_statement(
 
 
 @not_keyword
+def validate_private_key_pop_statement_csr(
+    csr: rfc6402.CertificationRequest,
+    signer_cert: rfc9480.CMPCertificate,
+    strict_subject_check: bool = True,
+    allow_different_san: bool = True,
+) -> None:
+    """Validate that the CSR against the signer certificate according to RFC 9883.
+
+    :param csr: The CSR to validate.
+    :param signer_cert: The signer's certificate.
+    :param strict_subject_check: Whether the subject must be the same as in the signer certificate. Defaults to `True`.
+    :param allow_different_san: Whether to allow different SANs when the subject is not a NULL-DN and the same. \
+    Defaults to `True`.
+    :raises BadCertTemplate: If the CSR does not match the signer's certificate or the public key is a signing key.
+    """
+    csr_info = csr["certificationRequestInfo"]
+
+    # Validate subject
+    extensions = certextractutils.extract_extensions_from_csr(csr) or rfc9480.Extensions()
+
+    _validate_san_and_subject_for_priv_key_pop_statement(
+        subject=csr_info["subject"],
+        extensions=extensions,
+        strict_subject_check=strict_subject_check,
+        name_str="CSR",
+        signer_cert=signer_cert,
+        allow_different_san=allow_different_san,
+    )
+
+    # Validate public key
+    if not csr_info["subjectPublicKeyInfo"].isValue:
+        raise BadCertTemplate("The CSR must contain the public key field to validate against the signer's certificate.")
+
+    # MUST not be a signing key according to RFC 9883 Section 6.
+    public_key = keyutils.load_public_key_from_spki(csr_info["subjectPublicKeyInfo"])
+    if isinstance(public_key, VerifyKey):
+        raise BadCertTemplate("The CSR public key must not be a signing key.")
+
+
+@not_keyword
 def validate_reg_info_field(
     cert_reg_msg: rfc4211.CertReqMsg,
     alt_reg_must_be_present: bool = False,
