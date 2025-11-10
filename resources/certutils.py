@@ -51,7 +51,6 @@ from resources import (
     utils,
 )
 from resources.asn1_structures import PKIMessageTMP, PrivateKeyPossessionStatement
-from resources.cmputils import find_cert_from_issuer_and_serial_number
 from resources.convertutils import ensure_is_kem_pub_key, ensure_is_verify_key
 from resources.exceptions import (
     BadAsn1Data,
@@ -2206,7 +2205,8 @@ def verify_csr_signature(  # noqa: D417 Missing argument descriptions in the doc
         raise BadPOP("The signature verification failed.") from e
 
 
-def _get_csr_private_key_possession_statement(csr: rfc6402.CertificationRequest) -> PrivateKeyPossessionStatement:
+@not_keyword
+def get_csr_private_key_possession_statement(csr: rfc6402.CertificationRequest) -> PrivateKeyPossessionStatement:
     """Retrieve the PrivateKeyPossessionStatement from the CSR.
 
     :param csr: The CertificationRequest object containing the possession statement.
@@ -2236,17 +2236,17 @@ def _get_csr_private_key_possession_statement(csr: rfc6402.CertificationRequest)
     return priv_obj
 
 
-def _get_cert_from_possession_statement(csr: rfc6402.CertificationRequest) -> rfc5280.Certificate:
+def _get_cert_from_possession_statement(csr: rfc6402.CertificationRequest) -> Optional[rfc9480.CMPCertificate]:
     """Retrieve the certificate from the PrivateKeyPossessionStatement in the CSR.
 
     :param csr: The CertificationRequest object containing the possession statement.
     :return: The certificate included in the possession statement.
     :raises ValueError: If the possession statement attribute is missing or does not contain a certificate.
     """
-    priv_obj = _get_csr_private_key_possession_statement(csr)
+    priv_obj = get_csr_private_key_possession_statement(csr)
 
     if not priv_obj["cert"].isValue:
-        raise BadRequest("Possession Statement Attribute does not contain a certificate")
+        return None
 
     return priv_obj["cert"]
 
