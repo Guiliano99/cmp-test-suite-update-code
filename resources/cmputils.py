@@ -2143,6 +2143,68 @@ def _validate_signer_cert_against_possession_statement(
     return found_cert
 
 
+@keyword(name="Validate CSR PrivateKeyPossessionStatement")
+def validate_csr_private_key_pop_statement(  # noqa D417 undocumented-params
+    csr: rfc6402.CertificationRequest,
+    signer_cert: Union[rfc9480.CMPCertificate, Sequence[rfc9480.CMPCertificate]],
+    strict_subject_check: bool = True,
+    allow_different_san: bool = True,
+) -> rfc9480.CMPCertificate:
+    """Validate the CRS according to RFC 9883 Section 4 PKCS#10.
+
+    Arguments:
+    ---------
+    - `csr`: The CSR containing the CertReqMsg to validate.
+    - `signer_cert`: The signer's certificate or a list of issued certificates.
+    - `strict_subject_check`: Whether teh `subject` in the CSR must be the same as in the signer certificate. \
+    Defaults to `True`.
+    - `allow_different_san`: Whether to allow different SANs when the subject is not a NULL-DN and the same. \
+    Defaults to `True`.
+
+    Retunrs:
+    -------
+    - The found signer's certificate.
+
+    Raises:
+    ------
+    - `BadAsn1Data`: If the `PrivateKeyPossessionStatement` is invalid.
+    - `SignerNotTrusted`: If the certificate inside the `PrivateKeyPossessionStatement` is not \
+    found among the provided certificates.
+    - `BadCertId`: If no matching certificate is found for the issuer and serial number in the \
+    `PrivateKeyPossessionStatement`.
+    - `BadCertTemplate`: If the CSR public key is a signature key.
+    - `BadCertTemplate`: If the CSR subject does not match the signer's certificate subject.
+    - `BadPOP`: If the signature verification fails.
+
+    Examples:
+    --------
+    | Validate CSR PrivateKeyPossessionStatement | ${csr} | ${signer_cert}
+    | Validate CSR PrivateKeyPossessionStatement | ${csr} | ${signer_cert} | False |
+
+    """
+    try:
+        priv_obj = certutils.get_csr_private_key_possession_statement(csr)
+    except ValueError as e:
+        raise BadAsn1Data("The `PrivateKeyPossessionStatement` inside the CSR is invalid.") from e
+    found_cert = _validate_signer_cert_against_possession_statement(
+        priv_obj,
+        signer_cert=signer_cert,  # type: ignore
+    )
+
+    validate_private_key_pop_statement_csr(
+        csr,
+        found_cert,
+        strict_subject_check=strict_subject_check,
+        allow_different_san=allow_different_san,
+    )
+    certutils.verify_possession_statement_signature(
+        csr,
+        found_cert,
+    )
+    return found_cert
+
+
+@keyword(name="Validate PrivateKeyPossessionStatement CMRF")
 @not_keyword
 def validate_reg_info_field(
     cert_reg_msg: rfc4211.CertReqMsg,
