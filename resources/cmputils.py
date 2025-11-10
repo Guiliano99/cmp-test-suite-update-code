@@ -1842,6 +1842,31 @@ def find_cert_from_issuer_and_serial_number(
     return None
 
 
+def _validate_cert_against_issuer_and_ser_num(
+    signer: rfc5652.IssuerAndSerialNumber,
+    cert: rfc9480.CMPCertificate,
+) -> None:
+    """Validate that the certificate matches the issuer and serial number.
+
+    :param signer: The `IssuerAndSerialNumber` structure of the signer.
+    :param cert: The certificate to validate against.
+    :raises BadCertId: If the issuer or serial number does not match.
+    """
+    if cert is None:
+        return
+
+    cert_issuer = cert["tbsCertificate"]["issuer"]
+    cert_serial_number = cert["tbsCertificate"]["serialNumber"]
+
+    if signer["issuer"] != cert_issuer:
+        raise BadCertId("The issuer in the PrivateKeyPossessionStatement does not match the certificate issuer.")
+
+    if signer["serialNumber"] != cert_serial_number:
+        raise BadCertId(
+            "The serial number in the PrivateKeyPossessionStatement does not match the certificate serial number."
+        )
+
+
 @not_keyword
 def validate_reg_info_field(
     cert_reg_msg: rfc4211.CertReqMsg,
