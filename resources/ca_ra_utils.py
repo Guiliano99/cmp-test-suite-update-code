@@ -2313,7 +2313,9 @@ def build_cp_from_p10cr(  # noqa: D417 Missing argument descriptions in the docs
     if request and set_header_fields:
         kwargs = set_ca_header_fields(request, kwargs)
 
-    certutils.verify_csr_signature(request["body"]["p10cr"])
+    if not csr_contains_attribute(request["body"]["p10cr"], ID_AT_STATEMENT_OF_POSSESSION):
+        certutils.verify_csr_signature(request["body"]["p10cr"])
+
     if cert is None and ca_key is None and ca_cert is None:
         raise ValueError("Either `cert` or `ca_key` and `ca_cert` must be provided to build a CA CMP message.")
 
