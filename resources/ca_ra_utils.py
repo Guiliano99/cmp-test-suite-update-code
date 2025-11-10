@@ -4000,12 +4000,17 @@ def build_kup_from_kur(  # noqa: D417 undocumented-param
 
     enforce_lwcmp_for_ca(request)
 
+    cert_req_msg = get_cert_req_msg_from_pkimessage(pki_message=request)
+    if is_private_key_possession_statement_request(cert_req_msg):
+        raise BadRequest(
+            "Private key possession statement is not allowed in KUR messages.", failinfo="badRequest, badPOP"
+        )
+
     _validate_popo_kur(
         request=request,
         index=0,
     )
 
-    cert_req_msg = get_cert_req_msg_from_pkimessage(pki_message=request)
     if not allow_same_key:
         cert = request["extraCerts"][0]
         # This is a lazy solution, but it works for now.
