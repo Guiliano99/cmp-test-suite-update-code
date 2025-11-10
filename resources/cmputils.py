@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 from urllib import parse
 
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import dh, ec, x448, x25519
 from pyasn1.codec.der import decoder, encoder
@@ -40,6 +41,7 @@ from resources import (
     certbuildutils,
     certextractutils,
     certutils,
+    compareutils,
     convertutils,
     cryptoutils,
     envdatautils,
@@ -59,8 +61,18 @@ from resources.asn1_structures import (
     PrivateKeyPossessionStatement,
 )
 from resources.asn1utils import try_decode_pyasn1
-from resources.convertutils import copy_asn1_certificate, str_to_bytes
-from resources.exceptions import BadAsn1Data, BadCertTemplate, BadDataFormat, BadRequest
+from resources.convertutils import copy_asn1_certificate, ensure_is_verify_key, str_to_bytes
+from resources.exceptions import (
+    BadAsn1Data,
+    BadCertId,
+    BadCertTemplate,
+    BadDataFormat,
+    BadPOP,
+    BadRequest,
+    BadSigAlgID,
+    BadSigAlgIDParams,
+    SignerNotTrusted,
+)
 from resources.typingutils import (
     CertObjOrPath,
     ControlsType,
@@ -69,6 +81,7 @@ from resources.typingutils import (
     PublicKey,
     SignKey,
     Strint,
+    VerifyKey,
 )
 
 # When dealing with post-quantum crypto algorithms, we encounter big numbers, which wouldn't be pretty-printed
@@ -1819,6 +1832,7 @@ def validate_reg_info_utf8_pairs(  # noqa D417 undocumented-param
     except Exception as e:
         raise BadAsn1Data(f"Failed to decode/unquote UTF8Pairs: {e}") from e
 
+
 @not_keyword
 def find_cert_from_issuer_and_serial_number(
     signer: rfc5652.IssuerAndSerialNumber,
@@ -1865,6 +1879,44 @@ def _validate_cert_against_issuer_and_ser_num(
         raise BadCertId(
             "The serial number in the PrivateKeyPossessionStatement does not match the certificate serial number."
         )
+
+
+@not_keyword
+def validate_private_key_pop_statement_cert_template(
+    cert_template: rfc4211.CertTemplate,
+    signer_cert: rfc9480.CMPCertificate,
+    strict_subject_check: bool = True,
+    allow_different_san: bool = False,
+) -> None:
+    """Validate that the CertTemplate inside the PrivateKeyPossessionStatement matches the signer certificate.
+
+    :param cert_template: The CertTemplate to validate.
+    :param signer_cert: The signer's certificate.
+    :param strict_subject_check: Whether the subject and SAN must be the same as in the signer certificate.
+    Defaults to `True`.
+    :param allow_different_san: Whether to allow different SANs when the subject is not a NULL-DN. Defaults to `False`.
+    :raises BadCertTemplate: If the CertTemplate does not match the signer's certificate or the public
+    key is a signing key.
+    """
+    _validate_san_and_subject_for_priv_key_pop_statement(
+        signer_cert=signer_cert,
+        name_str="CertTemplate",
+        strict_subject_check=strict_subject_check,
+        extensions=cert_template["extensions"],
+        subject=cert_template["subject"],
+        allow_different_san=allow_different_san,
+    )
+
+    if not cert_template["publicKey"].isValue:
+        raise BadCertTemplate(
+            "The `PrivateKeyPossessionStatement` CertTemplate must contain the public key field "
+            "to validate against the signer's certificate."
+        )
+
+    # MUST not be a signing key according to RFC 9883 Section 6.
+    public_key = keyutils.load_public_key_from_cert_template(cert_template, must_be_present=True)
+    if isinstance(public_key, VerifyKey):
+        raise BadCertTemplate("The PrivateKeyPossessionStatement CertTemplate public key must not be a signing key.")
 
 
 def _validate_san_and_subject_for_priv_key_pop_statement(
