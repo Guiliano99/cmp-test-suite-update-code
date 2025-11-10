@@ -2105,6 +2105,44 @@ def _find_and_get_private_key_pop_statement(  # noqa D417 undocumented-param
     return None
 
 
+def _validate_signer_cert_against_possession_statement(
+    priv_statement: PrivateKeyPossessionStatement,
+    signer_cert: Union[rfc9480.CMPCertificate, List[rfc9480.CMPCertificate]],
+) -> rfc9480.CMPCertificate:
+    """Validate that the certificate inside the PrivateKeyPossessionStatement matches the signer certificate.
+
+    :param priv_statement: The PrivateKeyPossessionStatement to validate.
+    :param signer_cert: The signer's certificate or a list of issued certificates.
+    :raises SignerNotTrusted: If the certificate inside the PrivateKeyPossessionStatement is not \
+    found among the provided certificates.
+    :raises BadCertId: If no matching certificate is found for the issuer and serial number in the \
+    PrivateKeyPossessionStatement.
+    :return: The found certificate.
+    """
+    found_cert: Optional[rfc9480.CMPCertificate] = None
+    if priv_statement["cert"].isValue:
+        found_cert = priv_statement["cert"]
+
+    if isinstance(signer_cert, rfc9480.CMPCertificate):
+        signer_cert = [signer_cert]
+
+    if found_cert is not None:
+        if not certutils.cert_in_list(cert=found_cert, cert_list=signer_cert):
+            raise SignerNotTrusted(
+                "The certificate inside the `PrivateKeyPossessionStatement` "
+                "is not found among the provided certificates."
+            )
+    else:
+        issuer_and_ser = priv_statement["signer"]
+        found_cert = find_cert_from_issuer_and_serial_number(issuer_and_ser, signer_cert)  # type: ignore
+        if found_cert is None:
+            raise BadCertId(
+                "No matching certificate found for the issuer and serial number in the `PrivateKeyPossessionStatement`."
+            )
+
+    return found_cert
+
+
 @not_keyword
 def validate_reg_info_field(
     cert_reg_msg: rfc4211.CertReqMsg,
