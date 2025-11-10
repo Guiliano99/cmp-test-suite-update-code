@@ -2266,8 +2266,10 @@ def verify_possession_statement_signature(  # noqa: D417 Missing argument descri
     Raises:
     ------
     - `BadAsn1Data`: If the CSR cannot be decoded.
+    - `ValueError`: If the signature certificate is not found in the possession statement and not provided.
     - `ValueError`: If the possession statement attribute is missing or invalid.
     - `BadPOP`: If the signature verification fails.
+    - `BadRequest`: If the public key type is unsupported or invalid.
 
     Examples:
     --------
@@ -2278,12 +2280,17 @@ def verify_possession_statement_signature(  # noqa: D417 Missing argument descri
     if signature_cert is None:
         signature_cert = _get_cert_from_possession_statement(csr)
 
+    if signature_cert is None:
+        raise ValueError("No certificate found in the possession statement for signature verification.")
+
     der_data = encoder.encode(signature_cert["tbsCertificate"]["subjectPublicKeyInfo"])
     public_key_sig = load_public_key_from_der(der_data)
     try:
         verify_key = ensure_is_verify_key(public_key_sig)
     except ValueError as e:
-        raise BadRequest(f"Unsupported public key type in possession statement certificate. Got: type={type(public_key_sig)}") from e
+        raise BadRequest(
+            f"Unsupported public key type in possession statement certificate. Got: type={type(public_key_sig)}"
+        ) from e
 
     signature = csr["signature"].asOctets()
     alg_id = csr["signatureAlgorithm"]
