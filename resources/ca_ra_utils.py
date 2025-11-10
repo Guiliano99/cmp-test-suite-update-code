@@ -54,7 +54,9 @@ from resources import (
 )
 from resources.asn1_structures import CertResponseTMP, ChallengeASN1, PKIBodyTMP, PKIMessageTMP
 from resources.asn1utils import get_set_bitstring_names, try_decode_pyasn1
+from resources.certbuildutils import csr_contains_attribute
 from resources.certextractutils import get_extension
+from resources.cmputils import validate_private_key_pop_statement_cmrf
 from resources.convertutils import (
     copy_asn1_certificate,
     ensure_is_kem_pub_key,
@@ -88,7 +90,7 @@ from resources.oid_mapping import (
     may_return_oid_to_name,
     sha_alg_name_to_oid,
 )
-from resources.oidutils import CURVE_OID_2_NAME, id_KemBasedMac
+from resources.oidutils import CURVE_OID_2_NAME, ID_AT_STATEMENT_OF_POSSESSION, id_KemBasedMac
 from resources.suiteenums import InvalidOneAsymKeyType, KeySaveType
 from resources.typingutils import (
     CAResponse,
@@ -1476,12 +1478,16 @@ def validate_cert_template_public_key(
     cert_template: rfc9480.CertTemplate,
     sig_popo_alg_id: Optional[rfc9480.AlgorithmIdentifier] = None,
     max_key_size: Optional[int] = None,
+    for_rfc9883: bool = False,
 ):
     """Validate that the certificate template has set the correct fields.
 
     :param cert_template: The certificate template to validate.
     :param sig_popo_alg_id: The signature POP algorithm identifier to validate against. Defaults to `None`.
     :param max_key_size: The maximum key size for RSA, to validate against, skipped if `None`. Defaults to `None`.
+    :param for_rfc9883: Whether the validation is for RFC 9883. Defaults to `False`.
+    :raises BadCertTemplate: If the certificate template is not valid.
+    :raises BadAlg: If the public key algorithm is not valid.
     """
     if compareutils.is_null_dn(cert_template["subject"]):
         if get_extension(cert_template["extensions"], rfc5280.id_ce_subjectAltName) is None:
@@ -1513,7 +1519,7 @@ def validate_cert_template_public_key(
         if max_key_size is not None and public_key.key_size > max_key_size:
             raise BadCertTemplate(f"The RSA public key was longer then {max_key_size} bits")
 
-    if sig_popo_alg_id is not None:
+    if sig_popo_alg_id is not None and not for_rfc9883:
         if public_key is None:
             raise BadCertTemplate(
                 "The public key was not set inside the `CertTemplate`.But a signature POP algorithm was set."
@@ -2073,6 +2079,7 @@ def respond_to_cert_req_msg(  # noqa: D417 Missing argument descriptions in the 
         cert_template,
         max_key_size=4096 * 2,
         sig_popo_alg_id=alg_id,
+        for_rfc9883=is_private_key_possession_statement_request(cert_req_msg),
     )
 
     if not cert_req_msg["popo"].isValue:
@@ -2156,6 +2163,10 @@ def verify_sig_pop_for_pki_request(  # noqa: D417 Missing argument descriptions 
     body_name = pki_message["body"].getName()
     if body_name in {"ir", "cr", "kur", "crr"}:
         cert_req_msg = get_cert_req_msg_from_pkimessage(pki_message, index=cert_index)
+
+        if is_private_key_possession_statement_request(cert_req_msg):
+            return
+
         popo: rfc4211.ProofOfPossession = cert_req_msg["popo"]
         if not popo["signature"].isValue:
             raise BadPOP("POP signature is missing in the PKIMessage.")
@@ -2377,27 +2388,45 @@ def _process_one_cert_request(
 
     if cert_req_msg["popo"].isValue:
         if cert_req_msg["popo"].getName() == "signature":
-            try:
-                public_key = get_public_key_from_cert_req_msg(cert_req_msg)
-            except (BadAsn1Data, InvalidKeyData) as e:
-                raise BadCertTemplate(e.message, error_details=e.get_error_details()) from e
+            if is_private_key_possession_statement_request(cert_req_msg):
+                if kwargs.get("issued_certs") is None and kwargs.get("signer_cert") is None:
+                    raise ValueError(
+                        "`issued_certs` or `signer_cert` must be provided "
+                        "to validate private key possession statement POP."
+                    )
 
-            try:
-                public_key = convertutils.ensure_is_verify_key(public_key)
-            except ValueError as e:
-                raise BadPOP(
-                    f"Invalid public key type: {type(public_key)}. {e}", failinfo="badPOP,badCertTemplate"
-                ) from e
-            try:
-                keyutils.check_consistency_sig_alg_id_and_key(
-                    cert_req_msg["popo"]["signature"]["algorithmIdentifier"], public_key
+                certs = kwargs.get("issued_certs") or [kwargs.get("signer_cert")]  # type: ignore
+                certs: List[rfc9480.CMPCertificate]
+
+                validate_private_key_pop_statement_cmrf(
+                    cert_req_msg=cert_req_msg,
+                    certs=certs,
+                    strict_subject_check=kwargs.get("private_key_possession_strict_subject_check", True),
+                    allow_different_san=kwargs.get("private_key_possession_allow_diff_san", False),
                 )
 
-            except BadSigAlgID as e:
-                raise BadPOP(
-                    "The `signature` POP alg id and the public key are of different types.",
-                    error_details=e.get_error_details(),
-                ) from e
+            else:
+                try:
+                    public_key = get_public_key_from_cert_req_msg(cert_req_msg)
+                except (BadAsn1Data, InvalidKeyData) as e:
+                    raise BadCertTemplate(e.message, error_details=e.get_error_details()) from e
+
+                try:
+                    public_key = convertutils.ensure_is_verify_key(public_key)
+                except ValueError as e:
+                    raise BadPOP(
+                        f"Invalid public key type: {type(public_key)}. {e}", failinfo="badPOP,badCertTemplate"
+                    ) from e
+                try:
+                    keyutils.check_consistency_sig_alg_id_and_key(
+                        cert_req_msg["popo"]["signature"]["algorithmIdentifier"], public_key
+                    )
+
+                except BadSigAlgID as e:
+                    raise BadPOP(
+                        "The `signature` POP alg id and the public key are of different types.",
+                        error_details=e.get_error_details(),
+                    ) from e
 
     elif not cert_req_msg["popo"].isValue:
         if not check_if_request_is_for_kga(request):
