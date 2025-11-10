@@ -5164,6 +5164,10 @@ def get_pkistatusinfo(  # noqa D417 undocumented-param
     -------
         - The extracted `PKIStatusInfo` object.
 
+    Raises:
+    ------
+        - `ValueError`: If the body type of the PKIMessage is not supported.
+
     Examples:
     --------
     | ${pki_status_info}= | Get PKIStatusInfo | ${pki_message} |
@@ -5870,3 +5874,37 @@ def get_inner_pkimessage(  # noqa D417 undocumented-param
         raise IndexError(f"Index {index} is out of bounds for the nested PKIMessage with length {length}.")
 
     return pki_message["body"]["nested"][index]
+
+
+@keyword(name="Add Text To PKIMessage statusString")
+def add_text_to_pkimessage_statusstring(  # noqa D417 undocumented-paramas
+    pki_message: PKIMessageTMP,
+    text: str,
+    index: Strint = 0,
+) -> PKIMessageTMP:
+    """Add text to the `statusString` field of the `PKIStatusInfo` in a `PKIMessage`.
+
+    Arguments:
+    ---------
+        - `pki_message`: The `PKIMessage` containing the `statusString` field.
+        - `text`: The text to add to the `statusString`.
+        - `index`: The index of the `statusString` to which the text will be added. Defaults to `0`.
+
+    Returns:
+    -------
+        - The updated `PKIMessage` with the added text in the `statusString`.
+
+    Raises:
+    ------
+        - `ValueError`: If the body type of the PKIMessage is not supported.
+
+    Examples:
+    --------
+    | ${updated_msg}= | Add Text To PKIMessage StatusString | ${pki_message} | text="New status" |
+    | ${updated_msg}= | Add Text To PKIMessage StatusString | ${pki_message} | text="Another status" | index=1 |
+
+    """
+    pki_status_info: rfc9480.PKIStatusInfo = get_pkistatusinfo(pki_message=pki_message, index=index)
+    pki_free_text: rfc9480.PKIFreeText = pki_status_info["statusString"]
+    pki_free_text.append(char.UTF8String(text))
+    return pki_message
