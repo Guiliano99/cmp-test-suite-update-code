@@ -2205,6 +2205,80 @@ def validate_csr_private_key_pop_statement(  # noqa D417 undocumented-params
 
 
 @keyword(name="Validate PrivateKeyPossessionStatement CMRF")
+def validate_private_key_pop_statement_cmrf(  # noqa D417 undocumented-params
+    cert_req_msg: rfc4211.CertReqMsg,
+    certs: Union[rfc9480.CMPCertificate, List[rfc9480.CMPCertificate]],
+    strict_subject_check: bool = True,
+    allow_different_san: bool = False,
+) -> Optional[rfc9480.CMPCertificate]:
+    """Validate that the CertReqMsg is conform against RFC 9883 Section 5 (CRMF).
+
+    Arguments:
+    ---------
+    - `cert_req_msg`: The CertReqMsg to validate.
+    - `certs`: The list of certificates included in the PKIMessage.
+    - `strict_subject_check`: Whether to strictly check the subject in the POPOSigningKeyInput. \
+    Defaults to `True`.
+    - `allow_different_san`: Whether to allow different SANs when the subject is not a NULL-DN. Defaults to `False`.
+
+    Raises:
+    ------
+    - `ValueError`: If the `regInfo` field is missing in the CertReqMsg.
+    - `BadAsn1Data`: If the `PrivateKeyPossessionStatement` is invalid.
+    - `SignerNotTrusted`: If the certificate inside the `PrivateKeyPossessionStatement` is not \
+    found among the provided certificates.
+    - `BadCertId`: If no matching certificate is found for the issuer and serial number in the \
+    `PrivateKeyPossessionStatement`.
+    - `BadCertTemplate`: If the CertTemplate does not match the signer's certificate.
+
+    Examples:
+    --------
+    | Validate PrivateKeyPossessionStatement CMRF | ${cert_req_msg} | ${certs} |
+    | Validate PrivateKeyPossessionStatement CMRF | ${cert_req_msg} | ${certs} | strict_subject_check=False |
+    | Validate PrivateKeyPossessionStatement CMRF | ${cert_req_msg} | ${certs} | allow_different_san=True |
+
+    """
+    if not cert_req_msg["regInfo"].isValue:
+        raise ValueError(
+            "The `regInfo` field is missing in the CertReqMsg, for the CMRF with a `PrivateKeyPossessionStatement`."
+        )
+
+    private_key_pop = _find_and_get_private_key_pop_statement(cert_req_msg)
+    if private_key_pop is None:
+        raise ValueError("The `PrivateKeyPossessionStatement` is missing in the CertReqMsg `regInfo` field.")
+
+    # Determine embedded or referenced certificate
+    found_cert: Optional[rfc9480.CMPCertificate] = None
+    if private_key_pop["cert"].isValue:
+        found_cert = private_key_pop["cert"]
+
+    if isinstance(certs, rfc9480.CMPCertificate):
+        certs = [certs]
+
+    # Determine the signer certificate
+    if found_cert is not None:
+        if not certutils.cert_in_list(cert=found_cert, cert_list=certs):
+            raise SignerNotTrusted(
+                "The certificate inside the `PrivateKeyPossessionStatement` "
+                "is not found among the provided certificates."
+            )
+    else:
+        found_cert = find_cert_from_issuer_and_serial_number(private_key_pop["signer"], certs)
+        if found_cert is None:
+            raise BadCertId(
+                "No matching certificate found for the issuer and serial number in the `PrivateKeyPossessionStatement`."
+            )
+
+    _validate_cert_against_issuer_and_ser_num(private_key_pop["signer"], found_cert)
+    validate_private_key_pop_statement_cert_template(
+        cert_req_msg["certReq"]["certTemplate"],
+        found_cert,
+        strict_subject_check=strict_subject_check,
+        allow_different_san=allow_different_san,
+    )
+    validate_private_key_pop_statement_popo(cert_req_msg, found_cert)
+
+
 @not_keyword
 def validate_reg_info_field(
     cert_reg_msg: rfc4211.CertReqMsg,
