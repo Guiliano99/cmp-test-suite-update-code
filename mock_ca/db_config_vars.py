@@ -5,7 +5,7 @@
 """Dataclasses for configuration variables used by the MockCA."""
 
 from abc import ABC
-from dataclasses import dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields
 from typing import Optional, Union
 
 from resources.data_objects import KARICertsAndKeys
@@ -147,3 +147,26 @@ class ProtectionHandlerConfig(ConfigVal):
             "enforce_lwcmp": self.enforce_lwcmp,
             **self.trusted_config.to_dict(),
         }
+
+
+@dataclass
+class RFC9883ValidationConfig(ConfigVal):
+    """Configuration for RFC 9883 validation.
+
+    Attributes:
+        private_key_possession_strict_subject_check: Whether to subject of the signer certificate and the CSR
+        or CertTemplate must be the same. Defaults to `True`.
+        private_key_possession_allow_diff_san: Whether to allow different subject alternative names in the
+        signer certificate and the CSR or CertTemplate, if the subject is the same. Defaults to `False`.
+        allow_missing_cert_in_possession_statement: Whether to allow missing certificates in possession statements.
+        Defaults to `True`.
+
+    """
+
+    private_key_possession_strict_subject_check: bool = True
+    private_key_possession_allow_diff_san: bool = False
+    allow_missing_cert_in_possession_statement: bool = True
+
+    def to_dict(self) -> dict:
+        """Convert the configuration to a dictionary."""
+        return asdict(self)
