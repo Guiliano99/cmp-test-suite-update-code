@@ -45,6 +45,7 @@ from resources import (
     envdatautils,
     keyutils,
     oid_mapping,
+    oidutils,
     prepare_alg_ids,
     prepareutils,
     protectionutils,
@@ -855,6 +856,71 @@ def prepare_controls_structure(  # noqa D417 undocumented-param
     control_instance = rfc9480.Controls()
     control_instance.extend(controls)
     return control_instance
+
+
+# RFC 9883 PrivateKeyPossessionStatement
+
+
+@keyword(name="Prepare regInfo PrivateKeyPossessionStatement")
+def prepare_reginfo_private_key_possession_statement(  # noqa D417 undocumented-param
+    signer_cert: Optional[rfc9480.CMPCertificate] = None,
+    issuer_and_serial: Optional[rfc5652.IssuerAndSerialNumber] = None,
+    include_cert: bool = True,
+    modify_serial_number: bool = False,
+    modify_issuer: bool = False,
+    issuer: Optional[str] = None,
+    serial_number: Optional[Union[str, int]] = None,
+) -> rfc4211.AttributeTypeAndValue:
+    """Prepare the regInfo `privateKeyPossessionStatement` attribute defined in RFC 9883.
+
+    Arguments:
+    ---------
+        - `signer_cert`: The certificate used to sign the statement. If not provided,
+          the `issuer_and_serial` must be provided.
+        - `issuer_and_serial`: The issuer and serial number of the certificate used to sign
+            the statement. If not provided, the `signer_cert` must be provided.
+        - `include_cert`: Whether to include the signer's certificate in the statement.
+        - `modify_serial_number`: If True, modifies the serial number in the statement to be
+          invalid.
+        - `modify_issuer`: If True, modifies the issuer in the statement to be invalid.
+        - `issuer`: The issuer's distinguished name in OpenSSL notation. Required if
+          `modify_issuer` is True.
+        - `serial_number`: The serial number of the certificate. Required if
+          `modify_serial_number` is True.
+
+    Returns:
+    -------
+        - A populated `AttributeTypeAndValue` structure for the
+          `privateKeyPossessionStatement` attribute.
+
+    Raises:
+    ------
+        - `ValueError`: If neither `signer_cert` nor `issuer_and_serial` are provided, or if
+          `modify_issuer` is True but `issuer` is not provided, or if `modify_serial_number` is True
+          but `serial_number` is not provided.
+
+    Examples:
+    --------
+    | ${reginfo_attr}= | Prepare regInfo PrivateKeyPossessionStatement | signer_cert=${cert} |
+    | ${reginfo_attr}= | Prepare regInfo PrivateKeyPossessionStatement | issuer_and_serial=${ias} | include_cert=False |
+    | ${reginfo_attr}= | Prepare regInfo PrivateKeyPossessionStatement | signer_cert=${cert} | \
+    modify_serial_number=True |
+
+    """
+    statement = certbuildutils.prepare_private_key_possession_statement(
+        signer_cert=signer_cert,
+        issuer_and_serial=issuer_and_serial,
+        include_cert=include_cert,
+        modify_serial_number=modify_serial_number,
+        modify_issuer=modify_issuer,
+        issuer=issuer,
+        serial_number=serial_number,
+    )
+
+    attribute = rfc4211.AttributeTypeAndValue()
+    attribute["type"] = oidutils.ID_REGCTRL_STATEMENT_OF_POSSESSION
+    attribute["value"] = statement
+    return attribute
 
 
 # RFC4210bis-16 Section 5.2.6 Archive Options
