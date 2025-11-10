@@ -2335,6 +2335,21 @@ def build_cp_from_p10cr(  # noqa: D417 Missing argument descriptions in the docs
     return pki_message, cert
 
 
+@not_keyword
+def is_private_key_possession_statement_request(
+    cert_req_msg: rfc4211.CertReqMsg,
+) -> bool:
+    """Check if the certificate request is contains a private key possession statement (RFC 9883).
+
+    :param cert_req_msg: The certificate request message to check.
+    :return: `True` if the request is for private key possession statement, `False` otherwise.
+    """
+    for x in cert_req_msg["regInfo"]:
+        if x["type"] == ID_AT_STATEMENT_OF_POSSESSION:
+            return True
+    return False
+
+
 def _process_one_cert_request(
     ca_key: SignKey,
     ca_cert: rfc9480.CMPCertificate,
