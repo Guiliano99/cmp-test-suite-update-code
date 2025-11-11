@@ -159,7 +159,8 @@ class CertReqHandler:
         self._rfc9883_validation_config = RFC9883ValidationConfig(
             private_key_possession_strict_subject_check=True,
             private_key_possession_allow_diff_san=False,
-            allow_missing_cert_in_possession_statement=False,
+            private_key_possession_cert_must_be_present=False,
+            private_key_possession_enforce_key_strength=True,
         )
         self.issuing_params.update(
             {
@@ -475,6 +476,8 @@ class CertReqHandler:
             signer_cert=self.state.issued_certs,
             strict_subject_check=self._rfc9883_validation_config.private_key_possession_strict_subject_check,
             allow_different_san=self._rfc9883_validation_config.private_key_possession_allow_diff_san,
+            cert_must_be_present=self._rfc9883_validation_config.private_key_possession_cert_must_be_present,
+            enforce_key_strength=self._rfc9883_validation_config.private_key_possession_enforce_key_strength,
         )
         # TODO validate signer certificate with OpenSSL
 
