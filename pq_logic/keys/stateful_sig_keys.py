@@ -270,6 +270,12 @@ class XMSSPublicKey(PQHashStatefulSigPublicKey):
 
         return XMSS_ALG_DETAILS[self.name.lower()]["hash_alg"]
 
+    @property
+    def key_bit_security(self) -> int:
+        """Return the traditional bit security of the XMSS public key."""
+        # Approximate bit security based on the hash output size
+        return int(self.name.split("_")[-1]) // 2
+
 
 class XMSSPrivateKey(PQHashStatefulSigPrivateKey):
     """Class representing an XMSS private key."""
@@ -412,6 +418,12 @@ class XMSSPrivateKey(PQHashStatefulSigPrivateKey):
         """Return the size of the signature for this XMSS private key."""
         return self._sig.length_signature
 
+    @property
+    def key_bit_security(self) -> int:
+        """Return the traditional bit security of the XMSS private key."""
+        # Approximate bit security based on the hash output size
+        return self.public_key().key_bit_security
+
 
 class XMSSMTPublicKey(PQHashStatefulSigPublicKey):
     """Class representing an XMSSMT public key."""
@@ -534,6 +546,12 @@ class XMSSMTPublicKey(PQHashStatefulSigPublicKey):
         """Return the hash algorithm used by this XMSSMT public key."""
         return XMSSMT_ALG_DETAILS[self.name.lower()]["hash_alg"]
 
+    @property
+    def key_bit_security(self) -> int:
+        """Return the pq bit security of the XMSSMT public key."""
+        # Approximate bit security based on the hash output size
+        return XMSSMT_ALG_DETAILS[self.name.lower()]["n"] * 4
+
 
 class XMSSMTPrivateKey(PQHashStatefulSigPrivateKey):
     """Class representing an XMSSMT private key."""
@@ -632,6 +650,11 @@ class XMSSMTPrivateKey(PQHashStatefulSigPrivateKey):
     def layers(self) -> int:
         """Return the number of layers in the XMSSMT tree."""
         return self.public_key().layers
+
+    @property
+    def key_bit_security(self) -> int:
+        """Return the traditional bit security of the XMSSMT private key."""
+        return self.public_key().key_bit_security
 
     def _change_index(self, new_index: int) -> "XMSSMTPrivateKey":
         """Change the index of the public key.

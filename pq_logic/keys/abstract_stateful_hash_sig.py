@@ -73,6 +73,11 @@ class PQHashStatefulSigPublicKey(PQPublicKey, ABC):
     def hash_alg(self) -> str:
         """Return the hash algorithm used by this public key."""
 
+    @property
+    @abstractmethod
+    def key_bit_strength(self) -> int:
+        """Return the pq key bit strength."""
+
 
 class PQHashStatefulSigPrivateKey(PQPrivateKey, ABC):
     """Abstract base class for Post-Quantum Hash Stateful Signature Private Keys."""
@@ -131,3 +136,8 @@ class PQHashStatefulSigPrivateKey(PQPrivateKey, ABC):
     def hash_alg(self) -> str:
         """Return the hash algorithm used by this private key."""
         return self.public_key().hash_alg
+
+    @property
+    def key_bit_strength(self) -> int:
+        """Return the pq key bit strength."""
+        return self.public_key().key_bit_strength
