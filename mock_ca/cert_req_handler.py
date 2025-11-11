@@ -479,8 +479,9 @@ class CertReqHandler:
             cert_must_be_present=self._rfc9883_validation_config.private_key_possession_cert_must_be_present,
             enforce_key_strength=self._rfc9883_validation_config.private_key_possession_enforce_key_strength,
         )
-        # TODO validate signer certificate with OpenSSL
 
+        # TODO validate signer certificate with OpenSSL, if other certs are also allowed.
+        # currently only issued certs are allowed.
         response, cert = build_cp_from_p10cr(
             request=pki_message,
             set_header_fields=True,
