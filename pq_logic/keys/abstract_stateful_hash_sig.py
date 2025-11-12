@@ -75,8 +75,8 @@ class PQHashStatefulSigPublicKey(PQPublicKey, ABC):
 
     @property
     @abstractmethod
-    def key_bit_strength(self) -> int:
-        """Return the pq key bit strength."""
+    def key_bit_security(self) -> int:
+        """Return the pq key bit security strength."""
 
 
 class PQHashStatefulSigPrivateKey(PQPrivateKey, ABC):
@@ -138,6 +138,6 @@ class PQHashStatefulSigPrivateKey(PQPrivateKey, ABC):
         return self.public_key().hash_alg
 
     @property
-    def key_bit_strength(self) -> int:
-        """Return the pq key bit strength."""
-        return self.public_key().key_bit_strength
+    def key_bit_security(self) -> int:
+        """Return the pq key bit security strength."""
+        return self.public_key().key_bit_security
