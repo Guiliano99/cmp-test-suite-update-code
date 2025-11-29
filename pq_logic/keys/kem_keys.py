@@ -257,6 +257,11 @@ class MLKEMPrivateKey(PQKEMPrivateKey):
         """Get the claimed NIST level."""
         return {"ml-kem-768": 3, "ml-kem-512": 1, "ml-kem-1024": 5}[self.name]
 
+    @property
+    def kem_lable(self) -> bytes:
+        """Return the ML-KEM label for a hybrid mechanism, as input into teh KDF."""
+        return {"ml-kem-512": b"MLKEM512", "ml-kem-768": b"MLKEM768", "ml-kem-1024": b"MLKEM1024"}
+
     @staticmethod
     def _seed_size(name: str) -> int:
         """Get the size of the seed for the specified ML-KEM algorithm.
@@ -340,6 +345,11 @@ class McEliecePublicKey(PQKEMPublicKey):
         except Exception:  # pylint: disable=broad-except
             self._kem_method = oqs.KeyEncapsulation(self._other_name)
 
+    @property
+    def kem_lable(self) -> bytes:
+        """Return the McEliece label for a hybrid mechanism, as input into teh KDF."""
+        return bytes(self.name.upper().replace("-", ""), "utf-8")
+
 
 class McEliecePrivateKey(PQKEMPrivateKey):
     """Represents a McEliece private key.
@@ -398,6 +408,11 @@ class Sntrup761PublicKey(PQKEMPublicKey):
     def from_public_bytes(cls, data: bytes, name: str) -> "Sntrup761PublicKey":
         """Load a McEliece public key from raw bytes."""
         return super().from_public_bytes(data, name)  # type: ignore
+
+    @property
+    def kem_lable(self) -> bytes:
+        """Return the Sntrup761 label for a hybrid mechanism, as input into teh KDF."""
+        return b"SNTRUP761"
 
 
 class Sntrup761PrivateKey(PQKEMPrivateKey):
@@ -505,6 +520,12 @@ class FrodoKEMPublicKey(PQKEMPublicKey):
         if oqs is not None:
             return super().nist_level
         return _FRODOKEM_NIST_LEVEL[self.name]
+
+    @property
+    def kem_lable(self) -> bytes:
+        """Return the FrodoKEM label for a hybrid mechanism, as input into teh KDF."""
+        _name = self.name.upper().replace("-", "")
+        return bytes(_name, "utf-8")
 
 
 class FrodoKEMPrivateKey(PQKEMPrivateKey):

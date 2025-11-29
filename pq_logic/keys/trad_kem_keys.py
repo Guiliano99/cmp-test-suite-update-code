@@ -117,6 +117,15 @@ class RSAEncapKey(TradKEMPublicKey):
         """Encode the public key as RSAPublicKey bytes."""
         return self._export_public_key()
 
+    @property
+    def kem_lable(self) -> bytes:
+        """Return the Composite KEM lable for a KDF.
+
+        :return: The Composite KEM lable (e.g. b"RSAOAEP4096").
+        """
+        _num = str(self._public_key.key_size).encode()
+        return b"RSAOAEP" + _num
+
 
 class RSADecapKey(TradKEMPrivateKey):
     """Wrapper class to support decaps method using RSA-OAEP or RSA-KEM."""
@@ -239,6 +248,33 @@ class RSADecapKey(TradKEMPrivateKey):
         decoded, _ = decoder.decode(der_data, asn1Spec=rfc5958.OneAsymmetricKey())
         return decoded["privateKey"].asOctets()
 
+    @property
+    def kem_lable(self) -> bytes:
+        """Return the Composite KEM lable for a KDF.
+
+        Note:
+        ----
+        - corrects the key size to 2048, 3072 or 4096.
+
+        :return: The Composite KEM lable (e.g. b"RSAOAEP4096").
+
+        """
+        if self._private_key.key_size in [2048, 3072, 4096]:
+            return self.public_key().kem_lable
+
+        _key_size = max(self._private_key.key_size, 2048)
+
+        if not _key_size != 2048:
+            # Round to the next valid key size
+            if _key_size < 3072:
+                _key_size = 2048
+            elif _key_size < 4096:
+                _key_size = 3072
+            else:
+                _key_size = 4096
+
+        return b"RSAOAEP" + str(_key_size).encode("utf-8")
+
 
 class DHKEMPublicKey(TradKEMPublicKey):
     """Wrapper class for Diffie-Hellman Key Encapsulation Mechanism (DHKEM) public keys."""
@@ -330,19 +366,39 @@ class DHKEMPublicKey(TradKEMPublicKey):
     @property
     def get_trad_name(self) -> str:
         """Return the traditional name of the encapsulation key (curve-name)."""
-        if isinstance(self._public_key, ec.EllipticCurvePublicKey):
-            return "ecdh-" + self._public_key.curve.name
-        if isinstance(self._public_key, x25519.X25519PublicKey):
-            return "x25519"
-        if isinstance(self._public_key, x448.X448PublicKey):
-            return "x448"
-        raise ValueError("Unsupported public key type.")
+        _name = self.curve_name
+        if _name in ["x25519", "x448"]:
+            return _name
+        return "ecdh-" + _name
+
+    @property
+    def kem_lable(self) -> bytes:
+        """Return the KEM lable for a KDF.
+
+        :return: The KEM lable for a KDF.
+        :raises NotImplementedError: If the curve is not supported yet.
+        """
+        _name = self.get_trad_name
+        if _name in ["x25519", "x448"]:
+            return _name.upper().encode()
+        _curve = _name.replace("ecdh-", "", 1)
+        curve_to_labels = {
+            "secp256r1": b"P256",
+            "secp384r1": b"P384",
+            "secp521r1": b"P521",
+            "brainpoolP256r1": b"BP256",
+            "brainpoolP384r1": b"BP384",
+            "brainpoolP512r1": b"BP512",
+        }
+        if _curve not in curve_to_labels:
+            raise NotImplementedError(f"To get the KEM lable for the curve {_curve} is not supported.")
+        return curve_to_labels[_curve]
 
     @property
     def curve_name(self) -> str:
         """Return the name of the curve.
 
-        return: The name of the curve or x25519/x448.
+        return: The name of the curve or x25519/x448/secp256r1.
         """
         if isinstance(self._public_key, x25519.X25519PublicKey):
             return "x25519"
@@ -561,3 +617,12 @@ class DHKEMPrivateKey(TradKEMPrivateKey):
         return: The name of the curve or x25519/x448.
         """
         return self.public_key().curve_name
+
+    @property
+    def kem_lable(self) -> bytes:
+        """Return the KEM lable for a KDF.
+
+        :return: The KEM lable for a KDF.
+        :raises NotImplementedError: If the curve is not supported yet.
+        """
+        return self.public_key().kem_lable
