@@ -136,20 +136,9 @@ class ChempatPublicKey(AbstractHybridRawPublicKey):
         :return: The context string as bytes.
         :raises InvalidKeyCombination: If the key combination is not supported.
         """
-        if pq_key.name == "sntrup761":
-            pq_name = "sntrup761"
-
-        elif isinstance(pq_key, (McEliecePrivateKey, McEliecePublicKey)):
-            pq_name = pq_key.name.replace("-", "").lower()
-        elif isinstance(pq_key, (MLKEMPrivateKey, MLKEMPublicKey)):
-            pq_name = pq_key.name.upper()
-
-        elif isinstance(pq_key, (FrodoKEMPrivateKey, FrodoKEMPublicKey)):
-            pq_name = pq_key.name.replace("frodokem", "FrodoKEM")
-            pq_name = pq_name.replace("-aes", "")
-            pq_name = pq_name.replace("-shake", "")
-
-        else:
+        if isinstance(pq_key, PQKEMPrivateKey):
+            pq_key = pq_key.public_key()
+        if not isinstance(pq_key, (Sntrup761PublicKey, McEliecePublicKey, FrodoKEMPublicKey, MLKEMPublicKey)):
             raise InvalidKeyCombination(f"Unsupported post-quantum key type for Chempat.: {pq_key.name}")
 
         curve_name = trad_key.curve_name
@@ -159,7 +148,8 @@ class ChempatPublicKey(AbstractHybridRawPublicKey):
             curve_name = CURVE_NAME_2_CONTEXT_NAME[curve_name]
 
         name = bytes(curve_name, "utf-8")
-        return b"Chempat-" + name + b"-" + bytes(pq_name, "utf-8")
+
+        return b"Chempat-" + name + b"-" + pq_key.kem_lable
 
     @staticmethod
     def kem_combiner(
