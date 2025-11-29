@@ -207,6 +207,11 @@ class PQKEMPublicKey(PQPublicKey, KEMPublicKey, ABC):
         """Return the claimed NIST security level as string."""
         return int(self._kem_method.details["claimed_nist_level"])
 
+    @property
+    def kem_lable(self) -> bytes:
+        """Return the KEM label for a hybrid mechanism as input for a KDF."""
+        raise NotImplementedError(f"KEM label is not supported yet for: {self.name}.")
+
 
 class PQKEMPrivateKey(PQPrivateKey, KEMPrivateKey, ABC):
     """Concrete implementation of a Post-Quantum KEM Private Key.
@@ -290,3 +295,8 @@ class PQKEMPrivateKey(PQPrivateKey, KEMPrivateKey, ABC):
     def seed_size(self) -> int:
         """Return the size of the seed used for key generation."""
         return self._seed_size(self._other_name)
+
+    @property
+    def kem_lable(self) -> bytes:
+        """Return the KEM label for a hybrid mechanism as input for a KDF."""
+        return self.public_key().kem_lable
