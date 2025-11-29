@@ -495,6 +495,11 @@ class TradKEMPublicKey(KEMPublicKey, ABC):
     def encode(self) -> bytes:
         """Encode the public key."""
 
+    @property
+    @abstractmethod
+    def kem_lable(self) -> bytes:
+        """Return the label for the Trad-KEM algorithm."""
+
 
 class TradKEMPrivateKey(KEMPrivateKey, ABC):
     """Abstract class for traditional KEM private keys."""
@@ -533,6 +538,14 @@ class TradKEMPrivateKey(KEMPrivateKey, ABC):
     def get_trad_name(self) -> str:
         """Get the name of the traditional algorithm."""
         return self.public_key().get_trad_name
+
+    @property
+    def kem_lable(self) -> bytes:
+        """Return the label for the Trad-KEM algorithm.
+
+        :return: The label as bytes (e.g, RSAOAEP4096, X25519, etc.)
+        """
+        return self.public_key().kem_lable
 
 
 class HybridPublicKey(WrapperPublicKey, ABC):
