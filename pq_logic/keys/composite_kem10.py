@@ -136,11 +136,10 @@ class CompositeKEM10PublicKey(HybridKEMPublicKey, AbstractCompositePublicKey):
         logging.info("Traditional KEM encaps ct: %s", ct.hex())
         return ss, ct
 
-    def encaps(self, private_key: Optional[ECDHPrivateKey] = None, use_in_cms: bool = True) -> Tuple[bytes, bytes]:
+    def encaps(self, private_key: Optional[ECDHPrivateKey] = None) -> Tuple[bytes, bytes]:
         """Encapsulate the key encapsulation mechanism.
 
         :param private_key: The ECC private key to use for encapsulation.
-        :param use_in_cms: Whether to use the combined secret in a CMS context.
         :return: A tuple containing the shared secret and the ciphertext.
         """
         mlkem_ss, mlkem_ct = self.pq_key.encaps()
@@ -232,7 +231,7 @@ class CompositeKEM10PrivateKey(HybridKEMPrivateKey, AbstractCompositePrivateKey)
         return CompositeKEM10PublicKey(self.pq_key.public_key(), self.trad_key.public_key())
 
     def kem_combiner(
-        self, mlkem_ss: bytes, trad_ss: bytes, trad_ct: bytes, trad_pk: bytes, use_in_cms: bool = False
+        self, mlkem_ss: bytes, trad_ss: bytes, trad_ct: bytes, trad_pk: bytes,
     ) -> bytes:
         """Combine the shared secrets from the post-quantum and traditional parts.
 
@@ -240,7 +239,6 @@ class CompositeKEM10PrivateKey(HybridKEMPrivateKey, AbstractCompositePrivateKey)
         :param trad_ss: The shared secret from the traditional part.
         :param trad_ct: The traditional ciphertext.
         :param trad_pk: The traditional public key.
-        :param use_in_cms: Whether to use the combined secret in a CMS context.
         :return: The combined shared secret.
         """
         return self.public_key().kem_combiner(mlkem_ss, trad_ss, trad_ct, trad_pk)
@@ -249,11 +247,10 @@ class CompositeKEM10PrivateKey(HybridKEMPrivateKey, AbstractCompositePrivateKey)
         """Encode the traditional part of the key."""
         return self.trad_key.public_key().encode()
 
-    def decaps(self, ct: bytes, use_in_cms: bool = True) -> bytes:
+    def decaps(self, ct: bytes) -> bytes:
         """Decapsulate the key encapsulation mechanism.
 
         :param ct: The ciphertext to decapsulate.
-        :param use_in_cms: Whether to use the combined secret in a CMS context, uses HKDF instead of HMAC.
         :return: The shared secret.
         """
         mlkem_ct = ct[: self.pq_key.ct_length]

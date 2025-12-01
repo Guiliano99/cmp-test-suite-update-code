@@ -2377,7 +2377,6 @@ def verify_kem_based_mac_protection(
         shared_secret = cryptoutils.compute_decapsulation(
             private_key,
             ciphertext=kem_ct,
-            use_in_cms=True,
         )
         logging.info("Shared Secret %s", shared_secret.hex())
 

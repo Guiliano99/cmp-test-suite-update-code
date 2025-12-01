@@ -1470,7 +1470,7 @@ def _handle_kem_encapsulation(
     kem_pub_key = ensure_is_kem_pub_key(kem_pub_key)
 
     if isinstance(kem_pub_key, CompositeKEM10PublicKey):
-        shared_secret, kemct = kem_pub_key.encaps(private_key=hybrid_key_recip, use_in_cms=True)
+        shared_secret, kemct = kem_pub_key.encaps(private_key=hybrid_key_recip)
     elif hybrid_key_recip is None:
         shared_secret, kemct = kem_pub_key.encaps()
     elif isinstance(kem_pub_key, HybridKEMPublicKey):
