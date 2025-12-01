@@ -208,7 +208,7 @@ class PQKEMPublicKey(PQPublicKey, KEMPublicKey, ABC):
         return int(self._kem_method.details["claimed_nist_level"])
 
     @property
-    def kem_lable(self) -> bytes:
+    def kem_label(self) -> bytes:
         """Return the KEM label for a hybrid mechanism as input for a KDF."""
         raise NotImplementedError(f"KEM label is not supported yet for: {self.name}.")
 
@@ -297,6 +297,6 @@ class PQKEMPrivateKey(PQPrivateKey, KEMPrivateKey, ABC):
         return self._seed_size(self._other_name)
 
     @property
-    def kem_lable(self) -> bytes:
+    def kem_label(self) -> bytes:
         """Return the KEM label for a hybrid mechanism as input for a KDF."""
-        return self.public_key().kem_lable
+        return self.public_key().kem_label

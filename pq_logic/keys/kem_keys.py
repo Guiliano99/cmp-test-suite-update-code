@@ -125,8 +125,8 @@ class MLKEMPublicKey(PQKEMPublicKey):
         return super().from_public_bytes(data, name)  # type: ignore
 
     @property
-    def kem_lable(self) -> bytes:
-        """Return the ML-KEM label for a hybrid mechanism, as input into teh KDF."""
+    def kem_label(self) -> bytes:
+        """Return the ML-KEM label for a hybrid mechanism, as input into the KDF."""
         return {"ml-kem-512": b"MLKEM512", "ml-kem-768": b"MLKEM768", "ml-kem-1024": b"MLKEM1024"}[self.name]
 
 
@@ -346,8 +346,8 @@ class McEliecePublicKey(PQKEMPublicKey):
             self._kem_method = oqs.KeyEncapsulation(self._other_name)
 
     @property
-    def kem_lable(self) -> bytes:
-        """Return the McEliece label for a hybrid mechanism, as input into teh KDF."""
+    def kem_label(self) -> bytes:
+        """Return the McEliece label for a hybrid mechanism, as input into the KDF."""
         return bytes(self.name.upper().replace("-", ""), "utf-8")
 
 
@@ -410,8 +410,8 @@ class Sntrup761PublicKey(PQKEMPublicKey):
         return super().from_public_bytes(data, name)  # type: ignore
 
     @property
-    def kem_lable(self) -> bytes:
-        """Return the Sntrup761 label for a hybrid mechanism, as input into teh KDF."""
+    def kem_label(self) -> bytes:
+        """Return the Sntrup761 label for a hybrid mechanism, as input into the KDF."""
         return b"SNTRUP761"
 
 
@@ -522,8 +522,8 @@ class FrodoKEMPublicKey(PQKEMPublicKey):
         return _FRODOKEM_NIST_LEVEL[self.name]
 
     @property
-    def kem_lable(self) -> bytes:
-        """Return the FrodoKEM label for a hybrid mechanism, as input into teh KDF."""
+    def kem_label(self) -> bytes:
+        """Return the FrodoKEM label for a hybrid mechanism, as input into the KDF."""
         _name = self.name.upper().replace("-", "")
         return bytes(_name, "utf-8")
 

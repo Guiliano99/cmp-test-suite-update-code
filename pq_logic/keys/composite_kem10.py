@@ -38,7 +38,7 @@ def _get_lable(
     :param pq_key: The post-quantum key.
     :param trad_key: The traditional key.
     """
-    return pq_key.kem_lable + trad_key.kem_lable
+    return pq_key.kem_label + trad_key.kem_label
 
 
 class CompositeKEM10PublicKey(HybridKEMPublicKey, AbstractCompositePublicKey):

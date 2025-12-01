@@ -150,7 +150,7 @@ class ChempatPublicKey(AbstractHybridRawPublicKey):
 
         name = bytes(curve_name, "utf-8")
 
-        return b"Chempat-" + name + b"-" + pq_key.kem_lable
+        return b"Chempat-" + name + b"-" + pq_key.kem_label
 
     @staticmethod
     def kem_combiner(

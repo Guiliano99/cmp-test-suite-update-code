@@ -118,7 +118,7 @@ class RSAEncapKey(TradKEMPublicKey):
         return self._export_public_key()
 
     @property
-    def kem_lable(self) -> bytes:
+    def kem_label(self) -> bytes:
         """Return the Composite KEM lable for a KDF.
 
         :return: The Composite KEM lable (e.g. b"RSAOAEP4096").
@@ -249,7 +249,7 @@ class RSADecapKey(TradKEMPrivateKey):
         return decoded["privateKey"].asOctets()
 
     @property
-    def kem_lable(self) -> bytes:
+    def kem_label(self) -> bytes:
         """Return the Composite KEM lable for a KDF.
 
         Note:
@@ -260,7 +260,7 @@ class RSADecapKey(TradKEMPrivateKey):
 
         """
         if self._private_key.key_size in [2048, 3072, 4096]:
-            return self.public_key().kem_lable
+            return self.public_key().kem_label
 
         _key_size = max(self._private_key.key_size, 2048)
 
@@ -372,7 +372,7 @@ class DHKEMPublicKey(TradKEMPublicKey):
         return "ecdh-" + _name
 
     @property
-    def kem_lable(self) -> bytes:
+    def kem_label(self) -> bytes:
         """Return the KEM lable for a KDF.
 
         :return: The KEM lable for a KDF.
@@ -619,10 +619,10 @@ class DHKEMPrivateKey(TradKEMPrivateKey):
         return self.public_key().curve_name
 
     @property
-    def kem_lable(self) -> bytes:
+    def kem_label(self) -> bytes:
         """Return the KEM lable for a KDF.
 
         :return: The KEM lable for a KDF.
         :raises NotImplementedError: If the curve is not supported yet.
         """
-        return self.public_key().kem_lable
+        return self.public_key().kem_label
