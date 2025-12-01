@@ -263,7 +263,6 @@ def generate_key(algorithm: str = "rsa", **params) -> PrivateKey:  # noqa: D417 
         - "composite-sig" (latest version of composite signature)
         - "composite-sig-13"
         - "composite-kem"
-        - "composite-dhkem" (uses DHKEM: RFC9180)
         - "chempat"
 
     Additional Parameters:
@@ -281,8 +280,7 @@ def generate_key(algorithm: str = "rsa", **params) -> PrivateKey:  # noqa: D417 
     ----------------------------
         - pq_name (str): The name of the post-quantum algorithm.
         - trad_param (str): The name of the traditional algorithm. needs to be `ecdh` for
-        composite-kem/composite-dhkem/chempat and
-        `ecdsa` for composite-sig.
+        composite-kem/chempat and `ecdsa` for composite-sig.
         - pq_key (PQPrivateKey): The post-quantum private key.
         - trad_key (ECDHPrivateKey or RSA): The traditional private key.
 
