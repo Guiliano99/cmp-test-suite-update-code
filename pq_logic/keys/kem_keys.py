@@ -124,6 +124,11 @@ class MLKEMPublicKey(PQKEMPublicKey):
         """Load an ML-KEM public key from raw bytes."""
         return super().from_public_bytes(data, name)  # type: ignore
 
+    @property
+    def kem_lable(self) -> bytes:
+        """Return the ML-KEM label for a hybrid mechanism, as input into teh KDF."""
+        return {"ml-kem-512": b"MLKEM512", "ml-kem-768": b"MLKEM768", "ml-kem-1024": b"MLKEM1024"}[self.name]
+
 
 class MLKEMPrivateKey(PQKEMPrivateKey):
     """Represents an ML-KEM private key.
@@ -256,11 +261,6 @@ class MLKEMPrivateKey(PQKEMPrivateKey):
     def nist_level(self) -> int:
         """Get the claimed NIST level."""
         return {"ml-kem-768": 3, "ml-kem-512": 1, "ml-kem-1024": 5}[self.name]
-
-    @property
-    def kem_lable(self) -> bytes:
-        """Return the ML-KEM label for a hybrid mechanism, as input into teh KDF."""
-        return {"ml-kem-512": b"MLKEM512", "ml-kem-768": b"MLKEM768", "ml-kem-1024": b"MLKEM1024"}
 
     @staticmethod
     def _seed_size(name: str) -> int:
