@@ -118,10 +118,10 @@ class RSAEncapKey(TradKEMPublicKey):
         return self._export_public_key()
 
     @property
-    def kem_lable(self) -> bytes:
-        """Return the Composite KEM lable for a KDF.
+    def kem_label(self) -> bytes:
+        """Return the Composite KEM label for a KDF.
 
-        :return: The Composite KEM lable (e.g. b"RSAOAEP4096").
+        :return: The Composite KEM label (e.g. b"RSAOAEP4096").
         """
         _num = str(self._public_key.key_size).encode()
         return b"RSAOAEP" + _num
@@ -249,18 +249,18 @@ class RSADecapKey(TradKEMPrivateKey):
         return decoded["privateKey"].asOctets()
 
     @property
-    def kem_lable(self) -> bytes:
-        """Return the Composite KEM lable for a KDF.
+    def kem_label(self) -> bytes:
+        """Return the Composite KEM label for a KDF.
 
         Note:
         ----
         - corrects the key size to 2048, 3072 or 4096.
 
-        :return: The Composite KEM lable (e.g. b"RSAOAEP4096").
+        :return: The Composite KEM label (e.g. b"RSAOAEP4096").
 
         """
         if self._private_key.key_size in [2048, 3072, 4096]:
-            return self.public_key().kem_lable
+            return self.public_key().kem_label
 
         _key_size = max(self._private_key.key_size, 2048)
 
@@ -372,10 +372,10 @@ class DHKEMPublicKey(TradKEMPublicKey):
         return "ecdh-" + _name
 
     @property
-    def kem_lable(self) -> bytes:
-        """Return the KEM lable for a KDF.
+    def kem_label(self) -> bytes:
+        """Return the KEM label for a KDF.
 
-        :return: The KEM lable for a KDF.
+        :return: The KEM label for a KDF.
         :raises NotImplementedError: If the curve is not supported yet.
         """
         _name = self.get_trad_name
@@ -391,7 +391,7 @@ class DHKEMPublicKey(TradKEMPublicKey):
             "brainpoolP512r1": b"BP512",
         }
         if _curve not in curve_to_labels:
-            raise NotImplementedError(f"To get the KEM lable for the curve {_curve} is not supported.")
+            raise NotImplementedError(f"To get the KEM label for the curve {_curve} is not supported.")
         return curve_to_labels[_curve]
 
     @property
@@ -619,10 +619,10 @@ class DHKEMPrivateKey(TradKEMPrivateKey):
         return self.public_key().curve_name
 
     @property
-    def kem_lable(self) -> bytes:
-        """Return the KEM lable for a KDF.
+    def kem_label(self) -> bytes:
+        """Return the KEM label for a KDF.
 
-        :return: The KEM lable for a KDF.
+        :return: The KEM label for a KDF.
         :raises NotImplementedError: If the curve is not supported yet.
         """
-        return self.public_key().kem_lable
+        return self.public_key().kem_label
