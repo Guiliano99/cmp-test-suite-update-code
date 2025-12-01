@@ -126,7 +126,7 @@ class MLKEMPublicKey(PQKEMPublicKey):
 
     @property
     def kem_lable(self) -> bytes:
-        """Return the ML-KEM label for a hybrid mechanism, as input into teh KDF."""
+        """Return the ML-KEM label for a hybrid mechanism, as input into the KDF."""
         return {"ml-kem-512": b"MLKEM512", "ml-kem-768": b"MLKEM768", "ml-kem-1024": b"MLKEM1024"}[self.name]
 
 
@@ -347,7 +347,7 @@ class McEliecePublicKey(PQKEMPublicKey):
 
     @property
     def kem_lable(self) -> bytes:
-        """Return the McEliece label for a hybrid mechanism, as input into teh KDF."""
+        """Return the McEliece label for a hybrid mechanism, as input into the KDF."""
         return bytes(self.name.upper().replace("-", ""), "utf-8")
 
 
@@ -411,7 +411,7 @@ class Sntrup761PublicKey(PQKEMPublicKey):
 
     @property
     def kem_lable(self) -> bytes:
-        """Return the Sntrup761 label for a hybrid mechanism, as input into teh KDF."""
+        """Return the Sntrup761 label for a hybrid mechanism, as input into the KDF."""
         return b"SNTRUP761"
 
 
@@ -523,7 +523,7 @@ class FrodoKEMPublicKey(PQKEMPublicKey):
 
     @property
     def kem_lable(self) -> bytes:
-        """Return the FrodoKEM label for a hybrid mechanism, as input into teh KDF."""
+        """Return the FrodoKEM label for a hybrid mechanism, as input into the KDF."""
         _name = self.name.upper().replace("-", "")
         return bytes(_name, "utf-8")
 
