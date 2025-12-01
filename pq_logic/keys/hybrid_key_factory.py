@@ -16,9 +16,9 @@ from pyasn1_alt_modules import rfc5280, rfc5958
 
 from pq_logic.keys.abstract_wrapper_keys import HybridPrivateKey, HybridPublicKey, PQPrivateKey, TradKEMPrivateKey
 from pq_logic.keys.chempat_key import ChempatPrivateKey, ChempatPublicKey
-from pq_logic.keys.composite_kem07 import (
+from pq_logic.keys.composite_kem10 import (
     CompositeDHKEMRFC9180PrivateKey,
-    CompositeKEM07PrivateKey,
+    CompositeKEM10PrivateKey,
 )
 from pq_logic.keys.composite_sig13 import CompositeSig13PrivateKey
 from pq_logic.keys.pq_key_factory import PQKeyFactory
@@ -206,9 +206,8 @@ def _parse_private_keys(hybrid_type: str, pq_key, trad_key) -> HybridPrivateKey:
 
     hybrid_type = hybrid_type.replace("composite-", "")
     key_class_mappings = {
-        "kem": CompositeKEM07PrivateKey,  # always the latest version
-        "kem-07": CompositeKEM07PrivateKey,
-        "kem07": CompositeKEM07PrivateKey,
+        "kem": CompositeKEM10PrivateKey,  # always the latest version
+        "kem10": CompositeKEM10PrivateKey,
         "dhkem": CompositeDHKEMRFC9180PrivateKey,  # always the latest version
         "sig": CompositeSig13PrivateKey,  # always the latest version
         "sig-13": CompositeSig13PrivateKey,
@@ -225,8 +224,7 @@ class HybridKeyFactory:
         "sig": ALL_COMPOSITE_SIG_COMBINATIONS,
         "kem-05": ALL_COMPOSITE_KEM05_COMBINATIONS,
         "kem": ALL_COMPOSITE_KEM07_COMBINATIONS,
-        "kem-07": ALL_COMPOSITE_KEM07_COMBINATIONS,
-        "kem07": ALL_COMPOSITE_KEM07_COMBINATIONS,
+        "kem10": ALL_COMPOSITE_KEM07_COMBINATIONS,
         "chempat": ALL_CHEMPAT_COMBINATIONS,
         "dhkem": ALL_COMPOSITE_KEM07_COMBINATIONS,
         "xwing": [],
@@ -236,8 +234,7 @@ class HybridKeyFactory:
         "sig": {"pq_name": "ml-dsa-44", "trad_name": "rsa", "length": "2048"},
         "sig-13": {"pq_name": "ml-dsa-44", "trad_name": "rsa", "length": "2048"},
         "kem": {"pq_name": "ml-kem-768", "trad_name": "x25519"},
-        "kem07": {"pq_name": "ml-kem-768", "trad_name": "x25519"},
-        "kem-07": {"pq_name": "ml-kem-768", "trad_name": "x25519"},
+        "kem10": {"pq_name": "ml-kem-768", "trad_name": "x25519"},
         "chempat": {"pq_name": "ml-kem-768", "trad_name": "x25519"},
         "dhkem": {"pq_name": "ml-kem-768", "trad_name": "x25519"},
     }
@@ -348,8 +345,7 @@ class HybridKeyFactory:
             "composite-sig-13",
             "composite-dhkem",
             "composite-kem",
-            "composite-kem-07",
-            "composite-kem07",
+            "composite-kem10",
             "chempat",
         ]
 
@@ -369,7 +365,7 @@ class HybridKeyFactory:
 
         valid_combinations = HybridKeyFactory.hybrid_mappings[hybrid_type]
 
-        if hybrid_type in ["dhkem", "kem"] and pq_name in ["frodokem-aes-640", "frodokem-shake-640"]:
+        if hybrid_type in ["dhkem", "kem", "kem10"] and pq_name in ["frodokem-aes-640", "frodokem-shake-640"]:
             raise InvalidKeyCombination("FrodoKEM-640 is not supported (the claimed NIST level is only `1`).")
 
         params = get_valid_hybrid_combination(
@@ -569,7 +565,7 @@ class HybridKeyFactory:
             key_type=key_type,
         )
 
-        if isinstance(private_key, (CompositeKEM07PrivateKey, CompositeSig13PrivateKey)):
+        if isinstance(private_key, (CompositeKEM10PrivateKey, CompositeSig13PrivateKey)):
             if key_type == KeySaveType.SEED and hasattr(private_key.pq_key, "private_numbers"):
                 pq_key_bytes = private_key.pq_key.private_numbers()
             elif key_type == KeySaveType.SEED_AND_RAW and hasattr(private_key.pq_key, "private_numbers"):
