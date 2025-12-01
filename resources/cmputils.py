@@ -5662,7 +5662,7 @@ def build_kem_based_mac_protected_message(  # noqa: D417 Missing argument descri
         ca_key = convertutils.ensure_is_kem_pub_key(ca_key)
 
         if isinstance(ca_key, CompositeKEM10PublicKey):
-            shared_secret, ct = ca_key.encaps(use_in_cms=False)
+            shared_secret, ct = ca_key.encaps()
         elif isinstance(ca_key, HybridKEMPublicKey):
             shared_secret, ct = ca_key.encaps(client_key)  # type: ignore
         else:

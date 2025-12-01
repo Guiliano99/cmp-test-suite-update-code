@@ -2242,7 +2242,7 @@ def process_kem_recip_info(
     )
 
     if isinstance(private_key, CompositeKEM10PrivateKey):
-        shared_secret = private_key.decaps(validated_info["kemct"], use_in_cms=True)
+        shared_secret = private_key.decaps(validated_info["kemct"])
     elif not isinstance(private_key, (RSAPrivateKey, RSADecapKey)):
         shared_secret = private_key.decaps(validated_info["kemct"])
     else:

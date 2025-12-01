@@ -791,7 +791,6 @@ def compute_encapsulation(  # noqa: D417 Missing argument descriptions in the do
     key: KEMPublicKey,
     other_key: Optional[ECDHPrivateKey] = None,
     key_length: int = 32,
-    use_in_cms: bool = False,
 ) -> Tuple[bytes, bytes]:
     """Compute encapsulation for a key.
 
@@ -801,8 +800,6 @@ def compute_encapsulation(  # noqa: D417 Missing argument descriptions in the do
         - `other_key`: The other key to use for encapsulation. Defaults to `None`.
         - `key_length`: The length of the key in bytes. Defaults to `32`. (only used for RSA to \
         align with RFC9690. uses `KDF3` with `SHA-256`).
-        - `use_in_cms`: Whether Composite-KEM07PublicKey encapsulation should be used in CMS \
-        (uses HKDF instead of HMAC). Defaults to `False`.
 
     Returns:
     -------
@@ -834,8 +831,8 @@ def compute_encapsulation(  # noqa: D417 Missing argument descriptions in the do
         if isinstance(key.trad_key, RSAEncapKey) and other_key is not None:
             raise InvalidKeyCombination("Composite-KEM RSA can not be encapsulated with ECDH.")
         if isinstance(key.trad_key, RSAEncapKey):
-            return key.encaps(use_in_cms=use_in_cms)
-        return key.encaps(private_key=other_key, use_in_cms=use_in_cms)
+            return key.encaps()
+        return key.encaps(private_key=other_key)
     if isinstance(key, DHKEMPublicKey):
         return key.encaps(private_key=other_key)
 
@@ -851,7 +848,6 @@ def compute_decapsulation(  # noqa: D417 Missing argument descriptions in the do
     key: KEMPrivateKey,
     ciphertext: Union[bytes, KemCiphertextInfoAsn1],
     key_length: int = 32,
-    use_in_cms: bool = False,
 ) -> bytes:
     """Compute decapsulation with a given ciphertext and private key.
 
@@ -861,8 +857,6 @@ def compute_decapsulation(  # noqa: D417 Missing argument descriptions in the do
         - `ciphertext`: The ciphertext to decapsulate or a `KemCiphertextInfoAsn1` object.
         - `key_length`: The length of the key in bytes. (only used for RSA to align with RFC9690.) Defaults to `32`.
         (uses `KDF3` with `SHA-256`).
-        - `use_in_cms`: Whether Composite-KEM07PrivateKey decapsulation should be used in CMS (uses \
-        HKDF instead of HMAC). Defaults to `False`.
 
     Returns:
     -------
@@ -892,7 +886,7 @@ def compute_decapsulation(  # noqa: D417 Missing argument descriptions in the do
             ss_length=key_length,
         )
     if isinstance(key, CompositeKEM10PrivateKey):
-        return key.decaps(ct=ct, use_in_cms=use_in_cms)
+        return key.decaps(ct=ct)
     return key.decaps(ct)
 
 
