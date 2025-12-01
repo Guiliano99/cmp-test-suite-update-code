@@ -152,6 +152,7 @@ class ChempatPublicKey(AbstractHybridRawPublicKey):
         else:
             raise InvalidKeyCombination(f"Unsupported post-quantum key type for Chempat.: {pq_key.name}")
 
+        # TODO change the chempat names, similar to composite.
         curve_name = trad_key.curve_name
         if curve_name in ["x448", "x25519"]:
             curve_name = curve_name.upper()
