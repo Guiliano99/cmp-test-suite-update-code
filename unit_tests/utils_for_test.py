@@ -974,7 +974,7 @@ def _save_composite_kem():
     )
     write_cmp_certificate_to_pem(cert, "data/unittest/hybrid_cert_composite_kem_frodokem_976_shake_x25519.pem")
 
-    print("Finished generating composite keys and certificates.")
+    print("Finished generating composite KEM keys and certificates.")
 
     # Chempat
 
