@@ -231,7 +231,11 @@ class CompositeKEM10PrivateKey(HybridKEMPrivateKey, AbstractCompositePrivateKey)
         return CompositeKEM10PublicKey(self.pq_key.public_key(), self.trad_key.public_key())
 
     def kem_combiner(
-        self, mlkem_ss: bytes, trad_ss: bytes, trad_ct: bytes, trad_pk: bytes,
+        self,
+        mlkem_ss: bytes,
+        trad_ss: bytes,
+        trad_ct: bytes,
+        trad_pk: bytes,
     ) -> bytes:
         """Combine the shared secrets from the post-quantum and traditional parts.
 
