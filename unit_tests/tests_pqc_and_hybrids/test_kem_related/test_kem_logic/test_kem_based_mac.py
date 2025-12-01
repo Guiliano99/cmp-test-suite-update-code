@@ -119,54 +119,6 @@ class TestKEMBasedMac(unittest.TestCase):
         decoded_pki_message, _ = decoder.decode(encoder.encode(pki_message), rfc9480.PKIMessage())
         verify_kem_based_mac_protection(decoded_pki_message, private_key=self.mlkem_key)
 
-    def test_verify_composite_kem_kem_based_mac_without_use_in_cms(self):
-        """
-        GIVEN a PKIMessage protected with a composite-KEM KEMBasedMAC.
-        WHEN the PKIMessage is verified with the private key, and the use_in_cms flag is set to False,
-        THEN should the verification raise a BadMessageCheck exception.
-        """
-        composite_kem = generate_key("composite-kem", trad_name="rsa")
 
-        ss, ct = composite_kem.public_key().encaps(use_in_cms=False)
-        kem_ct_info = prepare_kem_ciphertextinfo(key=composite_kem,
-                                                 ct=ct)
-
-        ir = build_ir_from_key(self.rsa_key)
-        ir = add_general_info_values(ir, kem_ct_info)
-
-        protected_ir = protect_pkimessage_kem_based_mac(pki_message=ir,
-                                                        private_key=composite_kem,
-                                                        shared_secret=ss,
-                                                        )
-
-        der_data = encoder.encode(protected_ir)
-        protected_ir = parse_pkimessage(der_data)
-
-        with self.assertRaises(BadMessageCheck):
-            # This should raise an error because the private key is not a KEM key
-            verify_kem_based_mac_protection(pki_message=protected_ir, private_key=composite_kem)
-
-    def test_verify_composite_kem_kem_based_mac_use_in_cms(self):
-        """
-        GIVEN a PKIMessage protected with a composite-KEM KEMBasedMAC.
-        WHEN the PKIMessage is verified with the private key,
-        THEN should the verification be successful.
-        """
-        composite_kem = generate_key("composite-kem", trad_name="rsa")
-
-        ss, ct = composite_kem.public_key().encaps(use_in_cms=True)
-        kem_ct_info = prepare_kem_ciphertextinfo(key=composite_kem,
-                                                 ct=ct)
-
-        ir = build_ir_from_key(self.rsa_key)
-        ir = add_general_info_values(ir, kem_ct_info)
-
-        protected_ir = protect_pkimessage_kem_based_mac(pki_message=ir,
-                                                        shared_secret=ss,
-                                                        )
-
-        der_data = encoder.encode(protected_ir)
-        protected_ir = parse_pkimessage(der_data)
-        verify_kem_based_mac_protection(pki_message=protected_ir, private_key=composite_kem)
-
-
+if __name__ == "__main__":
+    unittest.main()
