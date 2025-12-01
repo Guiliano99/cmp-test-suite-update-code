@@ -38,7 +38,7 @@ def _get_lable(
     :param pq_key: The post-quantum key.
     :param trad_key: The traditional key.
     """
-    return pq_key.kem_lable + trad_key.kem_lable
+    return pq_key.kem_lable + trad_key.kem_label
 
 
 class CompositeKEM10PublicKey(HybridKEMPublicKey, AbstractCompositePublicKey):
@@ -231,7 +231,11 @@ class CompositeKEM10PrivateKey(HybridKEMPrivateKey, AbstractCompositePrivateKey)
         return CompositeKEM10PublicKey(self.pq_key.public_key(), self.trad_key.public_key())
 
     def kem_combiner(
-        self, mlkem_ss: bytes, trad_ss: bytes, trad_ct: bytes, trad_pk: bytes,
+        self,
+        mlkem_ss: bytes,
+        trad_ss: bytes,
+        trad_ct: bytes,
+        trad_pk: bytes,
     ) -> bytes:
         """Combine the shared secrets from the post-quantum and traditional parts.
 
