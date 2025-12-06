@@ -32,7 +32,7 @@ from pyasn1_alt_modules import (
 from robot.api.deco import keyword, not_keyword
 
 from pq_logic.keys.abstract_wrapper_keys import HybridKEMPublicKey, KEMPublicKey
-from pq_logic.keys.composite_kem10 import CompositeKEM10PublicKey
+from pq_logic.keys.composite_kem11 import CompositeKEM11PublicKey
 from pq_logic.pq_utils import get_kem_oid_from_key, is_kem_private_key
 from resources import (
     asn1utils,
@@ -5661,7 +5661,7 @@ def build_kem_based_mac_protected_message(  # noqa: D417 Missing argument descri
 
         ca_key = convertutils.ensure_is_kem_pub_key(ca_key)
 
-        if isinstance(ca_key, CompositeKEM10PublicKey):
+        if isinstance(ca_key, CompositeKEM11PublicKey):
             shared_secret, ct = ca_key.encaps()
         elif isinstance(ca_key, HybridKEMPublicKey):
             shared_secret, ct = ca_key.encaps(client_key)  # type: ignore

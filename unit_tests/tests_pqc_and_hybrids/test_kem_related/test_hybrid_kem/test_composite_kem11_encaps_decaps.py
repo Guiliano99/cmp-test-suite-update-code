@@ -4,12 +4,12 @@
 
 import unittest
 
-from pq_logic.keys.composite_kem10 import CompositeKEM10PrivateKey
+from pq_logic.keys.composite_kem11 import CompositeKEM11PrivateKey
 from pq_logic.keys.pq_key_factory import PQKeyFactory
 from resources.keyutils import generate_key
 
 
-class TestCompositeKEM10(unittest.TestCase):
+class TestCompositeKEM11(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -20,11 +20,11 @@ class TestCompositeKEM10(unittest.TestCase):
 
     def test_valid_mlkem_ecdh_secp256r1(self):
         """
-        GIVEN a CompositeKEM10PrivateKey
+        GIVEN a CompositeKEM11PrivateKey
         WHEN the encaps and decaps functions are called,
         THEN the shared secret is the same.
         """
-        key = CompositeKEM10PrivateKey(self.ml_kem_key, self.ecc_key)  # type: ignore
+        key = CompositeKEM11PrivateKey(self.ml_kem_key, self.ecc_key)  # type: ignore
         
         ss, ct = key.public_key().encaps()
         ss2 = key.decaps(ct)
@@ -32,23 +32,23 @@ class TestCompositeKEM10(unittest.TestCase):
 
     def test_valid_mlkem_x448(self):
         """
-        GIVEN a CompositeKEM10PrivateKey
+        GIVEN a CompositeKEM11PrivateKey
         WHEN the encaps and decaps functions are called,
         THEN the shared secret is the same.
         """
         ml_kem_key = generate_key("ml-kem-1024")
-        key = CompositeKEM10PrivateKey(ml_kem_key, self.x448_key)
+        key = CompositeKEM11PrivateKey(ml_kem_key, self.x448_key)
         ss, ct = key.public_key().encaps()
         ss2 = key.decaps(ct)
         self.assertEqual(ss, ss2)
 
     def test_valid_mlkem_rsa(self):
         """
-        GIVEN a CompositeKEM10PrivateKey
+        GIVEN a CompositeKEM11PrivateKey
         WHEN the encaps and decaps functions are called,
         THEN the shared secret is the same.
         """
-        key = CompositeKEM10PrivateKey(self.ml_kem_key, self.rsa_key) # type: ignore
+        key = CompositeKEM11PrivateKey(self.ml_kem_key, self.rsa_key) # type: ignore
         ss, ct = key.public_key().encaps()
         ss2 = key.decaps(ct)
         self.assertEqual(ss, ss2)
@@ -61,7 +61,7 @@ class TestCompositeKEM10(unittest.TestCase):
         """
         trad_key = generate_key("x25519")
         pq_key = PQKeyFactory.generate_pq_key("frodokem-976-aes")
-        comp_key = CompositeKEM10PrivateKey(pq_key, trad_key)
+        comp_key = CompositeKEM11PrivateKey(pq_key, trad_key)
         shared_secret, ct_vals = comp_key.public_key().encaps()
         decaps_ss = comp_key.decaps(ct_vals)
         self.assertEqual(shared_secret, decaps_ss, "Shared secret mismatch for FrodoKEM X25519-based keys.")

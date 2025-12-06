@@ -236,8 +236,6 @@ id_comp_kem10_mlkem1024_ecdh_brainpool_p384r1 = univ.ObjectIdentifier(f"{id_new_
 id_comp_kem10_mlkem1024_x448 = univ.ObjectIdentifier(f"{id_new_compKEM}.96")
 id_comp_kem10_mlkem1024_ecdh_p521 = univ.ObjectIdentifier(f"{id_new_compKEM}.97")
 
-composite_kem_version = "composite-kem10"
-
 COMPOSITE_KEM10_MLKEM_NAME_2_OID = {
     f"{composite_kem_version}-ml-kem-768-rsa2048": id_comp_kem10_mlkem768_rsa2048,
     f"{composite_kem_version}-ml-kem-768-rsa3072": id_comp_kem10_mlkem768_rsa3072,
@@ -251,9 +249,24 @@ COMPOSITE_KEM10_MLKEM_NAME_2_OID = {
     f"{composite_kem_version}-ml-kem-1024-ecdh-brainpoolP384r1": id_comp_kem10_mlkem1024_ecdh_brainpool_p384r1,
     f"{composite_kem_version}-ml-kem-1024-x448": id_comp_kem10_mlkem1024_x448,
     f"{composite_kem_version}-ml-kem-1024-ecdh-secp521r1": id_comp_kem10_mlkem1024_ecdh_p521,
+composite_kem_version = "composite-kem-11"
+
+COMPOSITE_KEM11_MLKEM_NAME_2_OID = {
+    f"{composite_kem_version}-ml-kem-768-rsa2048": id_comp_kem11_mlkem768_rsa2048,
+    f"{composite_kem_version}-ml-kem-768-rsa3072": id_comp_kem11_mlkem768_rsa3072,
+    f"{composite_kem_version}-ml-kem-768-rsa4096": id_comp_kem11_mlkem768_rsa4096,
+    f"{composite_kem_version}-ml-kem-768-x25519": id_comp_kem11_mlkem768_x25519,
+    f"{composite_kem_version}-ml-kem-768-ecdh-secp256r1": id_comp_kem11_mlkem768_ecdh_p256,
+    f"{composite_kem_version}-ml-kem-768-ecdh-secp384r1": id_comp_kem11_mlkem768_ecdh_p384,
+    f"{composite_kem_version}-ml-kem-768-ecdh-brainpoolP256r1": id_comp_kem11_mlkem768_ecdh_brainpool_p256r1,
+    f"{composite_kem_version}-ml-kem-1024-rsa3072": id_comp_kem11_mlkem1024_rsa3072,
+    f"{composite_kem_version}-ml-kem-1024-ecdh-secp384r1": id_comp_kem11_mlkem1024_ecdh_p384,
+    f"{composite_kem_version}-ml-kem-1024-ecdh-brainpoolP384r1": id_comp_kem11_mlkem1024_ecdh_brainpool_p384r1,
+    f"{composite_kem_version}-ml-kem-1024-x448": id_comp_kem11_mlkem1024_x448,
+    f"{composite_kem_version}-ml-kem-1024-ecdh-secp521r1": id_comp_kem11_mlkem1024_ecdh_p521,
 }
 
-COMPOSITE_KEM10_LABELS = {
+COMPOSITE_KEM11_LABELS = {
     f"{composite_kem_version}-ml-kem-768-rsa2048": b"MLKEM768-RSAOAEP2048",
     f"{composite_kem_version}-ml-kem-768-rsa3072": b"MLKEM768-RSAOAEP3072",
     f"{composite_kem_version}-ml-kem-768-rsa4096": b"MLKEM768-RSAOAEP4096",
@@ -437,13 +450,13 @@ id_altSubPubKeyExt = univ.ObjectIdentifier(f"{id_hybrid_sun}.6")
 id_altSignatureExt = univ.ObjectIdentifier(f"{id_hybrid_sun}.7")
 
 # Composite KEM OIDs
-COMPOSITE_KEM10_NAME_2_OID = {}
-COMPOSITE_KEM10_NAME_2_OID.update(COMPOSITE_KEM10_MLKEM_NAME_2_OID)
-COMPOSITE_KEM10_NAME_2_OID.update(COMPOSITE_FRODOKEM_NAME_2_OID)
+COMPOSITE_KEM11_NAME_2_OID = {}
+COMPOSITE_KEM11_NAME_2_OID.update(COMPOSITE_KEM11_MLKEM_NAME_2_OID)
+COMPOSITE_KEM11_NAME_2_OID.update(COMPOSITE_FRODOKEM_NAME_2_OID)
 
-COMPOSITE_KEM10_OID_2_NAME = {oid: name for name, oid in COMPOSITE_KEM10_NAME_2_OID.items()}
+COMPOSITE_KEM11_OID_2_NAME = {oid: name for name, oid in COMPOSITE_KEM11_NAME_2_OID.items()}
 
 # Backwards compatibility aliases for legacy names
-COMPOSITE_KEM_NAME_2_OID = COMPOSITE_KEM10_NAME_2_OID
-COMPOSITE_KEM_OID_2_NAME = COMPOSITE_KEM10_OID_2_NAME
-COMPOSITE_KEM_LABELS = {**COMPOSITE_KEM10_LABELS, **COMPOSITE_KEM_LABELS_OTHER}
+COMPOSITE_KEM_NAME_2_OID = COMPOSITE_KEM11_NAME_2_OID
+COMPOSITE_KEM_OID_2_NAME = COMPOSITE_KEM11_OID_2_NAME
+COMPOSITE_KEM_LABELS = {**COMPOSITE_KEM11_LABELS, **COMPOSITE_KEM_LABELS_OTHER}

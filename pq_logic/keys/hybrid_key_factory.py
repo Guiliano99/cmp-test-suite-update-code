@@ -16,7 +16,7 @@ from pyasn1_alt_modules import rfc5280, rfc5958
 
 from pq_logic.keys.abstract_wrapper_keys import HybridPrivateKey, HybridPublicKey, PQPrivateKey, TradKEMPrivateKey
 from pq_logic.keys.chempat_key import ChempatPrivateKey, ChempatPublicKey
-from pq_logic.keys.composite_kem10 import CompositeKEM10PrivateKey
+from pq_logic.keys.composite_kem11 import CompositeKEM11PrivateKey
 from pq_logic.keys.composite_sig13 import CompositeSig13PrivateKey
 from pq_logic.keys.pq_key_factory import PQKeyFactory
 from pq_logic.keys.serialize_utils import prepare_ec_private_key
@@ -86,7 +86,7 @@ ALL_COMPOSITE_KEM05_COMBINATIONS = [
 ALL_COMPOSITE_KEM07_COMBINATIONS = [
     {"pq_name": "ml-kem-768", "trad_name": "ecdh", "curve": "secp256r1"},
     {"pq_name": "ml-kem-1024", "trad_name": "rsa", "length": "3072"},
-    {"pq_name": "ml-kem-1024", "trad_name": "ecdh", "curve": "secp512r1"},
+    {"pq_name": "ml-kem-1024", "trad_name": "ecdh", "curve": "secp521r1"},
 ]
 ALL_COMPOSITE_KEM07_COMBINATIONS += ALL_COMPOSITE_KEM05_COMBINATIONS
 
@@ -202,9 +202,10 @@ def _parse_private_keys(hybrid_type: str, pq_key, trad_key) -> HybridPrivateKey:
         return ChempatPrivateKey.parse_keys(pq_key, trad_key)
 
     hybrid_type = hybrid_type.replace("composite-", "")
+    hybrid_type = hybrid_type.replace("kem11", "kem-11")
     key_class_mappings = {
-        "kem": CompositeKEM10PrivateKey,  # always the latest version
-        "kem10": CompositeKEM10PrivateKey,
+        "kem": CompositeKEM11PrivateKey,  # always the latest version
+        "kem-11": CompositeKEM11PrivateKey,
         "sig": CompositeSig13PrivateKey,  # always the latest version
         "sig-13": CompositeSig13PrivateKey,
     }
@@ -220,7 +221,7 @@ class HybridKeyFactory:
         "sig": ALL_COMPOSITE_SIG_COMBINATIONS,
         "kem-05": ALL_COMPOSITE_KEM05_COMBINATIONS,
         "kem": ALL_COMPOSITE_KEM07_COMBINATIONS,
-        "kem10": ALL_COMPOSITE_KEM07_COMBINATIONS,
+        "kem-11": ALL_COMPOSITE_KEM07_COMBINATIONS,
         "chempat": ALL_CHEMPAT_COMBINATIONS,
         "xwing": [],
     }
@@ -229,7 +230,7 @@ class HybridKeyFactory:
         "sig": {"pq_name": "ml-dsa-44", "trad_name": "rsa", "length": "2048"},
         "sig-13": {"pq_name": "ml-dsa-44", "trad_name": "rsa", "length": "2048"},
         "kem": {"pq_name": "ml-kem-768", "trad_name": "x25519"},
-        "kem10": {"pq_name": "ml-kem-768", "trad_name": "x25519"},
+        "kem-11": {"pq_name": "ml-kem-768", "trad_name": "x25519"},
         "chempat": {"pq_name": "ml-kem-768", "trad_name": "x25519"},
     }
 
@@ -293,6 +294,7 @@ class HybridKeyFactory:
             allowed_keys = {
                 "chempat": ["ecdh", "x25519", "x448"],
                 "composite-kem": ["rsa", "ecdh", "x25519", "x448"],
+                "composite-kem-11": ["rsa", "ecdh", "x25519", "x448"],
                 "composite-sig": ["rsa", "ecdsa", "ed25519", "ed448"],
                 "composite-sig-13": ["rsa", "ecdsa", "ed25519", "ed448"],
                 "xwing": ["x25519"],
@@ -338,7 +340,7 @@ class HybridKeyFactory:
             "composite-sig",
             "composite-sig-13",
             "composite-kem",
-            "composite-kem10",
+            "composite-kem-11",
             "chempat",
         ]
 
@@ -352,13 +354,14 @@ class HybridKeyFactory:
     ) -> HybridPrivateKey:
         """Generate composite signature or KEM keys based on provided parameters."""
         hybrid_type = algorithm.lower().replace("composite-", "")
+        hybrid_type = hybrid_type.replace("kem11", "kem-11")
 
         if hybrid_type not in HybridKeyFactory.hybrid_mappings:
             raise InvalidKeyCombination(f"Unsupported hybrid type: {algorithm}")
 
         valid_combinations = HybridKeyFactory.hybrid_mappings[hybrid_type]
 
-        if hybrid_type in ["kem", "kem10"] and pq_name in ["frodokem-aes-640", "frodokem-shake-640"]:
+        if hybrid_type in ["kem", "kem-11"] and pq_name in ["frodokem-aes-640", "frodokem-shake-640"]:
             raise InvalidKeyCombination("FrodoKEM-640 is not supported (the claimed NIST level is only `1`).")
 
         params = get_valid_hybrid_combination(
@@ -558,7 +561,7 @@ class HybridKeyFactory:
             key_type=key_type,
         )
 
-        if isinstance(private_key, (CompositeKEM10PrivateKey, CompositeSig13PrivateKey)):
+        if isinstance(private_key, (CompositeKEM11PrivateKey, CompositeSig13PrivateKey)):
             if key_type == KeySaveType.SEED and hasattr(private_key.pq_key, "private_numbers"):
                 pq_key_bytes = private_key.pq_key.private_numbers()
             elif key_type == KeySaveType.SEED_AND_RAW and hasattr(private_key.pq_key, "private_numbers"):

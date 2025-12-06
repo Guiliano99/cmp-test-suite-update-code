@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Composite KEM implementation based on draft-ietf-lamps-pq-composite-kem-10."""
+"""Composite KEM implementation based on draft-ietf-lamps-pq-composite-kem-11."""
 
 import logging
 from typing import Optional, Tuple, Union
@@ -27,7 +27,7 @@ from pq_logic.tmp_oids import COMPOSITE_KEM_LABELS, COMPOSITE_KEM_NAME_2_OID
 from resources.exceptions import InvalidKeyCombination
 from resources.typingutils import ECDHPrivateKey, ECDHPublicKey
 
-__all__ = ["CompositeKEM10PublicKey", "CompositeKEM10PrivateKey"]
+__all__ = ["CompositeKEM11PublicKey", "CompositeKEM11PrivateKey"]
 
 
 def _get_lable(
@@ -41,12 +41,12 @@ def _get_lable(
     return pq_key.kem_lable + trad_key.kem_label
 
 
-class CompositeKEM10PublicKey(HybridKEMPublicKey, AbstractCompositePublicKey):
-    """A Composite KEM public key for the Composite KEM 10."""
+class CompositeKEM11PublicKey(HybridKEMPublicKey, AbstractCompositePublicKey):
+    """A Composite KEM public key for the Composite KEM 11."""
 
     _trad_key: TradKEMPublicKey
     _pq_key: PQKEMPublicKey
-    _name = "composite-kem10"
+    _name = "composite-kem-11"
 
     def __init__(self, pq_key: PQKEMPublicKey, trad_key: Union[TradKEMPublicKey, ECDHPublicKey, RSAPublicKey]):
         """Initialize the composite KEM public key."""
@@ -156,12 +156,12 @@ class CompositeKEM10PublicKey(HybridKEMPublicKey, AbstractCompositePublicKey):
         return self._export_public_key()
 
 
-class CompositeKEM10PrivateKey(HybridKEMPrivateKey, AbstractCompositePrivateKey):
-    """A Composite KEM private key for the Composite KEM 10."""
+class CompositeKEM11PrivateKey(HybridKEMPrivateKey, AbstractCompositePrivateKey):
+    """A Composite KEM private key for the Composite KEM 11."""
 
     _trad_key: TradKEMPrivateKey
     _pq_key: PQKEMPrivateKey
-    _name = "composite-kem10"
+    _name = "composite-kem-11"
 
     def __init__(self, pq_key: PQKEMPrivateKey, trad_key: Union[TradKEMPrivateKey, ECDHPrivateKey, RSAPrivateKey]):
         """Initialize the composite KEM private key."""
@@ -226,9 +226,9 @@ class CompositeKEM10PrivateKey(HybridKEMPrivateKey, AbstractCompositePrivateKey)
             raise InvalidKeyCombination(f"Unsupported composite KEM combination: {name}")
         return COMPOSITE_KEM_NAME_2_OID[name]
 
-    def public_key(self) -> CompositeKEM10PublicKey:
+    def public_key(self) -> CompositeKEM11PublicKey:
         """Return the public key associated with this private key."""
-        return CompositeKEM10PublicKey(self.pq_key.public_key(), self.trad_key.public_key())
+        return CompositeKEM11PublicKey(self.pq_key.public_key(), self.trad_key.public_key())
 
     def kem_combiner(
         self,

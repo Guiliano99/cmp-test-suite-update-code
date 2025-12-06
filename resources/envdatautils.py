@@ -35,7 +35,7 @@ from robot.api.deco import keyword, not_keyword
 from pq_logic.keys.abstract_pq import PQSignaturePrivateKey, PQSignaturePublicKey
 from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPrivateKey, PQHashStatefulSigPublicKey
 from pq_logic.keys.abstract_wrapper_keys import HybridKEMPublicKey, KEMPublicKey
-from pq_logic.keys.composite_kem10 import CompositeKEM10PublicKey
+from pq_logic.keys.composite_kem11 import CompositeKEM11PublicKey
 from pq_logic.keys.composite_sig13 import CompositeSig13PrivateKey, CompositeSig13PublicKey
 from pq_logic.pq_utils import get_kem_oid_from_key, is_kem_public_key
 from pq_logic.tmp_oids import COMPOSITE_SIG_PREHASH_OID_2_HASH
@@ -1469,7 +1469,7 @@ def _handle_kem_encapsulation(
 
     kem_pub_key = ensure_is_kem_pub_key(kem_pub_key)
 
-    if isinstance(kem_pub_key, CompositeKEM10PublicKey):
+    if isinstance(kem_pub_key, CompositeKEM11PublicKey):
         shared_secret, kemct = kem_pub_key.encaps(private_key=hybrid_key_recip)
     elif hybrid_key_recip is None:
         shared_secret, kemct = kem_pub_key.encaps()

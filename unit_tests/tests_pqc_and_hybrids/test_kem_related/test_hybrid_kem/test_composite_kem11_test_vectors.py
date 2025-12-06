@@ -11,33 +11,33 @@ from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448P
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
 from cryptography.hazmat.primitives.serialization import load_der_private_key, load_der_public_key
 
-from pq_logic.keys.composite_kem10 import CompositeKEM10PrivateKey, CompositeKEM10PublicKey
+from pq_logic.keys.composite_kem11 import CompositeKEM11PrivateKey, CompositeKEM11PublicKey
 from pq_logic.keys.kem_keys import MLKEMPrivateKey
 from pq_logic.keys.pq_key_factory import PQKeyFactory
 from pq_logic.keys.trad_kem_keys import DHKEMPrivateKey, RSADecapKey, RSAEncapKey
-from resources.certutils import parse_certificate
+from resources.certutils import parse_certificate, load_public_key_from_cert
 from resources.exceptions import InvalidKeyData
 from resources.oidutils import CURVE_NAMES_TO_INSTANCES
 
 
-COMPOSITE_KEM10_ORIGINAL_NAME_TO_NAME = {
-    "id-MLKEM768-RSA3072-SHA3-256": "composite-kem10-ml-kem-768-rsa3072",
-    "id-MLKEM768-RSA4096-SHA3-256": "composite-kem10-ml-kem-768-rsa4096",
-    "id-MLKEM768-RSA2048-SHA3-256": "composite-kem10-ml-kem-768-rsa2048",
-    "id-MLKEM768-X25519-SHA3-256": "composite-kem10-ml-kem-768-x25519",
-    "id-MLKEM768-ECDH-P256-SHA3-256": "composite-kem10-ml-kem-768-ecdh-secp256r1",
-    "id-MLKEM768-ECDH-P384-SHA3-256": "composite-kem10-ml-kem-768-ecdh-secp384r1",
-    "id-MLKEM768-ECDH-brainpoolP256r1-SHA3-256": "composite-kem10-ml-kem-768-ecdh-brainpoolP256r1",
-    "id-MLKEM1024-RSA3072-SHA3-256": "composite-kem10-ml-kem-1024-rsa3072",
-    "id-MLKEM1024-ECDH-P384-SHA3-256": "composite-kem10-ml-kem-1024-ecdh-secp384r1",
-    "id-MLKEM1024-ECDH-brainpoolP384r1-SHA3-256": "composite-kem10-ml-kem-1024-ecdh-brainpoolP384r1",
-    "id-MLKEM1024-X448-SHA3-256": "composite-kem10-ml-kem-1024-x448",
-    "id-MLKEM1024-ECDH-P521-SHA3-256": "composite-kem10-ml-kem-1024-ecdh-secp521r1",
+COMPOSITE_KEM11_ORIGINAL_NAME_TO_NAME = {
+    "id-MLKEM768-RSA3072-SHA3-256": "composite-kem-11-ml-kem-768-rsa3072",
+    "id-MLKEM768-RSA4096-SHA3-256": "composite-kem-11-ml-kem-768-rsa4096",
+    "id-MLKEM768-RSA2048-SHA3-256": "composite-kem-11-ml-kem-768-rsa2048",
+    "id-MLKEM768-X25519-SHA3-256": "composite-kem-11-ml-kem-768-x25519",
+    "id-MLKEM768-ECDH-P256-SHA3-256": "composite-kem-11-ml-kem-768-ecdh-secp256r1",
+    "id-MLKEM768-ECDH-P384-SHA3-256": "composite-kem-11-ml-kem-768-ecdh-secp384r1",
+    "id-MLKEM768-ECDH-brainpoolP256r1-SHA3-256": "composite-kem-11-ml-kem-768-ecdh-brainpoolP256r1",
+    "id-MLKEM1024-RSA3072-SHA3-256": "composite-kem-11-ml-kem-1024-rsa3072",
+    "id-MLKEM1024-ECDH-P384-SHA3-256": "composite-kem-11-ml-kem-1024-ecdh-secp384r1",
+    "id-MLKEM1024-ECDH-brainpoolP384r1-SHA3-256": "composite-kem-11-ml-kem-1024-ecdh-brainpoolP384r1",
+    "id-MLKEM1024-X448-SHA3-256": "composite-kem-11-ml-kem-1024-x448",
+    "id-MLKEM1024-ECDH-P521-SHA3-256": "composite-kem-11-ml-kem-1024-ecdh-secp521r1",
 }
 
 
 @dataclass
-class CompositeKEM10TestVectors:
+class CompositeKEM11TestVectors:
     """
     Test vectors for Composite KEM 1.0.
     """
@@ -51,7 +51,7 @@ class CompositeKEM10TestVectors:
     k: str
 
     @classmethod
-    def from_dict(cls, data: dict) -> "CompositeKEM10TestVectors":
+    def from_dict(cls, data: dict) -> "CompositeKEM11TestVectors":
         return cls(
             tcId=data["tcId"],
             ek=data["ek"],
@@ -86,7 +86,7 @@ class CompositeKEM10TestVectors:
     @property
     def name(self):
         """Get the name of the algorithm."""
-        return COMPOSITE_KEM10_ORIGINAL_NAME_TO_NAME[self.tcId]
+        return COMPOSITE_KEM11_ORIGINAL_NAME_TO_NAME[self.tcId]
 
     @property
     def ct_bytes(self):
@@ -94,16 +94,15 @@ class CompositeKEM10TestVectors:
         return base64.b64decode(self.c)
 
 
-def _load_composite_kem10_from_private_bytes(algorithm: str, private_key: bytes) -> CompositeKEM10PrivateKey:
-    """
-    Load a Composite KEM v10 public key from private key bytes.
+def _load_composite_kem11_from_private_bytes(algorithm: str, private_key: bytes) -> CompositeKEM11PrivateKey:
+    """Load a Composite KEM v11 public key from private key bytes.
 
     :param algorithm: The name of the algorithm.
     :param private_key: The private key bytes.
-    :return: A CompositeKEM10PublicKey instance.
+    :return: A CompositeKEM11PublicKey instance.
     """
     algorithm = algorithm.lower()
-    prefix = "composite-kem10-"
+    prefix = "composite-kem-11-"
     pq_name = PQKeyFactory.get_pq_alg_name(algorithm=algorithm)
     tmp_pq_key = PQKeyFactory.generate_pq_key(pq_name)
 
@@ -142,21 +141,21 @@ def _load_composite_kem10_from_private_bytes(algorithm: str, private_key: bytes)
     if not isinstance(trad_key, rsa.RSAPrivateKey):
         trad_key = DHKEMPrivateKey(private_key=trad_key, use_rfc9180=False)
 
-    return CompositeKEM10PrivateKey(
+    return CompositeKEM11PrivateKey(
         pq_key=pq_key,
         trad_key=trad_key,
     )
 
 
-def _load_composite_kem10_from_public_bytes(algorithm: str, public_key: bytes) -> CompositeKEM10PublicKey:
-    """Load a Composite KEM v10 public key from public bytes.
+def _load_composite_kem11_from_public_bytes(algorithm: str, public_key: bytes) -> CompositeKEM11PublicKey:
+    """Load a Composite KEM v11 public key from public bytes.
 
     :param algorithm: The name of the algorithm.
     :param public_key: The public key bytes.
-    :return: A CompositeKEM10PublicKey instance.
+    :return: A CompositeKEM11PublicKey instance.
     """
     algorithm = algorithm.lower()
-    prefix = "composite-kem10-"
+    prefix = "composite-kem-11-"
     pq_name = PQKeyFactory.get_pq_alg_name(algorithm=algorithm)
     trad_name = algorithm.replace(prefix, "").replace(pq_name + "-", "")
     pq_key, rest = PQKeyFactory.from_public_bytes(pq_name, public_key, allow_rest=True)
@@ -165,28 +164,28 @@ def _load_composite_kem10_from_public_bytes(algorithm: str, public_key: bytes) -
         trad_key = X25519PublicKey.from_public_bytes(rest)
     elif trad_name == "x448":
         trad_key = X448PublicKey.from_public_bytes(rest)
-    elif trad_name == "ecdh":
+    elif trad_name == "ecdh" or trad_name.startswith("ecdh-"):
         curve_name = trad_name.replace("ecdh-", "")
         curve = CURVE_NAMES_TO_INSTANCES.get(curve_name)
         if curve is None:
             raise ValueError(f"Unsupported ECDH curve: {curve_name}")
         trad_key = ec.EllipticCurvePublicKey.from_encoded_point(curve, rest)
-    elif trad_name == "rsa":
+    elif trad_name.startswith("rsa") or trad_name == "rsa":
         trad_key = load_der_public_key(rest)
         trad_key = RSAEncapKey(trad_key)
     else:
         raise ValueError(f"Unsupported traditional key type: {trad_name}")
 
-    return CompositeKEM10PublicKey(
+    return CompositeKEM11PublicKey(
         pq_key=pq_key,
         trad_key=trad_key,
     )
 
 
-class TestCompositeKEM10TestVectors(unittest.TestCase):
+class TestCompositeKEM11TestVectors(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.path = "./data/rfc_test_vectors/composite_kem10_testvectors.json"
+        cls.path = "./data/rfc_test_vectors/composite_kem11_testvectors.json"
         cls.test_vectors = cls.load_test_vectors(cls.path)
         if len(cls.test_vectors) == 0:
             raise ValueError("No test vectors loaded.")
@@ -201,7 +200,7 @@ class TestCompositeKEM10TestVectors(unittest.TestCase):
             print(f"{vector.tcId}")
 
     @staticmethod
-    def load_test_vectors(path: str) -> list[CompositeKEM10TestVectors]:
+    def load_test_vectors(path: str) -> list[CompositeKEM11TestVectors]:
         import json
 
         with open(path, "r") as file:
@@ -211,9 +210,26 @@ class TestCompositeKEM10TestVectors(unittest.TestCase):
         for test in data["tests"]:
             if test["tcId"] in ["id-alg-ml-kem-768", "id-alg-ml-kem-1024"]:
                 continue
-            tests_vectors.append(CompositeKEM10TestVectors.from_dict(test))
+            tests_vectors.append(CompositeKEM11TestVectors.from_dict(test))
 
         return tests_vectors
+
+    def test_load_composite_kem_certs(self):
+        """
+        GIVEN a Composite KEM v11 test vector certificate.
+        WHEN the public key is loaded from the certificate,
+        THEN it should match the expected values.
+        """
+        for vector in self.test_vectors:
+            with self.subTest(tcId=vector.tcId):
+                cert = vector.certificate
+                public_key = load_public_key_from_cert(cert)
+                self.assertIsInstance(public_key, CompositeKEM11PublicKey)
+                self.assertEqual(public_key.name, vector.name)
+                loaded_key = _load_composite_kem11_from_public_bytes(
+                    algorithm=vector.name, public_key=vector.ek_bytes
+                )
+                self.assertEqual(public_key, loaded_key)
 
     def test_decaps_composite_rsa_key(self):
         """
@@ -226,10 +242,10 @@ class TestCompositeKEM10TestVectors(unittest.TestCase):
                 continue
 
             with self.subTest(tcId=vector.tcId):
-                private_key = _load_composite_kem10_from_private_bytes(
+                private_key = _load_composite_kem11_from_private_bytes(
                     algorithm=vector.name, private_key=vector.dk_bytes
                 )
-                self.assertIsInstance(private_key, CompositeKEM10PrivateKey)
+                self.assertIsInstance(private_key, CompositeKEM11PrivateKey)
                 self.assertIsInstance(private_key.pq_key, MLKEMPrivateKey)
                 self.assertIsInstance(private_key.trad_key, RSADecapKey)
                 self.assertEqual(private_key.pq_key.name, PQKeyFactory.get_pq_alg_name(vector.name))
@@ -247,10 +263,10 @@ class TestCompositeKEM10TestVectors(unittest.TestCase):
                 continue
 
             with self.subTest(tcId=vector.tcId):
-                private_key = _load_composite_kem10_from_private_bytes(
+                private_key = _load_composite_kem11_from_private_bytes(
                     algorithm=vector.name, private_key=vector.dk_bytes
                 )
-                self.assertIsInstance(private_key, CompositeKEM10PrivateKey)
+                self.assertIsInstance(private_key, CompositeKEM11PrivateKey)
                 self.assertIsInstance(private_key.pq_key, MLKEMPrivateKey)
                 self.assertIsInstance(private_key.trad_key, DHKEMPrivateKey)
                 self.assertEqual(private_key.pq_key.name, PQKeyFactory.get_pq_alg_name(vector.name))
@@ -268,10 +284,10 @@ class TestCompositeKEM10TestVectors(unittest.TestCase):
                 continue
 
             with self.subTest(tcId=vector.tcId):
-                private_key = _load_composite_kem10_from_private_bytes(
+                private_key = _load_composite_kem11_from_private_bytes(
                     algorithm=vector.name, private_key=vector.dk_bytes
                 )
-                self.assertIsInstance(private_key, CompositeKEM10PrivateKey)
+                self.assertIsInstance(private_key, CompositeKEM11PrivateKey)
                 self.assertIsInstance(private_key.pq_key, MLKEMPrivateKey)
                 self.assertIsInstance(private_key.trad_key, DHKEMPrivateKey)
                 ss_out = private_key.decaps(vector.ct_bytes)

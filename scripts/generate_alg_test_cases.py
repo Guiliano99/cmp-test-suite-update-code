@@ -12,6 +12,7 @@ from pq_logic.tmp_oids import (
     CHEMPAT_NAME_2_OID,
     COMPOSITE_KEM_NAME_2_OID,
     COMPOSITE_SIG_NAME_TO_OID,
+    composite_kem_version,
 )
 from resources.oidutils import PQ_KEM_NAME_2_OID, PQ_SIG_NAME_2_OID, PQ_SIG_PRE_HASH_NAME_2_OID
 
@@ -212,7 +213,7 @@ def _generate_hybrid_kem_tests():
     for hybrid_type, name_list in {
         "xwing": {"xwing"},
         "chempat": CHEMPAT_NAME_2_OID,
-        "composite-kem10": COMPOSITE_KEM_NAME_2_OID,
+        composite_kem_version: COMPOSITE_KEM_NAME_2_OID,
     }.items():
         for name in name_list:
             base_name = name.upper()
@@ -233,7 +234,7 @@ def _generate_hybrid_kem_tests():
 
                 if "frodokem" in name:
                     tags.append("frodokem")
-                    if hybrid_type == "composite-kem10":
+                    if hybrid_type == composite_kem_version:
                         tags.append("experimental")
 
                 if "mceliece" in name:
