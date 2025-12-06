@@ -920,7 +920,7 @@ CA MUST Reject A Update Composite Sig Key
     PKIStatusInfo Failinfo Bit Must Be    ${response}    badCertTemplate
 
 CA MUST Reject A Revoked Composite KEM Key
-    [Documentation]    According to composite-kem-pki07 the keys should not be used inside another certificate.
+    [Documentation]    According to composite-kem draft the keys should not be used inside another certificate.
     ...                We send a composite-sig certificate request, which contains a already revoked key.
     ...                The CA MUST reject the request and MAY respond with the optional failInfo `badCertTemplate`.
     [Tags]    composite-kem
@@ -939,7 +939,7 @@ CA MUST Reject A Revoked Composite KEM Key
     PKIStatusInfo Failinfo Bit Must Be    ${response}    badCertTemplate
 
 CA MUST Reject A Update Composite KEM Key
-    [Documentation]    According to composite-kem-pki07 the keys should not be used inside another certificate.
+    [Documentation]    According to composite-kem draft the keys should not be used inside another certificate.
     ...                We send a composite-sig certificate request, which contains a already updated key.
     ...                The CA MUST reject the request and MAY respond with the optional failInfo `badCertTemplate`.
     [Tags]    composite-kem
@@ -995,7 +995,7 @@ CA MUST Check that the traditional key is not used inside another Cert
     PKIStatusInfo Failinfo Bit Must Be    ${response}    badCertTemplate
 
 CA MUST Check that the ML-KEM key is not used inside another Cert
-    [Documentation]    According to composite-kem-pki07 the keys should not be used inside another certificate.
+    [Documentation]    According to composite-kem draft the keys should not be used inside another certificate.
     ...                We send a composite-sig certificate request, which contains a ML-KEM key, which is already used
     ...                inside another certificate. The CA MUST reject the request and MAY respond with the optional
     ...                failInfo `badCertTemplate`.
