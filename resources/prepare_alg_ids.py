@@ -418,7 +418,11 @@ def prepare_aes_gmac_prot_alg_id(
 
 @not_keyword
 def prepare_pbmac1_parameters(
-    salt: Optional[Union[bytes, str]] = None, iterations: int = 100, length: int = 32, hash_alg: str = "sha256"
+    salt: Optional[Union[bytes, str]] = None,
+    iterations: int = 100,
+    length: int = 32,
+    hash_alg: str = "sha256",
+    mac_hash_alg: Optional[str] = None,
 ) -> rfc8018.PBMAC1_params:
     """Prepare the PBMAC1 `rfc8018.PBMAC1_params` for `PKIMessageTMP` protection, using PBKDF2 with HMAC.
 
@@ -428,17 +432,18 @@ def prepare_pbmac1_parameters(
         - If not provided, a random 16-byte salt is generated.
     :param iterations: The number of iterations to be used in the PBKDF2 key derivation function.
                        Default is 100.
-    :param length: The desired length of the derived key in bytes. Default is 32 bytes.
-    :param hash_alg: The name of the hash algorithm to use with HMAC. Default is "sha256".
-    :return: Populated `rfc8018.PBMAC1_params` object.
+    :param length: The desired length of the derived key in bytes. Defauls to 32 bytes.
+    :param hash_alg: The name of the hash algorithm to use with PBKDF2 and HMAC. Defaults to "sha256".
+    :param mac_hash_alg: The name of the hash algorithm to use for the HMAC algorithm. If not provided,
+                         it defaults to the value of `hash_alg`.
+    :return: Populated `PBMAC1_params` structure.
     """
     salt = convertutils.str_to_bytes(salt or os.urandom(16))
     outer_params = rfc8018.PBMAC1_params()
     outer_params["keyDerivationFunc"] = prepare_pbkdf2_alg_id(
         salt=salt, iterations=iterations, key_length=length, hash_alg=hash_alg
     )
-    outer_params["messageAuthScheme"] = prepare_hmac_alg_id(hash_alg)
-
+    outer_params["messageAuthScheme"] = prepare_hmac_alg_id(mac_hash_alg or hash_alg)
     return outer_params
 
 
