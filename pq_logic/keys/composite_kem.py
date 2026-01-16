@@ -45,7 +45,7 @@ class CompositeKEMPublicKey(HybridKEMPublicKey, AbstractCompositePublicKey):
 
     _trad_key: TradKEMPublicKey
     _pq_key: PQKEMPublicKey
-    _name = "composite-kem10"
+    _name = "composite-kem12"
 
     def __init__(self, pq_key: PQKEMPublicKey, trad_key: Union[TradKEMPublicKey, ECDHPublicKey, RSAPublicKey]):
         """Initialize the composite KEM public key."""
@@ -163,7 +163,7 @@ class CompositeKEMPrivateKey(HybridKEMPrivateKey, AbstractCompositePrivateKey):
 
     _trad_key: TradKEMPrivateKey
     _pq_key: PQKEMPrivateKey
-    _name = "composite-kem10"
+    _name = "composite-kem12"
 
     def __init__(self, pq_key: PQKEMPrivateKey, trad_key: Union[TradKEMPrivateKey, ECDHPrivateKey, RSAPrivateKey]):
         """Initialize the composite KEM private key."""
