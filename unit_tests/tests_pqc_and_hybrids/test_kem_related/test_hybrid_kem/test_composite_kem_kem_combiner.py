@@ -6,7 +6,7 @@ import unittest
 
 from pq_logic.keys.composite_kem import CompositeKEMPrivateKey, CompositeKEMPublicKey
 
-from pq_logic.tmp_oids import composite_kem_version
+from pq_logic.tmp_oids import COMPOSITE_KEM_VERSION
 from resources.keyutils import generate_key
 
 
@@ -35,11 +35,11 @@ class CompositeKEMKEMCombinerTest(unittest.TestCase):
         pq_key = generate_key("ml-kem-768")
         trad_key = generate_key("ecdh", curve="secp256r1")
         comp_key = CompositeKEMPublicKey(pq_key=pq_key.public_key(), trad_key=trad_key.public_key())
-        self.assertEqual(f"composite-kem-{composite_kem_version}-ml-kem-768-ecdh-secp256r1", comp_key.name)
+        self.assertEqual(f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-768-ecdh-secp256r1", comp_key.name)
         self.assertEqual("1.3.6.1.5.5.7.6.59", str(comp_key.get_oid()))
 
         comp_private_key = CompositeKEMPrivateKey(pq_key=pq_key, trad_key=trad_key)
-        self.assertEqual(f"composite-kem-{composite_kem_version}-ml-kem-768-ecdh-secp256r1", comp_private_key.name)
+        self.assertEqual(f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-768-ecdh-secp256r1", comp_private_key.name)
         self.assertEqual("1.3.6.1.5.5.7.6.59", str(comp_private_key.get_oid()))
 
         ss = comp_key.kem_combiner(
@@ -70,7 +70,7 @@ class CompositeKEMKEMCombinerTest(unittest.TestCase):
         trad_key = generate_key("x25519")
         pq_key = generate_key("ml-kem-768")
         comp_key = CompositeKEMPublicKey(pq_key=pq_key.public_key(), trad_key=trad_key.public_key())
-        self.assertEqual(f"composite-kem-{composite_kem_version}-ml-kem-768-x25519", comp_key.name)
+        self.assertEqual(f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-768-x25519", comp_key.name)
         self.assertEqual("1.3.6.1.5.5.7.6.58", str(comp_key.get_oid()))
         comp_private_key = CompositeKEMPrivateKey(pq_key=pq_key, trad_key=trad_key)
         self.assertEqual("composite-kem-12-ml-kem-768-x25519", comp_private_key.name)
@@ -122,10 +122,10 @@ class CompositeKEMKEMCombinerTest(unittest.TestCase):
         trad_key = generate_key("ecdh", curve="secp384r1")
         pq_key = generate_key("ml-kem-1024")
         comp_key = CompositeKEMPublicKey(pq_key=pq_key.public_key(), trad_key=trad_key.public_key())
-        self.assertEqual(f"composite-kem-{composite_kem_version}-ml-kem-1024-ecdh-secp384r1", comp_key.name)
+        self.assertEqual(f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-1024-ecdh-secp384r1", comp_key.name)
         self.assertEqual("1.3.6.1.5.5.7.6.63", str(comp_key.get_oid()))
         comp_private_key = CompositeKEMPrivateKey(pq_key=pq_key, trad_key=trad_key)
-        self.assertEqual(f"composite-kem-{composite_kem_version}-ml-kem-1024-ecdh-secp384r1", comp_private_key.name)
+        self.assertEqual(f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-1024-ecdh-secp384r1", comp_private_key.name)
         self.assertEqual("1.3.6.1.5.5.7.6.63", str(comp_private_key.get_oid()))
         ss_expected = "9704485a39219ae696eb9978d24d7641bb2743b1412844808e81cc00afc174ca"
         ss = comp_key.kem_combiner(
