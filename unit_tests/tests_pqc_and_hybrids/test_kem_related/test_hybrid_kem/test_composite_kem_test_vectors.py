@@ -15,24 +15,24 @@ from pq_logic.keys.composite_kem import CompositeKEMPrivateKey, CompositeKEMPubl
 from pq_logic.keys.kem_keys import MLKEMPrivateKey
 from pq_logic.keys.pq_key_factory import PQKeyFactory
 from pq_logic.keys.trad_kem_keys import DHKEMPrivateKey, RSADecapKey, RSAEncapKey
-from pq_logic.tmp_oids import composite_kem_version
+from pq_logic.tmp_oids import COMPOSITE_KEM_VERSION
 from resources.certutils import parse_certificate
 from resources.exceptions import InvalidKeyData
 from resources.oidutils import CURVE_NAMES_TO_INSTANCES
 
 COMPOSITE_KEM_NAME_TO_ORIGINAL_OID = {
-    f"composite-kem-{composite_kem_version}-ml-kem-768-rsa2048": "id-MLKEM768-RSA2048-SHA3-256",
-    f"composite-kem-{composite_kem_version}-ml-kem-768-rsa3072": "id-MLKEM768-RSA3072-SHA3-256",
-    f"composite-kem-{composite_kem_version}-ml-kem-768-rsa4096": "id-MLKEM768-RSA4096-SHA3-256",
-    f"composite-kem-{composite_kem_version}-ml-kem-768-x25519": "id-MLKEM768-X25519-SHA3-256",
-    f"composite-kem-{composite_kem_version}-ml-kem-768-ecdh-secp256r1": "id-MLKEM768-ECDH-P256-SHA3-256",
-    f"composite-kem-{composite_kem_version}-ml-kem-768-ecdh-secp384r1": "id-MLKEM768-ECDH-P384-SHA3-256",
-    f"composite-kem-{composite_kem_version}-ml-kem-768-ecdh-brainpoolP256r1": "id-MLKEM768-ECDH-brainpoolP256r1-SHA3-256",
-    f"composite-kem-{composite_kem_version}-ml-kem-1024-rsa3072": "id-MLKEM1024-RSA3072-SHA3-256",
-    f"composite-kem-{composite_kem_version}-ml-kem-1024-ecdh-secp384r1": "id-MLKEM1024-ECDH-P384-SHA3-256",
-    f"composite-kem-{composite_kem_version}-ml-kem-1024-ecdh-brainpoolP384r1": "id-MLKEM1024-ECDH-brainpoolP384r1-SHA3-256",
-    f"composite-kem-{composite_kem_version}-ml-kem-1024-x448": "id-MLKEM1024-X448-SHA3-256",
-    f"composite-kem-{composite_kem_version}-ml-kem-1024-ecdh-secp521r1": "id-MLKEM1024-ECDH-P521-SHA3-256",
+    f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-768-rsa2048": "id-MLKEM768-RSA2048-SHA3-256",
+    f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-768-rsa3072": "id-MLKEM768-RSA3072-SHA3-256",
+    f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-768-rsa4096": "id-MLKEM768-RSA4096-SHA3-256",
+    f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-768-x25519": "id-MLKEM768-X25519-SHA3-256",
+    f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-768-ecdh-secp256r1": "id-MLKEM768-ECDH-P256-SHA3-256",
+    f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-768-ecdh-secp384r1": "id-MLKEM768-ECDH-P384-SHA3-256",
+    f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-768-ecdh-brainpoolP256r1": "id-MLKEM768-ECDH-brainpoolP256r1-SHA3-256",
+    f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-1024-rsa3072": "id-MLKEM1024-RSA3072-SHA3-256",
+    f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-1024-ecdh-secp384r1": "id-MLKEM1024-ECDH-P384-SHA3-256",
+    f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-1024-ecdh-brainpoolP384r1": "id-MLKEM1024-ECDH-brainpoolP384r1-SHA3-256",
+    f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-1024-x448": "id-MLKEM1024-X448-SHA3-256",
+    f"composite-kem-{COMPOSITE_KEM_VERSION}-ml-kem-1024-ecdh-secp521r1": "id-MLKEM1024-ECDH-P521-SHA3-256",
 }
 
 COMPOSITE_KEM_ORIGINAL_NAME_TO_NAME = {y:x for x,y in COMPOSITE_KEM_NAME_TO_ORIGINAL_OID.items()}
@@ -104,7 +104,7 @@ def _load_composite_kem_from_private_bytes(algorithm: str, private_key: bytes) -
     :return: A CompositeKEMPublicKey instance.
     """
     algorithm = algorithm.lower()
-    prefix = f"composite-kem-{composite_kem_version}-"
+    prefix = f"composite-kem-{COMPOSITE_KEM_VERSION}-"
     pq_name = PQKeyFactory.get_pq_alg_name(algorithm=algorithm)
     tmp_pq_key = PQKeyFactory.generate_pq_key(pq_name)
 
@@ -157,7 +157,7 @@ def _load_composite_kem_from_public_bytes(algorithm: str, public_key: bytes) -> 
     :return: A CompositeKEMPublicKey instance.
     """
     algorithm = algorithm.lower()
-    prefix = f"composite-kem-{composite_kem_version}-"
+    prefix = f"composite-kem-{COMPOSITE_KEM_VERSION}-"
     pq_name = PQKeyFactory.get_pq_alg_name(algorithm=algorithm)
     trad_name = algorithm.replace(prefix, "").replace(pq_name + "-", "")
     pq_key, rest = PQKeyFactory.from_public_bytes(pq_name, public_key, allow_rest=True)
