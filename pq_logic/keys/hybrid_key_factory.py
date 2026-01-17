@@ -16,6 +16,7 @@ from pyasn1_alt_modules import rfc5280, rfc5958
 
 from pq_logic.keys.abstract_wrapper_keys import HybridPrivateKey, HybridPublicKey, PQPrivateKey, TradKEMPrivateKey
 from pq_logic.keys.chempat_key import ChempatPrivateKey, ChempatPublicKey
+from pq_logic.keys.composite_kem import CompositeKEMPrivateKey
 from pq_logic.keys.composite_sig import CompositeSigPrivateKey
 from pq_logic.keys.pq_key_factory import PQKeyFactory
 from pq_logic.keys.serialize_utils import prepare_ec_private_key
@@ -338,7 +339,6 @@ class HybridKeyFactory:
             "xwing",
             "composite-sig",
             f"composite-sig-{COMPOSITE_SIG_VERSION}",
-            "composite-dhkem",
             "composite-kem",
             f"composite-kem-{COMPOSITE_KEM_VERSION}",
             f"composite-kem{COMPOSITE_KEM_VERSION}",
