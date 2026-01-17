@@ -128,6 +128,79 @@ SPDX-License-Identifier: Apache-2.0
 
 ---
 
+#### Algorithm Tags
+
+##### Traditional Algorithms
+
+| Tag     | Description                                        |
+|---------|----------------------------------------------------|
+| rsa     | Tests cases which revolve around the RSA algorithm |
+| rsa-pss | Tests cases using the RSA-PSS algorithm.           |
+| ecc     | Tests cases which revolve around the ECC algorithm |
+| ecdsa   | Tests cases using the ECDSA algorithm.             |
+| ecdh    | Tests cases using the ECDH algorithm.              |
+| dsa     | Tests cases using the DSA algorithm.               |
+| dh      | Tests cases using the Diffie-Hellman algorithm.    |
+| ed25519 | Tests cases using the Ed25519 algorithm.           |
+| ed448   | Tests cases using the Ed448 algorithm.             |
+| x25519  | Tests cases using the X25519 algorithm.            |
+| x448    | Tests cases using the X448 algorithm.              |
+
+##### Key Encapsulation Mechanisms Algorithms
+
+| Tag        | Description                                                                                     |
+|------------|-------------------------------------------------------------------------------------------------|
+| rsa-kem    | Tests related to RSA Key Encapsulation Mechanism.                                               |
+| ml-kem-*   | Tests related to Module-Lattice Key-Encapsulation Mechanism (ML-KEM), defined in NIST FIPS 203. |
+| frodokem-* | Tests related to FrodoKEM algorithm.                                                            |
+| mceliece-* | Tests related to Classic McEliece algorithm.                                                    |
+| sntrup761  | Tests related to Streamlined NTRU Prime algorithm (sntrup761).                                  |
+
+##### Hybrid Key Encapsulation Mechanisms Algorithms
+
+| Tag           | Description                               |
+|---------------|-------------------------------------------|
+| x-wing        | Tests related to x-wing algorithm.        |
+| composite-kem | Tests related to Composite-KEM algorithm. |
+| chempat       | Tests related to chempat algorithm.       |
+
+##### PQ Signature Algorithms
+
+| Tag     | Description                                                                                            |
+|---------|--------------------------------------------------------------------------------------------------------|
+| ml-dsa  | Tests related to Module-Lattice Digital Signature Algorithm (ML-DSA), defined in NIST FIPS 204.        |
+| slh-dsa | Tests related to Stateless Hash-Based Digital Signature Algorithm (SLH-DSA), defined in NIST FIPS 205. |
+| falcon  | Tests related to Fast-Fourier Lattice-based Compact Signatures (Falcon).                               |
+
+##### Hybrid Signature Algorithms
+
+| Tag           | Description                                     |
+|---------------|-------------------------------------------------|
+| composite-sig | Tests related to Composite-Signature algorithm. |
+
+##### PQ Stateful Algorithms
+
+| Tag      | Description                                                                           |
+|----------|---------------------------------------------------------------------------------------|
+| hss      | Tests using Leighton-Micali Hierarchical Signature System (HSS), defined in RFC 8554. |
+| hss-*    | Tests using specific parameter sets or variants of HSS.                               |
+| xmss     | Tests using eXtended Merkle Signature Scheme (XMSS), defined in RFC 8391.             |
+| xmss-*   | Tests using specific parameter sets or variants of XMSS.                              |
+| xmssmt   | Tests using XMSS Multi-Tree (XMSS^MT), defined in RFC 8391.                           |
+| xmssmt-* | Tests using specific parameter sets or variants of XMSS^MT.                           |
+
+##### Hashing Algorithms
+
+| Tag      | Description                                                |
+|----------|------------------------------------------------------------|
+| sha1     | Tests using the SHA1 algorithm.                            |
+| sha*     | Tests using the SHA2 algorithm family (sha256, etc.)       |
+| shake128 | Tests using the SHAKE128 XOF with a 32-byte output length. |
+| shake256 | Tests using the SHAKE256 XOF with a 64-byte output length. |
+| sha3_*   | Tests using the SHA3 algorithm family (sha3_256, etc.).    |
+
+---
+
 #### Custom Tags
 
 | Tag               | Description |
