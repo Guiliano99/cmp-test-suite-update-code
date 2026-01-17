@@ -55,6 +55,23 @@ HASH_ALG_TO_STRENGTH = {
     "shake256": 256,  # Uses in CMP 64 Byte as output size. According to RFC 9481.
 }
 
+MAC_ALG_TO_STRENGTH = {
+    "hmac-sha1": 80,
+    "hmac-sha224": 112,
+    "hmac-sha256": 128,
+    "hmac-sha384": 192,
+    "hmac-sha512": 256,
+    "hmac-sha3_224": 112,
+    "hmac-sha3_256": 128,
+    "hmac-sha3_384": 192,
+    "hmac-sha3_512": 256,
+    "kmac-shake128": 128,  # Uses in CMP 32 Byte as output size. According to RFC 9481.
+    "kmac-shake256": 256,  # Uses in CMP 64 Byte as output size. According to RFC 9481.
+    "aes128_gmac": 128,
+    "aes192_gmac": 192,
+    "aes256_gmac": 256,
+}
+
 
 def _rsa_security_strength(key_size: int) -> int:
     """Return an approximate security strength (in bits) for an RSA key size.
