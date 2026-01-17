@@ -190,3 +190,16 @@ def estimate_key_security_strength(key: Union[PrivateKey, PublicKey]) -> int:
 
     else:
         raise NotImplementedError(f"Security strength estimation not implemented for key type: {type(key)}")
+@keyword(name="Get Hash Algorithm Bit Strength")
+def get_hash_alg_id_bit_strength(alg_id: rfc5280.AlgorithmIdentifier) -> int:
+    """Return the bit strength of the hash algorithm identifier.
+
+    :param alg_id: The AlgorithmIdentifier to get the bit strength for.
+    :return: The bit strength of the hash algorithm identifier.
+    """
+    name = may_return_oid_to_name(alg_id["algorithm"])
+    if name not in HASH_ALG_TO_STRENGTH:
+        raise BadAlg(f"Unsupported hash algorithm: {name}")
+    return HASH_ALG_TO_STRENGTH[name]
+
+
