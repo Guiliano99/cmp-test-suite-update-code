@@ -25,9 +25,11 @@ SPDX-License-Identifier: Apache-2.0
 
 #### Setup
 
-| Tag    | Description                                                                                                     |
-|--------|-----------------------------------------------------------------------------------------------------------------|
-| lwcmp  | Tests the Lightweight Certificate Management Protocol, designed for constrained resource environments.         |
+| Tag            | Description                                                                                                                       |
+|----------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| lwcmp          | Tests the Lightweight Certificate Management Protocol, designed for constrained resource environments.                            |
+| single-run     | Tests intended to be executed only once; requires resetting the CA/RA state beforehand.                                                      |
+| may-single-run | Tests intended to be executed only once if the configuration meets the required conditions; requires resetting the CA/RA state beforehand. |
 
 ---
 
