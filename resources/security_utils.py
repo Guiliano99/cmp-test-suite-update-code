@@ -9,11 +9,25 @@ from typing import Optional, Union
 
 from cryptography.hazmat.primitives.asymmetric import dsa, ed448, ed25519, rsa, x448, x25519
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
+from pyasn1_alt_modules import rfc4055, rfc5280, rfc8018, rfc9481
+from robot.api.deco import keyword, not_keyword
 
 from pq_logic.keys.abstract_pq import PQKEMPublicKey, PQSignaturePublicKey
 from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPublicKey
 from pq_logic.keys.abstract_wrapper_keys import HybridPublicKey, TradKEMPublicKey
 from pq_logic.keys.stateful_sig_keys import HSSPublicKey, XMSSMTPublicKey, XMSSPublicKey
+from resources.asn1utils import try_decode_pyasn1
+from resources.exceptions import BadAlg
+from resources.oid_mapping import may_return_oid_to_name
+from resources.oidutils import (
+    AES_GMAC_OID_2_NAME,
+    HMAC_OID_2_NAME,
+    KDF_OID_2_NAME,
+    KEY_WRAP_OID_2_NAME,
+    KMAC_OID_2_NAME,
+    PROT_SYM_ALG,
+    RSASSA_PSS_OID_2_NAME,
+)
 from resources.typingutils import PrivateKey, PublicKey
 
 # Security strength values follow NIST SP 800-57 Part 1 Revision 5, Tables 2 and 4.
@@ -190,6 +204,45 @@ def estimate_key_security_strength(key: Union[PrivateKey, PublicKey]) -> int:
 
     else:
         raise NotImplementedError(f"Security strength estimation not implemented for key type: {type(key)}")
+
+
+@keyword(name="Get MAC Algorithm Bit Strength")
+def get_mac_alg_id_bit_strength(alg_id: rfc5280.AlgorithmIdentifier) -> int:
+    """Return the bit strength of the MAC algorithm identifier.
+
+    :param alg_id: The AlgorithmIdentifier to get the bit strength for.
+    :return: The bit strength of the MAC algorithm identifier.
+    """
+    oid = alg_id["algorithm"]
+    if oid in HMAC_OID_2_NAME:
+        return MAC_ALG_TO_STRENGTH[HMAC_OID_2_NAME[oid]]
+
+    if oid in KMAC_OID_2_NAME:
+        return MAC_ALG_TO_STRENGTH[KMAC_OID_2_NAME[oid]]
+
+    if oid in AES_GMAC_OID_2_NAME:
+        return MAC_ALG_TO_STRENGTH[AES_GMAC_OID_2_NAME[oid]]
+
+    if oid == rfc9481.id_PasswordBasedMac:
+        raise NotImplementedError("PasswordBasedMac is not supported yet.")
+
+    if oid == rfc9481.id_PBMAC1:
+        if not isinstance(alg_id["parameters"], rfc8018.PBMAC1_params):
+            mac_params, _ = try_decode_pyasn1(alg_id["parameters"], rfc8018.PBMAC1_params())
+        else:
+            mac_params = alg_id["parameters"]
+
+        kdf_alg_id = mac_params["keyDerivationFunc"]
+        mac_alg_id = mac_params["messageAuthScheme"]
+
+        mac_sec_strength = get_mac_alg_id_bit_strength(mac_alg_id)
+        kdf_sec_strength = get_kdf_alg_id_bit_strength(kdf_alg_id)
+        # TODO look up, if this is correct way, to decide the strength of the MAC algorithm.
+        return min(mac_sec_strength, kdf_sec_strength)
+
+    raise BadAlg(f"Unsupported MAC algorithm: {may_return_oid_to_name(oid)}")
+
+
 @keyword(name="Get Hash Algorithm Bit Strength")
 def get_hash_alg_id_bit_strength(alg_id: rfc5280.AlgorithmIdentifier) -> int:
     """Return the bit strength of the hash algorithm identifier.
