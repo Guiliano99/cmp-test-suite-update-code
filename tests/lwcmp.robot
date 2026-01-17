@@ -1209,7 +1209,7 @@ CA MUST Reject IR With Too Large RSA Key In CertTemplate
     [Documentation]    We send a initialization request (ir) with a certTemplate containing an RSA key that exceeds
     ...    the maximum allowed size and expect the CA to reject the request. The CA should reject any request with an
     ...    RSA key that is too large, marking the request with a badCertTemplate failinfo.
-    [Tags]    certTemplate    config-dependent    ir    key    negative  sec-awareness   resource-intensive
+    [Tags]    certTemplate    config-dependent    ir    key    negative  sec-awareness   resource-intensive  may-single-run
     Skip If  not ${LARGE_KEY_SIZE}    The `LARGE_KEY_SIZE` variable is not set, so this test is skipped.
     IF   ${LARGE_KEY_SIZE} < 18000
         ${bad_key}=    Load Private Key From File    ./data/keys/private-key-rsa-size-18000.pem

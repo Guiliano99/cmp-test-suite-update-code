@@ -603,7 +603,7 @@ CA MUST Accept Encrypted Key For ML-KEM Private Key As POPO
 CA MUST Accept One Time regToken
     [Documentation]    According to RFC 4211 section-6.1 the Client can send a one time regToken to the CA.
     ...    The CA MUST accept the request and issue a certificate.
-    [Tags]    positive   regToken  issuing  advanced  robot:skip-on-failure  controls
+    [Tags]    positive   regToken  issuing  advanced  robot:skip-on-failure  controls   single-run
     ${key}=   Generate Default Key
     ${cm}=   Get Next Common Name
     ${reg_token_attr}=   Prepare RegToken Controls   ${regToken}
