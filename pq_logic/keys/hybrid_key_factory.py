@@ -205,7 +205,6 @@ def _parse_private_keys(hybrid_type: str, pq_key, trad_key) -> HybridPrivateKey:
         "kem": CompositeKEMPrivateKey,  # always the latest version
         f"kem-{COMPOSITE_KEM_VERSION}": CompositeKEMPrivateKey,
         f"kem{COMPOSITE_KEM_VERSION}": CompositeKEMPrivateKey,
-        "dhkem": CompositeDHKEMRFC9180PrivateKey,  # always the latest version
         "sig": CompositeSigPrivateKey,  # always the latest version
         f"sig-{COMPOSITE_SIG_VERSION}": CompositeSigPrivateKey,
     }
@@ -223,7 +222,6 @@ class HybridKeyFactory:
         f"kem-{COMPOSITE_KEM_VERSION}": ALL_COMPOSITE_KEM07_COMBINATIONS,
         f"kem{COMPOSITE_KEM_VERSION}": ALL_COMPOSITE_KEM07_COMBINATIONS,
         "chempat": ALL_CHEMPAT_COMBINATIONS,
-        "dhkem": ALL_COMPOSITE_KEM07_COMBINATIONS,
         "xwing": [],
     }
 
@@ -234,7 +232,6 @@ class HybridKeyFactory:
         f"kem{COMPOSITE_KEM_VERSION}": {"pq_name": "ml-kem-768", "trad_name": "x25519"},
         f"kem-{COMPOSITE_KEM_VERSION}": {"pq_name": "ml-kem-768", "trad_name": "x25519"},
         "chempat": {"pq_name": "ml-kem-768", "trad_name": "x25519"},
-        "dhkem": {"pq_name": "ml-kem-768", "trad_name": "x25519"},
     }
 
     @staticmethod
@@ -364,7 +361,7 @@ class HybridKeyFactory:
 
         valid_combinations = HybridKeyFactory.hybrid_mappings[hybrid_type]
 
-        if hybrid_type in ["dhkem", "kem"] and pq_name in ["frodokem-aes-640", "frodokem-shake-640"]:
+        if hybrid_type == "kem" and pq_name in ["frodokem-aes-640", "frodokem-shake-640"]:
             raise InvalidKeyCombination("FrodoKEM-640 is not supported (the claimed NIST level is only `1`).")
 
         params = get_valid_hybrid_combination(
