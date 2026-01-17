@@ -256,3 +256,75 @@ def get_hash_alg_id_bit_strength(alg_id: rfc5280.AlgorithmIdentifier) -> int:
     return HASH_ALG_TO_STRENGTH[name]
 
 
+def _get_rsa_pss_bit_strength(alg_id: rfc5280.AlgorithmIdentifier) -> int:
+    """Return the security strength (in bits) for RSA-PSS algorithm identifier."""
+    name = RSASSA_PSS_OID_2_NAME[alg_id["algorithm"]]
+    if name == "rsassa_pss-shake128":
+        return HASH_ALG_TO_STRENGTH["shake128"]
+    if name == "rsassa_pss-shake256":
+        return HASH_ALG_TO_STRENGTH["shake256"]
+
+    # If the algorithm is not set, so it must be checked, by checking the mfg1 algorithm.
+
+    if not isinstance(alg_id["parameters"], rfc4055.RSASSA_PSS_params):
+        rsa_pss_params, _ = try_decode_pyasn1(alg_id["parameters"], rfc4055.RSASSA_PSS_params())  # type: ignore
+    else:
+        rsa_pss_params = alg_id["parameters"]
+
+    rsa_pss_params: rfc4055.RSASSA_PSS_params
+
+    hash_alg_id = rsa_pss_params["hashAlgorithm"]
+    mfg1_alg_id = rsa_pss_params["maskGenAlgorithm"]
+    error_message = f"Unsupported RSA-PSS hash algorithm: {may_return_oid_to_name(hash_alg_id['algorithm'])}"
+    try:
+        hash_strength = get_hash_alg_id_bit_strength(hash_alg_id)
+        error_message = f"Unsupported RSA-PSS MFG1 hash algorithm: {may_return_oid_to_name(mfg1_alg_id['algorithm'])}"
+        mfg1_strength = get_hash_alg_id_bit_strength(mfg1_alg_id)
+    except BadAlg as e:
+        raise BadAlg(error_message) from e
+
+    return min(hash_strength, mfg1_strength)
+
+
+@keyword(name="Get Signature Algorithm Bit Strength")
+def get_sig_alg_id_bit_strength(alg_id: rfc5280.AlgorithmIdentifier, key: Union[PublicKey, PrivateKey]) -> int:
+    """Return the bit strength of the signature algorithm identifier.
+
+    :param alg_id: The AlgorithmIdentifier to get the bit strength for.
+    :param key: The key instance to estimate the security strength for.
+    :return: The bit strength of the signature algorithm identifier.
+    :raises BadAlg: If the signature algorithm is not supported.
+    :raises NotImplementedError: If the signature algorithm is not supported yet.
+    """
+    oid = alg_id["algorithm"]
+    name = may_return_oid_to_name(oid)
+    public_key = key.public_key() if isinstance(key, PrivateKey) else key
+
+    if name in {"ed25519", "ed448"} or isinstance(public_key, PQHashStatefulSigPublicKey):
+        return estimate_key_security_strength(public_key)
+
+    if name.startswith("ecdsa"):
+        _name = name.replace("ecdsa-", "")
+        hash_strength = HASH_ALG_TO_STRENGTH[_name]
+        # TODO lookup if this is a correct solution.
+        return min(hash_strength, estimate_key_security_strength(public_key))
+
+    if isinstance(public_key, PQSignaturePublicKey):
+        # TODO look up, if this is the correct way to estimate the security strength.
+        return estimate_key_security_strength(public_key)
+
+    if oid in RSASSA_PSS_OID_2_NAME:
+        hash_strength = _get_rsa_pss_bit_strength(alg_id)
+        # TODO lookup if this is a correct solution.
+        return min(hash_strength, estimate_key_security_strength(public_key))
+
+    if name.startswith("rsa"):
+        _name = name.replace("rsa-", "")
+        hash_strength = HASH_ALG_TO_STRENGTH[_name]
+        return min(hash_strength, estimate_key_security_strength(public_key))
+
+    if isinstance(public_key, HybridPublicKey):
+        # TODO decide how to do this.
+        raise NotImplementedError("The hybrid signature algorithm is not supported yet.")
+
+    raise BadAlg(f"Unsupported signature algorithm: {name}")
