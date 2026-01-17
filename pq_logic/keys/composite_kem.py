@@ -29,8 +29,9 @@ from resources.typingutils import ECDHPrivateKey, ECDHPublicKey
 
 __all__ = ["CompositeKEMPublicKey", "CompositeKEMPrivateKey"]
 
+
 def _get_lable(
-        pq_key: Union[PQKEMPrivateKey, PQKEMPublicKey], trad_key: Union[TradKEMPrivateKey, TradKEMPublicKey]
+    pq_key: Union[PQKEMPrivateKey, PQKEMPublicKey], trad_key: Union[TradKEMPrivateKey, TradKEMPublicKey]
 ) -> bytes:
     """Return the label for the Composite KEM KDF input.
 
@@ -96,12 +97,12 @@ class CompositeKEMPublicKey(HybridKEMPublicKey, AbstractCompositePublicKey):
         return label
 
     def kem_combiner(
-            self,
-            mlkem_ss: bytes,
-            trad_ss: bytes,
-            trad_ct: bytes,
-            trad_pk: bytes,
-            use_in_cms: bool = False,
+        self,
+        mlkem_ss: bytes,
+        trad_ss: bytes,
+        trad_ct: bytes,
+        trad_pk: bytes,
+        use_in_cms: bool = False,
     ) -> bytes:
         """Combine the shared secrets from the post-quantum and traditional parts.
 
@@ -233,7 +234,7 @@ class CompositeKEMPrivateKey(HybridKEMPrivateKey, AbstractCompositePrivateKey):
         return CompositeKEMPublicKey(self.pq_key.public_key(), self.trad_key.public_key())
 
     def kem_combiner(
-            self, mlkem_ss: bytes, trad_ss: bytes, trad_ct: bytes, trad_pk: bytes, use_in_cms: bool = False
+        self, mlkem_ss: bytes, trad_ss: bytes, trad_ct: bytes, trad_pk: bytes, use_in_cms: bool = False
     ) -> bytes:
         """Combine the shared secrets from the post-quantum and traditional parts.
 
@@ -263,40 +264,3 @@ class CompositeKEMPrivateKey(HybridKEMPrivateKey, AbstractCompositePrivateKey):
         trad_ss = self._trad_key.decaps(trad_ct)
         combined_ss = self.kem_combiner(mlkem_ss, trad_ss, trad_ct, self.encode_trad_part())
         return combined_ss
-
-
-class CompositeDHKEMRFC9180PublicKey(CompositeKEMPublicKey):
-    """Composite DHKEMRFC9180 public key."""
-
-    _name = "composite-dhkem"
-    _trad_key: DHKEMPublicKey
-
-    def __init__(self, pq_key: PQKEMPublicKey, trad_key: Union[DHKEMPublicKey, ECDHPublicKey]):
-        """Initialize the composite KEM private key."""
-        super().__init__(pq_key, trad_key)
-        self._trad_key = DHKEMPublicKey(trad_key, use_rfc9180=True)
-
-
-class CompositeDHKEMRFC9180PrivateKey(CompositeKEMPrivateKey):
-    """Composite DHKEMRFC9180 private key."""
-
-    _name = "composite-dhkem"
-    _trad_key: DHKEMPrivateKey
-
-    @property
-    def trad_key(self) -> DHKEMPrivateKey:
-        """Return the traditional key."""
-        return self._trad_key
-
-    def __init__(self, pq_key: PQKEMPrivateKey, trad_key: Union[DHKEMPrivateKey, ECDHPrivateKey]):
-        """Initialize the composite KEM private key."""
-        super().__init__(pq_key, trad_key)
-        self._trad_key = DHKEMPrivateKey(trad_key, use_rfc9180=True)
-
-    def _get_header_name(self) -> bytes:
-        """Return the algorithm name."""
-        return b"COMPOSITE-DHKEM"
-
-    def public_key(self) -> CompositeDHKEMRFC9180PublicKey:
-        """Return the public key of the composite KEM."""
-        return CompositeDHKEMRFC9180PublicKey(self.pq_key.public_key(), self.trad_key.public_key())

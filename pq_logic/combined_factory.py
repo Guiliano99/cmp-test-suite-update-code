@@ -32,12 +32,7 @@ from pq_logic.keys.abstract_wrapper_keys import (
     WrapperPrivateKey,
 )
 from pq_logic.keys.chempat_key import ChempatPublicKey
-from pq_logic.keys.composite_kem import (
-    CompositeDHKEMRFC9180PrivateKey,
-    CompositeDHKEMRFC9180PublicKey,
-    CompositeKEMPrivateKey,
-    CompositeKEMPublicKey,
-)
+from pq_logic.keys.composite_kem import CompositeKEMPrivateKey, CompositeKEMPublicKey
 from pq_logic.keys.composite_sig import (
     CompositeSigPrivateKey,
     CompositeSigPublicKey,
