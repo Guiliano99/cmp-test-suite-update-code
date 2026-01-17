@@ -256,6 +256,56 @@ def get_hash_alg_id_bit_strength(alg_id: rfc5280.AlgorithmIdentifier) -> int:
     return HASH_ALG_TO_STRENGTH[name]
 
 
+@not_keyword
+def get_aes_bit_strength(name: str):
+    """Return the bit strength of the AES algorithm."""
+    if name.startswith("aes128"):
+        return 128
+    if name.startswith("aes192"):
+        return 192
+    if name.startswith("aes256"):
+        return 256
+    raise BadAlg(f"Unsupported AES algorithm: {name}")
+
+
+@keyword(name="Get Key Wrap Algorithm Bit Strength")
+def get_key_wrap_alg_id_bit_strength(alg_id: rfc5280.AlgorithmIdentifier) -> int:
+    """Return the bit strength of the key wrap algorithm identifier.
+
+    :param alg_id: The AlgorithmIdentifier to get the bit strength for.
+    :return: The bit strength of the key wrap algorithm identifier.
+    :raises BadAlg: If the key wrap algorithm is not supported.
+    :raises NotImplementedError: If the key wrap algorithm is not supported yet.
+    """
+    oid = alg_id["algorithm"]
+    if oid not in KEY_WRAP_OID_2_NAME:
+        raise BadAlg(f"Key wrap algorithm is not supported yet. Got: {may_return_oid_to_name(oid)}")
+
+    name = KEY_WRAP_OID_2_NAME[oid]
+    if name.startswith("aes"):
+        return get_aes_bit_strength(name)
+    raise NotImplementedError(f"Unsupported key wrap algorithm: {name}")
+
+
+@keyword(name="Get Content Encryption Algorithm Bit Strength")
+def get_content_enc_alg_id_bit_strength(alg_id: rfc5280.AlgorithmIdentifier) -> int:
+    """Return the bit strength of the content encryption algorithm identifier.
+
+    :param alg_id: The AlgorithmIdentifier to get the bit strength for.
+    :return: The bit strength of the content encryption algorithm identifier.
+    :raises BadAlg: If the content encryption algorithm is not supported.
+    :raises NotImplementedError: If the content encryption algorithm is not supported yet.
+    """
+    oid = alg_id["algorithm"]
+    if oid not in PROT_SYM_ALG:
+        raise BadAlg(f"Content encryption algorithm is not supported yet. Got: {may_return_oid_to_name(oid)}")
+
+    name = PROT_SYM_ALG[oid]
+    if name.startswith("aes"):
+        return get_aes_bit_strength(name)
+    raise NotImplementedError(f"Unsupported content encryption algorithm: {name}")
+
+
 def _get_rsa_pss_bit_strength(alg_id: rfc5280.AlgorithmIdentifier) -> int:
     """Return the security strength (in bits) for RSA-PSS algorithm identifier."""
     name = RSASSA_PSS_OID_2_NAME[alg_id["algorithm"]]
