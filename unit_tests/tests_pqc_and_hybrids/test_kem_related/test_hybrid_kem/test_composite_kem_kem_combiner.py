@@ -5,98 +5,85 @@
 import unittest
 
 from pq_logic.keys.composite_kem import CompositeKEMPrivateKey, CompositeKEMPublicKey
+
+from pq_logic.tmp_oids import composite_kem_version
 from resources.keyutils import generate_key
 
 
 class CompositeKEMKEMCombinerTest(unittest.TestCase):
-    """Test the Composite KEM KEM combiner."""
+    """Test the Composite KEM 11 KEM combiner."""
 
     def test_kem_combiner_example1(self):
-        """Example of id-MLKEM768-ECDH-P256-HMAC-SHA256 Combiner function output."""
+        """Example of id-MLKEM768-ECDH-P256-SHA3-256 Combiner function output."""
         # Inputs
-        mlkemSS = "13f3e2c8d43aaa1045f0e3ba5c53a495a03553965d78fb8c62f1de14a83f0d4e"
+        mlkemSS = "7a87233aa6cfacb3f28776785ee1c3ae0175d502ec6a6ef5f12ae426e1b163ef"
 
-        tradSS = "90b5bd5efb23a8084a53da8fabc5e919c9f3e7d6e9e62d1019959dff41e6669b"
-        tradCT = "040c9c634ff4e0a309e1a285b9b79cc09c9b06f7558dd948f46b880b4acbe22061149a210e8c2d00f6c00837d52657d6c6b7ad94babb1cdfe0de85d869ec362a84"
-        tradPK = "0436d5a0636fd2448488e5914d4820b9420c78f7ae14841c83d3b13f9550a76e96344e509845b1c4d451d6d865d45c69f62659ca77ecd1d69668d22c6c24643704"
-        Domain = "060b6086480186fa6b50050236"
-
-        # Combined KDF Input:
-        #  mlkemSS || tradSS || tradCT || tradPK || Domain
-        combined_kdf_input = mlkemSS + tradSS + tradCT + tradPK + Domain
+        tradSS = "ac00870310b72b5a1820e787ff9d553b05275bf70f3ffa9b8bb821fc9964bb89"
+        tradCT = (
+            "04d2d4e8a247899f779b6233efabe17d328a0fb3772e5e37eae3405dec1909e3"
+            "1984c3ec4cfd462d76d84d178ea104a38122b4f5942ba4a95a62e78c689388158d"
+        )
+        tradPK = (
+            "04f080fa8049e82f6a247555cdf04b927d65d9502673ce87c299344ababb87de8"
+            "37a22f3704f471bffc04d66807ffccbbf3fde99e12afe3c5a41e05f80f9236aa9"
+        )
 
         # Outputs
-        # ss = HMAC-SHA256(Combined KDF Input)
-        ss_expected = "8e9333dbfbd5057855fee30049790e9e835f24373334bd257e76ec19725e8f89"
+        # ss = SHA3-256(Combined KDF Input)
+        ss_expected = "e8a3638eff395201ae3577199e0655c636974e3d9b8746e8ae4511e84f7158d8"
 
         pq_key = generate_key("ml-kem-768")
         trad_key = generate_key("ecdh", curve="secp256r1")
         comp_key = CompositeKEMPublicKey(pq_key=pq_key.public_key(), trad_key=trad_key.public_key())
-        self.assertEqual("composite-kem07-ml-kem-768-ecdh-secp256r1", comp_key.name)
-        self.assertEqual("2.16.840.1.114027.80.5.2.54", str(comp_key.get_oid()))
+        self.assertEqual(f"composite-kem-{composite_kem_version}-ml-kem-768-ecdh-secp256r1", comp_key.name)
+        self.assertEqual("1.3.6.1.5.5.7.6.59", str(comp_key.get_oid()))
 
         comp_private_key = CompositeKEMPrivateKey(pq_key=pq_key, trad_key=trad_key)
-        self.assertEqual("composite-kem07-ml-kem-768-ecdh-secp256r1", comp_private_key.name)
-        self.assertEqual("2.16.840.1.114027.80.5.2.54", str(comp_private_key.get_oid()))
+        self.assertEqual(f"composite-kem-{composite_kem_version}-ml-kem-768-ecdh-secp256r1", comp_private_key.name)
+        self.assertEqual("1.3.6.1.5.5.7.6.59", str(comp_private_key.get_oid()))
 
         ss = comp_key.kem_combiner(
             mlkem_ss=bytes.fromhex(mlkemSS),
             trad_ss=bytes.fromhex(tradSS),
             trad_ct=bytes.fromhex(tradCT),
             trad_pk=bytes.fromhex(tradPK),
-            use_in_cms=False,
         )
-        self.assertEqual(
-            ss_expected,
-            ss.hex(),
-            "id-MLKEM768-ECDH-P256-HMAC-SHA256 Combiner function output does not match expected value.",
-        )
+        self.assertEqual(ss_expected, ss.hex(), "id-MLKEM768-ECDH-P256 Combiner output does not match expected value.")
 
         ss2 = comp_private_key.kem_combiner(
             mlkem_ss=bytes.fromhex(mlkemSS),
             trad_ss=bytes.fromhex(tradSS),
             trad_ct=bytes.fromhex(tradCT),
             trad_pk=bytes.fromhex(tradPK),
-            use_in_cms=False,
         )
-        self.assertEqual(
-            ss_expected,
-            ss2.hex(),
-            "id-MLKEM768-ECDH-P256-HMAC-SHA256 Combiner "
-            "function output does not match expected value from private key.",
-        )
+        self.assertEqual(ss_expected, ss2.hex(), "Composite KEM combiner output does not match expected value from private key.")
 
     def test_kem_combiner_example2(self):
         """Example of id-MLKEM768-X25519-SHA3-256 Combiner function output."""
         # Example of id-MLKEM768-X25519-SHA3-256 Combiner function output.
         # Inputs
-        mlkemSS = "542aba637e129ef540743b8420edb78b26e492af2a496f31d33138a5402239c3"
-        tradSS = "8af825f1d07ad0b3bff6856a6f7aaa706eb1db11b6a7d2c44dfb06d041e7e261"
-        tradCT = "1c5e3c085e7180ffe732c67b94f0d408e524af9dc2954e5ceea1fdfc03a76247"
-        tradPK = "0cf7344981ef158017db99cce88de79194f0bf8ebc128d462b1f6a89b34fce7c"
-        Domain = "060b6086480186fa6b50050235"
+        mlkemSS = "3553c8859d5013fa95acdaf2e3098f48c513eec4877316d8b118e20848ffe686"
+        tradSS = "8cea86ce190015374dc62e392f62873e879f4b91b4e14833bbc90a3861ec8015"
+        tradCT = "df1cd647a0794c5aff520844148660491922d6b8172e7f93faf722632171b70d"
+        tradPK = "8d21e8c462970d8b8600480f8587277393f113a4e2297286bde54b65aa334311"
 
-        # Combined KDF Input:
-        #  mlkemSS || tradSS || tradCT || tradPK || Domain
-        combined_kdf_input = mlkemSS + tradSS + tradCT + tradPK + Domain
         trad_key = generate_key("x25519")
         pq_key = generate_key("ml-kem-768")
         comp_key = CompositeKEMPublicKey(pq_key=pq_key.public_key(), trad_key=trad_key.public_key())
-        self.assertEqual("composite-kem07-ml-kem-768-x25519", comp_key.name)
-        self.assertEqual("2.16.840.1.114027.80.5.2.53", str(comp_key.get_oid()))
+        self.assertEqual(f"composite-kem-{composite_kem_version}-ml-kem-768-x25519", comp_key.name)
+        self.assertEqual("1.3.6.1.5.5.7.6.58", str(comp_key.get_oid()))
         comp_private_key = CompositeKEMPrivateKey(pq_key=pq_key, trad_key=trad_key)
-        self.assertEqual("composite-kem07-ml-kem-768-x25519", comp_private_key.name)
-        self.assertEqual("2.16.840.1.114027.80.5.2.53", str(comp_private_key.get_oid()))
+        self.assertEqual("composite-kem-12-ml-kem-768-x25519", comp_private_key.name)
+        self.assertEqual("1.3.6.1.5.5.7.6.58", str(comp_private_key.get_oid()))
 
         # Outputs
         # ss = SHA3-256(Combined KDF Input)
-        ss_expected = "1fa931e383cd072d5df88a42865f1e2c14acac1c2820cfcf76fbbcd2444aadbd"
+        ss_expected = "491538ed1a0a9bf9bd5622a25e1f8139209f2336dab28a22b61b43523cf7fecc"
         ss = comp_key.kem_combiner(
             mlkem_ss=bytes.fromhex(mlkemSS),
             trad_ss=bytes.fromhex(tradSS),
             trad_ct=bytes.fromhex(tradCT),
             trad_pk=bytes.fromhex(tradPK),
-            use_in_cms=False,
         )
         self.assertEqual(
             ss_expected, ss.hex(), "id-MLKEM768-X25519-SHA3-256 Combiner function output does not match expected value."
@@ -106,7 +93,6 @@ class CompositeKEMKEMCombinerTest(unittest.TestCase):
             trad_ss=bytes.fromhex(tradSS),
             trad_ct=bytes.fromhex(tradCT),
             trad_pk=bytes.fromhex(tradPK),
-            use_in_cms=False,
         )
         self.assertEqual(
             ss_expected,
@@ -115,40 +101,38 @@ class CompositeKEMKEMCombinerTest(unittest.TestCase):
         )
 
     def test_kem_combiner_example3(self):
-        """Example of id-MLKEM1024-ECDH-P384-HMAC-SHA512 Combiner function output."""
+        """Example of id-MLKEM1024-ECDH-P384-SHA3-256 Combiner function output."""
         # Inputs
-        mlkemSS = "99308f288ab1c346bc501eca3f8c1c64315e91686e98920a1b97f60368ead216"
-        tradSS = "30604eb9718fc42386217d9d9a71a678fea6b2381f4232624f80a9b176b8f2323fe52cc6d477f024cffbea63c143bdb0"
-        tradCT = "04e4f92e7dac57d1fe25c833011947e9ab41445392061b419cc75eaf15e2c99615233a806899a092de01a3bc9cba8acf68f31b3c6b157178a8f890b6f268c6ac361d9f14772c60f34873bbea46c9658462b4e99901c688d6edcfac2859706e6791"
-        tradPK = "0408a746f5f561013de88c6f549b846002807d250470e6b101185caec9e3917afbe4c7bd00944f9924aaa95859c1030875d5455daabceca59ee3efd838ac6df1da001a4ca317eb518b931aad0489e8b2bc1955cfdd4b4a62686933491d3ff01d3"
-        Domain = "060b6086480186fa6b50050239"
-
+        mlkemSS = "4ffb4e09862a6b2de28a94f1c45c0ff156427f7889c8cafdd5ccd05c18e061aa"
+        tradSS = (
+            "78d093eca7248340a89dd0109f6f460f0cd7d4d0337b3121695870ee1d0afdee"
+            "312e47708c4fa2f7798ef8fbd02ea0da"
+        )
+        tradCT = (
+            "04b8bec46bf81ac8bd1eabf8d6e9dff02439a1e44e0e65a6df7a73f0b213b331"
+            "abd51422fb0d732f3717f5d7955c267a08648998f793fac2112e7abd8a8bfc5fe"
+            "3323acaba0272e4e2e95b5ec8508e93998a26338df5249cb09fd7b421cecd260b"
+        )
         tradPK = (
-            "0408a746f5f561013de88c6f549b846002807d250470e6b101185caec9e3a"
-            "917afbe4c7bd00944f9924aaa95859c1030875d5455daabceca59ee3efd838ac6df1da"
-            "001a4ca317eb518b931aad0489e8b2bc1955cfdd4b4a62686933491d3ff01d3"
+            "04945e7f006691a33aeddd4b9f1a63cf2b322269225a4e20fbf5fd7448038c7a"
+            "a27a9ed02998486dc3cb281a8d461db63ad3e7eed8e3960333a60f6e6b295a36b"
+            "c109be18e3bbf9eb7495b6a2badedc81f7b554edb5c940d14f3ee903788c7dec4"
         )
 
-        # Combined KDF Input:
-        #  mlkemSS || tradSS || tradCT || tradPK || Domain
-        combined_kdf_input = mlkemSS + tradSS + tradCT + tradPK + Domain
         trad_key = generate_key("ecdh", curve="secp384r1")
         pq_key = generate_key("ml-kem-1024")
         comp_key = CompositeKEMPublicKey(pq_key=pq_key.public_key(), trad_key=trad_key.public_key())
-        self.assertEqual("composite-kem07-ml-kem-1024-ecdh-secp384r1", comp_key.name)
-        self.assertEqual("2.16.840.1.114027.80.5.2.57", str(comp_key.get_oid()))
+        self.assertEqual(f"composite-kem-{composite_kem_version}-ml-kem-1024-ecdh-secp384r1", comp_key.name)
+        self.assertEqual("1.3.6.1.5.5.7.6.63", str(comp_key.get_oid()))
         comp_private_key = CompositeKEMPrivateKey(pq_key=pq_key, trad_key=trad_key)
-        self.assertEqual("composite-kem07-ml-kem-1024-ecdh-secp384r1", comp_private_key.name)
-        self.assertEqual("2.16.840.1.114027.80.5.2.57", str(comp_private_key.get_oid()))
-        # Outputs
-        # ss = HMAC-SHA512(Combined KDF Input)
-        ss_expected = "466c0ca23953241fddfd50a035b24ecb4e9ea66ce91ca3343b270457ecd63bf2"
+        self.assertEqual(f"composite-kem-{composite_kem_version}-ml-kem-1024-ecdh-secp384r1", comp_private_key.name)
+        self.assertEqual("1.3.6.1.5.5.7.6.63", str(comp_private_key.get_oid()))
+        ss_expected = "9704485a39219ae696eb9978d24d7641bb2743b1412844808e81cc00afc174ca"
         ss = comp_key.kem_combiner(
             mlkem_ss=bytes.fromhex(mlkemSS),
             trad_ss=bytes.fromhex(tradSS),
             trad_ct=bytes.fromhex(tradCT),
             trad_pk=bytes.fromhex(tradPK),
-            use_in_cms=False,
         )
         self.assertEqual(
             ss_expected,
@@ -161,7 +145,6 @@ class CompositeKEMKEMCombinerTest(unittest.TestCase):
             trad_ss=bytes.fromhex(tradSS),
             trad_ct=bytes.fromhex(tradCT),
             trad_pk=bytes.fromhex(tradPK),
-            use_in_cms=False,
         )
         self.assertEqual(
             ss_expected,
@@ -169,3 +152,7 @@ class CompositeKEMKEMCombinerTest(unittest.TestCase):
             "id-MLKEM1024-ECDH-P384-HMAC-SHA512 Combiner "
             "function output does not match expected value from private key.",
         )
+
+
+if __name__ == "__main__":
+    unittest.main()
