@@ -15,45 +15,33 @@ from pq_logic.keys.composite_kem import CompositeKEMPrivateKey, CompositeKEMPubl
 from pq_logic.keys.kem_keys import MLKEMPrivateKey
 from pq_logic.keys.pq_key_factory import PQKeyFactory
 from pq_logic.keys.trad_kem_keys import DHKEMPrivateKey, RSADecapKey, RSAEncapKey
+from pq_logic.tmp_oids import composite_kem_version
 from resources.certutils import parse_certificate
 from resources.exceptions import InvalidKeyData
 from resources.oidutils import CURVE_NAMES_TO_INSTANCES
 
-COMPOSITE_KEM07_NAME_TO_ORIGINAL_OID = {
-    "composite-kem07-ml-kem-768-rsa2048": "id-MLKEM768‑RSA2048‑HMAC‑SHA256",
-    "composite-kem07-ml-kem-768-rsa3072": "id-MLKEM768‑RSA3072‑HMAC‑SHA256",
-    "composite-kem07-ml-kem-768-rsa4096": "id-MLKEM768‑RSA4096‑HMAC‑SHA256",
-    "composite-kem07-ml-kem-768-x25519": "id-MLKEM768‑X25519‑SHA3‑256",
-    "composite-kem07-ml-kem-768-ecdh-secp256r1": "id-MLKEM768‑ECDH‑P256‑HMAC‑SHA256",
-    "composite-kem07-ml-kem-768-ecdh-secp384r1": "id-MLKEM768‑ECDH‑P384‑HMAC‑SHA256",
-    "composite-kem07-ml-kem-768-ecdh-brainpoolP256r1": "id-MLKEM768‑ECDH‑brainpoolP256r1‑HMAC‑SHA256",
-    "composite-kem07-ml-kem-1024-rsa3072": "id-MLKEM1024‑RSA3072‑HMAC‑SHA512",
-    "composite-kem07-ml-kem-1024-ecdh-secp384r1": "id-MLKEM1024‑ECDH‑P384‑HMAC‑SHA512",
-    "composite-kem07-ml-kem-1024-ecdh-brainpoolP384r1": "id-MLKEM1024‑ECDH‑brainpoolP384r1‑HMAC‑SHA512",
-    "composite-kem07-ml-kem-1024-x448": "id-MLKEM1024‑X448‑SHA3‑256",
-    "composite-kem07-ml-kem-1024-ecdh-p521": "id-MLKEM1024‑ECDH‑P521‑HMAC‑SHA512",
+COMPOSITE_KEM_NAME_TO_ORIGINAL_OID = {
+    f"composite-kem-{composite_kem_version}-ml-kem-768-rsa2048": "id-MLKEM768-RSA2048-SHA3-256",
+    f"composite-kem-{composite_kem_version}-ml-kem-768-rsa3072": "id-MLKEM768-RSA3072-SHA3-256",
+    f"composite-kem-{composite_kem_version}-ml-kem-768-rsa4096": "id-MLKEM768-RSA4096-SHA3-256",
+    f"composite-kem-{composite_kem_version}-ml-kem-768-x25519": "id-MLKEM768-X25519-SHA3-256",
+    f"composite-kem-{composite_kem_version}-ml-kem-768-ecdh-secp256r1": "id-MLKEM768-ECDH-P256-SHA3-256",
+    f"composite-kem-{composite_kem_version}-ml-kem-768-ecdh-secp384r1": "id-MLKEM768-ECDH-P384-SHA3-256",
+    f"composite-kem-{composite_kem_version}-ml-kem-768-ecdh-brainpoolP256r1": "id-MLKEM768-ECDH-brainpoolP256r1-SHA3-256",
+    f"composite-kem-{composite_kem_version}-ml-kem-1024-rsa3072": "id-MLKEM1024-RSA3072-SHA3-256",
+    f"composite-kem-{composite_kem_version}-ml-kem-1024-ecdh-secp384r1": "id-MLKEM1024-ECDH-P384-SHA3-256",
+    f"composite-kem-{composite_kem_version}-ml-kem-1024-ecdh-brainpoolP384r1": "id-MLKEM1024-ECDH-brainpoolP384r1-SHA3-256",
+    f"composite-kem-{composite_kem_version}-ml-kem-1024-x448": "id-MLKEM1024-X448-SHA3-256",
+    f"composite-kem-{composite_kem_version}-ml-kem-1024-ecdh-secp521r1": "id-MLKEM1024-ECDH-P521-SHA3-256",
 }
 
-COMPOSITE_KEM07_ORIGINAL_NAME_TO_NAME = {
-    "id-MLKEM768-RSA3072-HMAC-SHA256": "composite-kem07-ml-kem-768-rsa3072",
-    "id-MLKEM768-RSA4096-HMAC-SHA256": "composite-kem07-ml-kem-768-rsa4096",
-    "id-MLKEM768-RSA2048-HMAC-SHA256": "composite-kem07-ml-kem-768-rsa2048",
-    "id-MLKEM768-X25519-SHA3-256": "composite-kem07-ml-kem-768-x25519",
-    "id-MLKEM768-ECDH-P256-HMAC-SHA256": "composite-kem07-ml-kem-768-ecdh-secp256r1",
-    "id-MLKEM768-ECDH-P384-HMAC-SHA256": "composite-kem07-ml-kem-768-ecdh-secp384r1",
-    "id-MLKEM768-ECDH-brainpoolP256r1-HMAC-SHA256": "composite-kem07-ml-kem-768-ecdh-brainpoolP256r1",
-    "id-MLKEM1024-RSA3072-HMAC-SHA512": "composite-kem07-ml-kem-1024-rsa3072",
-    "id-MLKEM1024-ECDH-P384-HMAC-SHA512": "composite-kem07-ml-kem-1024-ecdh-secp384r1",
-    "id-MLKEM1024-ECDH-brainpoolP384r1-HMAC-SHA512": "composite-kem07-ml-kem-1024-ecdh-brainpoolP384r1",
-    "id-MLKEM1024-X448-SHA3-256": "composite-kem07-ml-kem-1024-x448",
-    "id-MLKEM1024-ECDH-P521-HMAC-SHA512": "composite-kem07-ml-kem-1024-ecdh-secp521r1",
-}
+COMPOSITE_KEM_ORIGINAL_NAME_TO_NAME = {y:x for x,y in COMPOSITE_KEM_NAME_TO_ORIGINAL_OID.items()}
 
 
 @dataclass
-class CompositeKEM07TestVectors:
+class CompositeKEMTestVectors:
     """
-    Test vectors for Composite KEM 0.7.
+    Test vectors for Composite KEM
     """
 
     tcId: str
@@ -65,7 +53,7 @@ class CompositeKEM07TestVectors:
     k: str
 
     @classmethod
-    def from_dict(cls, data: dict) -> "CompositeKEM07TestVectors":
+    def from_dict(cls, data: dict) -> "CompositeKEMTestVectors":
         return cls(
             tcId=data["tcId"],
             ek=data["ek"],
@@ -100,7 +88,7 @@ class CompositeKEM07TestVectors:
     @property
     def name(self):
         """Get the name of the algorithm."""
-        return COMPOSITE_KEM07_ORIGINAL_NAME_TO_NAME[self.tcId]
+        return COMPOSITE_KEM_ORIGINAL_NAME_TO_NAME[self.tcId]
 
     @property
     def ct_bytes(self):
@@ -116,7 +104,7 @@ def _load_composite_kem_from_private_bytes(algorithm: str, private_key: bytes) -
     :return: A CompositeKEMPublicKey instance.
     """
     algorithm = algorithm.lower()
-    prefix = "composite-kem07-"
+    prefix = f"composite-kem-{composite_kem_version}-"
     pq_name = PQKeyFactory.get_pq_alg_name(algorithm=algorithm)
     tmp_pq_key = PQKeyFactory.generate_pq_key(pq_name)
 
@@ -140,7 +128,7 @@ def _load_composite_kem_from_private_bytes(algorithm: str, private_key: bytes) -
         if curve is None:
             raise ValueError(f"Unsupported ECDH curve: {curve_name}")
         trad_key = load_der_private_key(trad_bytes, password=None)
-        if trad_key.curve.name.lower() != curve_name.lower():
+        if trad_key.curve.name.lower() != curve.name.lower():
             raise InvalidKeyData(f"Expected ECDH curve {curve_name}, but got {trad_key.curve.name}")
 
     elif trad_name.startswith("rsa"):
@@ -169,7 +157,7 @@ def _load_composite_kem_from_public_bytes(algorithm: str, public_key: bytes) -> 
     :return: A CompositeKEMPublicKey instance.
     """
     algorithm = algorithm.lower()
-    prefix = "composite-kem-07-"
+    prefix = f"composite-kem-{composite_kem_version}-"
     pq_name = PQKeyFactory.get_pq_alg_name(algorithm=algorithm)
     trad_name = algorithm.replace(prefix, "").replace(pq_name + "-", "")
     pq_key, rest = PQKeyFactory.from_public_bytes(pq_name, public_key, allow_rest=True)
@@ -178,13 +166,13 @@ def _load_composite_kem_from_public_bytes(algorithm: str, public_key: bytes) -> 
         trad_key = X25519PublicKey.from_public_bytes(rest)
     elif trad_name == "x448":
         trad_key = X448PublicKey.from_public_bytes(rest)
-    elif trad_name == "ecdh":
+    elif trad_name.startswith("ecdh-"):
         curve_name = trad_name.replace("ecdh-", "")
         curve = CURVE_NAMES_TO_INSTANCES.get(curve_name)
         if curve is None:
             raise ValueError(f"Unsupported ECDH curve: {curve_name}")
         trad_key = ec.EllipticCurvePublicKey.from_encoded_point(curve, rest)
-    elif trad_name == "rsa":
+    elif trad_name.startswith("rsa"):
         trad_key = load_der_public_key(rest)
         trad_key = RSAEncapKey(trad_key)
     else:
@@ -199,11 +187,11 @@ def _load_composite_kem_from_public_bytes(algorithm: str, public_key: bytes) -> 
 class TestCompositeKEM07TestVectors(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.path = "./data/rfc_test_vectors/composite_kem07_testvectors.json"
+        cls.path = "./data/rfc_test_vectors/composite_kem12_testvectors.json"
         cls.test_vectors = cls.load_test_vectors(cls.path)
 
     @staticmethod
-    def load_test_vectors(path: str) -> list[CompositeKEM07TestVectors]:
+    def load_test_vectors(path: str) -> list[CompositeKEMTestVectors]:
         import json
 
         with open(path, "r") as file:
@@ -213,7 +201,7 @@ class TestCompositeKEM07TestVectors(unittest.TestCase):
         for test in data["tests"]:
             if test["tcId"] in ["id-alg-ml-kem-768", "id-alg-ml-kem-1024"]:
                 continue
-            tests_vectors.append(CompositeKEM07TestVectors.from_dict(test))
+            tests_vectors.append(CompositeKEMTestVectors.from_dict(test))
 
         return tests_vectors
 
