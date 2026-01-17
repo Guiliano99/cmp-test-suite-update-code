@@ -54,10 +54,10 @@ from pq_logic.tmp_oids import (
     CHEMPAT_OID_2_NAME,
     COMPOSITE_KEM_NAME_2_OID,
     COMPOSITE_KEM_OID_2_NAME,
-    COMPOSITE_SIG_OID_TO_NAME,
-    id_rsa_kem_spki,
     COMPOSITE_KEM_VERSION,
+    COMPOSITE_SIG_OID_TO_NAME,
     COMPOSITE_SIG_VERSION,
+    id_rsa_kem_spki,
 )
 from resources.asn1utils import try_decode_pyasn1
 from resources.exceptions import BadAlg, BadAsn1Data, InvalidKeyCombination, InvalidKeyData, MismatchingKey
@@ -91,7 +91,13 @@ def _any_string_in_string(string: str, options: List[str]) -> str:
 class CombinedKeyFactory:
     """Factory for creating all known key types."""
 
-    _composite_prefixes = [f"sig-{COMPOSITE_SIG_VERSION}", f"kem-{COMPOSITE_KEM_VERSION}", f"kem{COMPOSITE_KEM_VERSION}", "dhkem", "kem", "sig"]
+    _composite_prefixes = [
+        f"sig-{COMPOSITE_SIG_VERSION}",
+        f"kem-{COMPOSITE_KEM_VERSION}",
+        f"kem{COMPOSITE_KEM_VERSION}",
+        "kem",
+        "sig",
+    ]
 
     @staticmethod
     def get_stateful_sig_algorithms() -> Dict[str, List[str]]:
@@ -105,11 +111,13 @@ class CombinedKeyFactory:
     def _generate_composite_key_by_name(algorithm: str):
         """Generate a composite key based on the provided key type.
 
-        :param algorithm: The type of key to generate (e.g., "composite-kem", "composite-sig", "composite-dhkem").
+        :param algorithm: The type of key to generate (e.g., "composite-kem", "composite-sig").
         :return: A generated key object.
         :raises InvalidKeyCombination: If the key type is not supported.
         """
         algorithm = algorithm.lower()
+        if algorithm.startswith("composite-dhkem"):
+            raise InvalidKeyCombination("Composite-DHKEM is not supported.")
         prefix = _any_string_in_string(algorithm, CombinedKeyFactory._composite_prefixes)
         pq_name = PQKeyFactory.get_pq_alg_name(algorithm=algorithm)
         pq_key = PQKeyFactory.generate_pq_key(pq_name)
@@ -312,9 +320,7 @@ class CombinedKeyFactory:
         else:
             raise ValueError(f"Unsupported traditional key type: {trad_name}")
 
-        if "dhkem" not in orig_name:
-            return CompositeKEMPublicKey(pq_key, trad_key)  # type: ignore
-        return CompositeDHKEMRFC9180PublicKey(pq_key, trad_key)  # type: ignore
+        return CompositeKEMPublicKey(pq_key, trad_key)  # type: ignore
 
     @staticmethod
     def _load_hybrid_key_from_spki(spki: rfc5280.SubjectPublicKeyInfo):
@@ -465,7 +471,7 @@ class CombinedKeyFactory:
         trad_key = CombinedKeyFactory._load_trad_composite_private_key(
             trad_name=trad_name,
             trad_key_bytes=trad_bytes,
-            prefix=f"KEM v{COMPOSITE_KEM_VERSION}" if "dhkem" not in algorithm.lower() else f"dhkem v{COMPOSITE_KEM_VERSION}",
+            prefix=f"KEM v{COMPOSITE_KEM_VERSION}",
         )
 
         if not isinstance(trad_key, rsa.RSAPrivateKey):
@@ -474,19 +480,10 @@ class CombinedKeyFactory:
         if not isinstance(pq_key, PQKEMPrivateKey):
             raise InvalidKeyCombination("The composite post-quantum key is not a valid PQKEMPrivateKey.")
 
-        if algorithm.startswith("composite-dhkem"):
-            if isinstance(trad_key, RSAPrivateKey):
-                raise InvalidKeyCombination("Composite-DHKEM with RSA is not supported.")
-
-            composite_key = CompositeDHKEMRFC9180PrivateKey(
-                pq_key=pq_key,
-                trad_key=trad_key,
-            )
-        else:
-            composite_key = CompositeKEMPrivateKey(
-                pq_key=pq_key,
-                trad_key=trad_key,
-            )
+        composite_key = CompositeKEMPrivateKey(
+            pq_key=pq_key,
+            trad_key=trad_key,
+        )
 
         # Check if the key is valid.
         composite_key.get_oid()
@@ -831,8 +828,6 @@ class CombinedKeyFactory:
             prefix = f"composite-kem-{COMPOSITE_KEM_VERSION}-"
         elif alg.startswith(f"composite-kem{COMPOSITE_KEM_VERSION}-"):
             prefix = f"composite-kem{COMPOSITE_KEM_VERSION}-"
-        elif alg.startswith("composite-dhkem-"):
-            prefix = "composite-dhkem-"
         elif alg.startswith("composite-kem-"):
             prefix = "composite-kem-"
         else:
