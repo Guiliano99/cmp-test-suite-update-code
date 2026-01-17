@@ -256,6 +256,76 @@ def get_hash_alg_id_bit_strength(alg_id: rfc5280.AlgorithmIdentifier) -> int:
     return HASH_ALG_TO_STRENGTH[name]
 
 
+def _get_pbkdf2_bit_strength(alg_id: rfc5280.AlgorithmIdentifier) -> int:
+    """Return the security strength (in bits) for PBKDF2 algorithm identifier.
+
+    According to NIST SP 800-132, the security strength of PBKDF2 is determined by:
+    1. The security strength of the underlying PRF (Pseudo-Random Function)
+    2. The derived key length
+
+    The effective security strength is the minimum of these two values.
+
+    :param alg_id: The AlgorithmIdentifier for PBKDF2 from RFC 8018.
+    :return: The security strength in bits.
+    :raises BadAlg: If the PRF algorithm is not supported.
+    """
+    # Decode the PBKDF2 parameters if needed
+    if not isinstance(alg_id["parameters"], rfc8018.PBKDF2_params):
+        pbkdf2_params, _ = try_decode_pyasn1(alg_id["parameters"], rfc8018.PBKDF2_params())
+    else:
+        pbkdf2_params = alg_id["parameters"]
+
+    # Get the PRF (Pseudo-Random Function) algorithm - typically HMAC with a hash function
+    prf_alg_id = pbkdf2_params["prf"]
+
+    if prf_alg_id["algorithm"] not in HMAC_OID_2_NAME:
+        raise BadAlg(f"Unsupported PRF algorithm: {may_return_oid_to_name(prf_alg_id['algorithm'])}. Expected HMAC.")
+
+    # Get the security strength of the underlying hash function used in the PRF
+    prf_strength = get_mac_alg_id_bit_strength(prf_alg_id)
+
+    # Get the derived key length in bits
+    key_length_bytes = int(pbkdf2_params["keyLength"])
+    key_length_bits = key_length_bytes * 8
+
+    # The effective security strength is the minimum of PRF strength and key length
+    # as per NIST SP 800-132 Section 5.3 "Security Strength of PBKDF2"
+    return min(prf_strength, key_length_bits)
+
+
+@keyword(name="Get KDF Algorithm Bit Strength")
+def get_kdf_alg_id_bit_strength(alg_id: rfc5280.AlgorithmIdentifier) -> int:
+    """Return the bit strength of the KDF algorithm identifier.
+
+    :param alg_id: The AlgorithmIdentifier to get the bit strength for.
+    :return: The bit strength of the KDF algorithm identifier.
+    :raises BadAlg: If the KDF algorithm is not supported or incorrect.
+    :raises NotImplementedError: If the KDF algorithm is not supported yet.
+    """
+    oid = alg_id["algorithm"]
+    if oid not in KDF_OID_2_NAME:
+        raise BadAlg(f"KDF algorithm is not supported yet. Got: {may_return_oid_to_name(oid)}")
+
+    _name = KDF_OID_2_NAME[oid]
+    if _name in {"kdf2", "kdf3"}:
+        if not isinstance(alg_id["parameters"], rfc5280.AlgorithmIdentifier):
+            kdf_params, _ = try_decode_pyasn1(alg_id["parameters"], rfc5280.AlgorithmIdentifier())  # type: ignore
+            kdf_params: rfc5280.AlgorithmIdentifier
+        else:
+            kdf_params = alg_id["parameters"]
+
+        return get_hash_alg_id_bit_strength(kdf_params)
+
+    if _name.startswith("hkdf-"):
+        _hash_alg = _name.replace("hkdf-", "")
+        return HASH_ALG_TO_STRENGTH[_hash_alg]
+
+    if _name == "pbkdf2":
+        return _get_pbkdf2_bit_strength(alg_id)
+
+    raise NotImplementedError(f"Unsupported KDF algorithm: {_name}")
+
+
 @not_keyword
 def get_aes_bit_strength(name: str):
     """Return the bit strength of the AES algorithm."""
