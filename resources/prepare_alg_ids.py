@@ -432,7 +432,7 @@ def prepare_pbmac1_parameters(
         - If not provided, a random 16-byte salt is generated.
     :param iterations: The number of iterations to be used in the PBKDF2 key derivation function.
                        Default is 100.
-    :param length: The desired length of the derived key in bytes. Defauls to 32 bytes.
+    :param length: The desired length of the derived key in bytes. Defaults to `32 bytes`.
     :param hash_alg: The name of the hash algorithm to use with PBKDF2 and HMAC. Defaults to "sha256".
     :param mac_hash_alg: The name of the hash algorithm to use for the HMAC algorithm. If not provided,
                          it defaults to the value of `hash_alg`.
