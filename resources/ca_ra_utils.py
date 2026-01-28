@@ -2334,6 +2334,28 @@ def build_cp_from_p10cr(  # noqa: D417 Missing argument descriptions in the docs
     return pki_message, cert
 
 
+def has_cert_template_a_value(cert_template: rfc4211.CertTemplate) -> bool:
+    """Check if a certificate template has a value set for a field.
+
+    Needed because of an error with the optional validity field.
+
+    :param cert_template: The certificate template to check.
+    :return: True if a value is set for the field, False otherwise.
+    """
+    if not cert_template.hasValue():
+        return False
+
+    for name in cert_template.keys():
+        if name == "validity":
+            if cert_template[name]["notBefore"].hasValue() or cert_template["validity"]["notAfter"].hasValue():
+                return True
+
+        if cert_template[name].isValue and name != "validity":
+            return True
+
+    return False
+
+
 def _process_one_cert_request(
     ca_key: SignKey,
     ca_cert: rfc9480.CMPCertificate,
