@@ -26,6 +26,7 @@ from pq_logic.tmp_oids import (
     COMPOSITE_SIG_OID_TO_NAME,
     COMPOSITE_SIG_PREHASH_OID_2_HASH,
 )
+from resources.exceptions import BadAlg
 from resources.oidutils import (
     ALL_KNOWN_NAMES_2_OID,
     ALL_KNOWN_OIDS_2_NAME,
@@ -217,9 +218,9 @@ def get_alg_oid_from_key_hash(
 
         return PQ_NAME_2_OID[name]
 
-    from pq_logic.keys.composite_sig import CompositeSigPrivateKey
+    from pq_logic.keys.composite_sig13 import CompositeSig13PrivateKey
 
-    if isinstance(key, CompositeSigPrivateKey):
+    if isinstance(key, CompositeSig13PrivateKey):
         alg_oid = key.get_oid(use_pss=use_rsa_pss)
 
     if isinstance(key, PQHashStatefulSigPrivateKey):
@@ -232,18 +233,47 @@ def get_alg_oid_from_key_hash(
 
 
 @not_keyword
-def compute_hash(alg_name: str, data: bytes) -> bytes:
+def compute_hash(alg_name: str, data: bytes, bad_digest: bool = False) -> bytes:
     """Calculate the hash of data using an algorithm given by its name.
 
     :param alg_name: The Name of algorithm, e.g., 'sha256', see HASH_NAME_OBJ_MAP.
     :param data: The buffer we want to hash.
+    :param bad_digest: The flag to manipulate the first byte of the hash. Defaults to `False`.
     :return: The resulting hash.
     :raises ValueError: If the specified hash algorithm is not supported.
     """
+    from resources import utils
+
     hash_class = hash_name_to_instance(alg_name)
     digest = hashes.Hash(hash_class)
     digest.update(data)
-    return digest.finalize()
+    computed_digest = digest.finalize()
+    logging.info("Computed digest with %s: %s", alg_name, computed_digest.hex())
+    if bad_digest:
+        return utils.manipulate_first_byte(computed_digest)
+    return computed_digest
+
+
+@not_keyword
+def compute_hash_from_alg_id(alg_id: rfc9480.AlgorithmIdentifier, data: bytes) -> bytes:
+    """Calculate the hash of data using an algorithm given by its `AlgorithmIdentifier`.
+
+    :param alg_id: The AlgorithmIdentifier specifying the hash algorithm.
+    :param data: The buffer we want to hash.
+    :return: The resulting hash.
+    :raises BadAlg: If the specified hash algorithm is not supported.
+    """
+    oid = alg_id["algorithm"]
+    if OID_HASH_MAP in alg_id:
+        try:
+            hash_alg = get_hash_from_oid(oid, only_hash=True)
+        except ValueError as e:
+            raise BadAlg(f"Unsupported hash algorithm: {oid}") from e
+        return compute_hash(hash_alg, data)
+
+    raise BadAlg(
+        f"Unsupported hash algorithm: {may_return_oid_to_name(oid)}.\nGot algorithm identifier:\n{alg_id.prettyPrint()}"
+    )
 
 
 @not_keyword
