@@ -382,3 +382,14 @@ class BodyRelevantError(CMPTestSuiteError):
         self.message = message
         self.pki_message = pki_message
         super().__init__(message, error_details=error_details, failinfo=failinfo)
+
+
+## Other Certificate Format Errors
+
+
+class BadAttributeCertTemplate(BadCertTemplate):
+    """Raised when an invalid attribute certificate template is provided."""
+
+
+class BadAttributeCert(BadCertTemplate):
+    """Raised when an invalid attribute certificate is provided."""
