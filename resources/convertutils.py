@@ -172,19 +172,19 @@ def validity_to_optional_validity(validity_obj: rfc5280.Validity) -> rfc4211.Opt
         implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 4)
     )
 
-    before_type = validity_obj["notBefore"].getName()
-    after_type = validity_obj["notAfter"].getName()
+    if validity_obj["notBefore"].isValue:
+        before_type = validity_obj["notBefore"].getName()
+        not_before_py = pyasn1_time_obj_to_py_datetime(validity_obj["notBefore"])
+        not_before = rfc5280.Time().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0))
+        not_before[before_type] = not_before[before_type].fromDateTime(not_before_py)
+        optional_validity["notBefore"] = not_before
 
-    not_before_py = pyasn1_time_obj_to_py_datetime(validity_obj["notBefore"])
-    not_after_py = pyasn1_time_obj_to_py_datetime(validity_obj["notAfter"])
-
-    not_before = rfc5280.Time().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0))
-    not_before[before_type] = not_before[before_type].fromDateTime(not_before_py)
-    optional_validity["notBefore"] = not_before
-
-    not_after = rfc5280.Time().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 1))
-    not_after[after_type] = not_after[after_type].fromDateTime(not_after_py)
-    optional_validity["notAfter"] = not_after
+    if validity_obj["notAfter"].isValue:
+        after_type = validity_obj["notAfter"].getName()
+        not_after_py = pyasn1_time_obj_to_py_datetime(validity_obj["notAfter"])
+        not_after = rfc5280.Time().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 1))
+        not_after[after_type] = not_after[after_type].fromDateTime(not_after_py)
+        optional_validity["notAfter"] = not_after
 
     return optional_validity
 
