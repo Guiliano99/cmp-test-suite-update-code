@@ -21,7 +21,7 @@ from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448P
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import tag, univ
-from pyasn1_alt_modules import rfc4211, rfc5280, rfc5480, rfc5652, rfc5958, rfc6664, rfc9480
+from pyasn1_alt_modules import rfc4211, rfc4212, rfc5280, rfc5480, rfc5652, rfc5958, rfc6664, rfc9480
 from robot.api.deco import keyword, not_keyword
 
 from pq_logic import pq_verify_logic
@@ -2354,6 +2354,35 @@ def has_cert_template_a_value(cert_template: rfc4211.CertTemplate) -> bool:
             return True
 
     return False
+
+
+def _validate_cert_request_for_other_cert_formats(cert_request: rfc4211.CertRequest) -> None:
+    """Validate the certificate request for other certificate formats.
+
+    :raises BadCertTemplate: If the certificate template is invalid.
+    :raises BadAsn1Data: If the ASN.1 data is invalid.
+    :raises BadRequest: Because this feature is not supported yet.
+    """
+    cert_template_is_present = has_cert_template_a_value(cert_request["certTemplate"])
+
+    der_data = None
+    if cert_request["controls"].isValue:
+        for entry in cert_request["controls"]:
+            if entry["type"] == rfc4212.id_regCtrl_altCertTemplate:
+                der_data = entry["value"].asOctets()
+                break
+
+    if cert_template_is_present and der_data is not None:
+        raise BadCertTemplate("The certificate template must be empty for other certificate formats.")
+
+    if not cert_template_is_present and der_data is None:
+        raise BadCertTemplate("The certificate template was empty and no `altCertTemplate` control was set.")
+
+    data, rest = try_decode_pyasn1(der_data, rfc4212.AttCertTemplate())
+    if rest:
+        raise BadAsn1Data("AttCertTemplate")
+
+    raise BadRequest("The MockCA does not support other certificate formats.")
 
 
 def _process_one_cert_request(
