@@ -556,3 +556,86 @@ def prepare_openpgp_cert_template_extended(  # noqa: D417 undocumented params
 
     return target
 
+
+def _prepare_attr_type_and_value(
+    attr_type: univ.ObjectIdentifier, attr_value: base.Asn1Item, bad_data: bool = False
+) -> rfc4211.AttributeTypeAndValue:
+    """Prepare an `AttributeTypeAndValue` structure from an attribute type and value.
+
+    :param attr_type: The attribute type.
+    :param attr_value: The attribute value.
+    :param bad_data: Boolean flag indicating whether to include bad data in the attribute value. Defaults to False.
+    """
+    attr_entry = rfc4211.AttributeTypeAndValue()
+    data = asn1utils.encode_to_der(attr_value)
+
+    if bad_data:
+        data += os.urandom(1)
+
+    attr_entry["value"] = univ.Any(data)
+    attr_entry["type"] = attr_type
+    return attr_entry
+
+
+@not_keyword
+def prepare_alt_cert_template(
+    other_format: Union[rfc4212.AttCertTemplate, rfc4212.OpenPGPCertTemplateExtended], bad_data: bool = False
+) -> rfc4212.AltCertTemplate:
+    """Prepare an `AltCertTemplate` structure for an empty certificate template.
+
+    :param other_format: The other certificate format template.
+    :param bad_data: Boolean flag indicating whether to include bad data in the template. Defaults to False.
+    :return: The prepared `AltCertTemplate` structure.
+    """
+    if isinstance(other_format, rfc4212.AttCertTemplate):
+        oid = rfc4212.id_acTemplate
+
+    elif isinstance(other_format, rfc4212.OpenPGPCertTemplateExtended):
+        oid = rfc4212.id_openPGPCertTemplateExt
+
+    else:
+        raise TypeError(f"Invalid other_format type: {type(other_format)}. Got: {other_format}.")
+
+    return _prepare_attr_type_and_value(attr_type=oid, attr_value=other_format, bad_data=bad_data)  # type: ignore
+
+
+@keyword(name="Prepare AltCertTemplate CertRequest")
+def prepare_alt_cert_template_cert_request(  # noqa: D417 undocumented params
+    other_cert_format: Union[rfc4212.AttCertTemplate, rfc4212.OpenPGPCertTemplateExtended],
+    cert_req_id: Union[str, int] = 0,
+    bad_controls_data: bool = False,
+) -> rfc4211.CertRequest:
+    """Prepare a `CertRequest` structure for a certificate request in another format than the CertTemplate.
+
+    Arguments:
+    ---------
+       - `other_cert_format`: The other certificate format template.
+       - `cert_req_id`: The certificate request ID. Defaults to `0`.
+       - `bad_controls_data`: Boolean flag indicating whether to include bad data in the controls. Defaults to `False`.
+
+    Returns:
+    -------
+       - The populated `CertRequest` structure.
+
+    Raises:
+    ------
+       - `TypeError`: If `other_cert_format` is not a valid certificate template type.
+
+    Examples:
+    --------
+    | ${cert_request} | Prepare AltCertTemplate CertRequest | ${att_cert_template} |
+    | ${cert_request} | Prepare AltCertTemplate CertRequest | ${openpgp_cert_template} | cert_req_id=1 | True |
+
+    """
+    cert_request = rfc4211.CertRequest()
+
+    attr_type_value = prepare_alt_cert_template(other_cert_format, bad_data=False)
+
+    controls_entry = _prepare_attr_type_and_value(
+        rfc4212.id_regCtrl_altCertTemplate, attr_type_value, bad_controls_data
+    )
+
+    cert_request["controls"].append(controls_entry)
+    cert_request["certTemplate"] = rfc4211.CertTemplate()
+    cert_request["certReqId"] = int(cert_req_id)
+    return cert_request
