@@ -181,3 +181,24 @@ def prepare_issuer_serial_structure(
         issuer_serial["issuerUID"] = rfc5280.UniqueIdentifier.fromOctetString(issuer_uid)
     return issuer_serial
 
+
+@not_keyword
+def prepare_issuer_serial_from_cert(
+    cert: rfc9480.CMPCertificate,
+    target: Optional[rfc5755.IssuerSerial] = None,
+) -> rfc5755.IssuerSerial:
+    """Prepare an `IssuerSerial` structure from a CMPCertificate.
+
+    This is a helper function to extract the issuer and serial number from a certificate
+    and create the `IssuerSerial` structure used to identify the base certificate.
+
+    :param cert: The CMPCertificate to extract the issuer serial from.
+    :param target: Optional `IssuerSerial` object to populate.
+    :return: The prepared `IssuerSerial` structure.
+    """
+    uid = cert["tbsCertificate"]["issuerUniqueID"]
+    issuer_uid = uid.asOctets() if uid.isValue else None
+    return prepare_issuer_serial_structure(
+        cert["tbsCertificate"]["issuer"], cert["tbsCertificate"]["serialNumber"], issuer_uid=issuer_uid, target=target
+    )
+
