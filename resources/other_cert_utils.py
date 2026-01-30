@@ -5,6 +5,7 @@
 """Helper for RFC 4212 alternative certificate formats, like an `AttributeCertificate` or an OpenPGP certificate."""
 
 import logging
+from datetime import datetime
 from typing import Optional, Sequence, Union
 
 from pyasn1.type import tag, univ
@@ -155,6 +156,32 @@ def prepare_object_digest_info(  # noqa: D417 undocumented params
         object_type=digest_obj_type,
         digest=digest,
     )
+
+
+def _prepare_optional_att_cert_validity(
+    not_before_time: Optional[Union[str, float, datetime]] = None,
+    not_after_time: Optional[Union[str, float, datetime]] = None,
+) -> rfc4212.OptionalAttCertValidity:
+    """Prepare an `OptionalAttCertValidity` structure.
+
+    :param not_before_time: The notBeforeTime value.
+    :param not_after_time: The notAfterTime value.
+    :return: The populated `OptionalAttCertValidity` structure.
+    """
+    validity = rfc4212.OptionalAttCertValidity().subtype(
+        implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 5)
+    )
+    if not_before_time is not None:
+        validity["notBeforeTime"] = prepareutils.prepare_generalized_time(not_before_time).subtype(
+            implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0)
+        )
+    if not_after_time is not None:
+        validity["notAfterTime"] = prepareutils.prepare_generalized_time(not_after_time).subtype(
+            implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1)
+        )
+    return validity
+
+
 @not_keyword
 def prepare_issuer_serial_structure(
     issuer: GeneralNamesType,
