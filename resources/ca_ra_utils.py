@@ -2378,7 +2378,8 @@ def _validate_cert_request_for_other_cert_formats(cert_request: rfc4211.CertRequ
     if not cert_template_is_present and der_data is None:
         raise BadCertTemplate("The certificate template was empty and no `altCertTemplate` control was set.")
 
-    data, rest = try_decode_pyasn1(der_data, rfc4212.AttCertTemplate())
+    data, rest = try_decode_pyasn1(der_data, rfc4212.AttCertTemplate())  # type: ignore
+    data: rfc4212.AttCertTemplate
     if rest:
         raise BadAsn1Data("AttCertTemplate")
 
