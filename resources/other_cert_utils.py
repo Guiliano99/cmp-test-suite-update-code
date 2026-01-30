@@ -10,8 +10,8 @@ from pyasn1.type import tag, univ
 from pyasn1_alt_modules import rfc5280, rfc5755, rfc9480
 from robot.api.deco import keyword, not_keyword
 
-from resources import asn1utils, convertutils, oid_mapping, prepare_alg_ids
-from resources.typingutils import PublicKey
+from resources import asn1utils, convertutils, oid_mapping, prepare_alg_ids, prepareutils
+from resources.typingutils import GeneralNamesType, PublicKey
 
 
 def _convert_cert_or_pub_key_to_der(
@@ -154,3 +154,30 @@ def prepare_object_digest_info(  # noqa: D417 undocumented params
         object_type=digest_obj_type,
         digest=digest,
     )
+@not_keyword
+def prepare_issuer_serial_structure(
+    issuer: GeneralNamesType,
+    serial_number: int,
+    issuer_uid: Optional[bytes] = None,
+    target: Optional[rfc5755.IssuerSerial] = None,
+) -> rfc5755.IssuerSerial:
+    """Prepare an `IssuerSerial` structure.
+
+    This structure identifies a certificate by its issuer's name and serial number.
+    It is used within a `Holder` structure to identify the base certificate of the Attribute Certificate holder.
+
+    :param issuer: The issuer name.
+    :param serial_number: The serial number.
+    :param issuer_uid: The issuer unique identifier. Defaults to `None`.
+    :param target: Optional `IssuerSerial` object to populate.
+    """
+    issuer_serial = rfc5755.IssuerSerial().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1))
+    if target is not None:
+        issuer_serial = target
+
+    issuer_serial["issuer"] = prepareutils.parse_to_general_names(issuer)
+    issuer_serial["serial"] = serial_number
+    if issuer_uid is not None:
+        issuer_serial["issuerUID"] = rfc5280.UniqueIdentifier.fromOctetString(issuer_uid)
+    return issuer_serial
+
