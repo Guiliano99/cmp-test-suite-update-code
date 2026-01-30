@@ -114,7 +114,7 @@ test-pq-hybrid:
 
 test-pq-hybrid-verbose:
     # Start the tests for PQ and Hybrid algorithms/mechanisms.
-	robot --pythonpath=./ --outputdir=reports --variable environment:$(env) tests_pq_and_hybrid
+	robot --pythonpath=./ --exclude "composite-kemANDfrodokem" --outputdir=reports --variable environment:$(env) tests_pq_and_hybrid
 
 start-mock-ca:
 	python ./mock_ca/ca_handler.py
@@ -129,4 +129,3 @@ test-mock-ca-verbose:
 	# The results will be stored in the reports/ directory.
 	# This will run all tests, including those marked as verbose-tests.
 	robot --pythonpath=./ --outputdir=reports --variable environment:mock_ca tests tests_mock_ca tests_pq_and_hybrid
-
