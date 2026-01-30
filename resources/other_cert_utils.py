@@ -4,7 +4,8 @@
 
 """Helper for RFC 4212 alternative certificate formats, like an `AttributeCertificate` or an OpenPGP certificate."""
 
-from typing import Optional, Union
+import logging
+from typing import Optional, Sequence, Union
 
 from pyasn1.type import tag, univ
 from pyasn1_alt_modules import rfc5280, rfc5755, rfc9480
@@ -201,4 +202,72 @@ def prepare_issuer_serial_from_cert(
     return prepare_issuer_serial_structure(
         cert["tbsCertificate"]["issuer"], cert["tbsCertificate"]["serialNumber"], issuer_uid=issuer_uid, target=target
     )
+
+
+def _patch_holder_structure_with_base_cert_id(
+    holder: rfc4212.Holder,
+    base_certificate_id: Optional[Union[rfc9480.CMPCertificate, rfc5755.IssuerSerial]] = None,
+) -> rfc5755.Holder:
+    """Patch the `Holder` structure with the issuer unique identifier of the certificate."""
+    if base_certificate_id is None:
+        return holder
+
+    if isinstance(base_certificate_id, rfc5755.IssuerSerial):
+        holder["baseCertificateID"]["issuer"] = base_certificate_id["issuer"]
+        holder["baseCertificateID"]["serial"] = base_certificate_id["serial"]
+        if base_certificate_id["issuerUID"].isValue:
+            holder["baseCertificateID"]["issuerUID"] = base_certificate_id["issuerUID"]
+
+    elif isinstance(base_certificate_id, rfc9480.CMPCertificate):
+        target_iss_ser = rfc5755.IssuerSerial().subtype(
+            implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)
+        )
+        holder["baseCertificateID"] = prepare_issuer_serial_from_cert(base_certificate_id, target=target_iss_ser)
+    else:
+        raise TypeError(f"Invalid baseCertificateID type: {type(base_certificate_id)}. Got: {base_certificate_id}.")
+
+    return holder
+
+
+def prepare_holder(  # noqa: D417 undocumented params
+    base_certificate_id: Optional[Union[rfc9480.CMPCertificate, rfc5755.IssuerSerial]] = None,
+    entity_name: Optional[GeneralNamesType] = None,
+    object_digest_info: Optional[rfc5755.ObjectDigestInfo] = None,
+    target: Optional[rfc4212.Holder] = None,
+) -> rfc4212.Holder:
+    """Prepare a `Holder` structure for an attribute certificate.
+
+    The `Holder` structure identifies the entity to which an Attribute Certificate is issued.
+    It can identify the holder by a base certificate (using `IssuerSerial`), by name (`entityName`),
+    or by the digest of an object (`ObjectDigestInfo`).
+
+    Arguments:
+    ---------
+        - `base_certificate_id`: The baseCertificateID value (CMPCertificate or IssuerSerial). Defaults to `None`.
+        - `entity_name`: The entityName value (GeneralNames). Defaults to `None`.
+        - `object_digest_info`: The objectDigestInfo value. Defaults to `None`.
+        - `target`: Optional `Holder` object to populate. Defaults to `None`.
+
+    Returns:
+    -------
+        - The populated `Holder` structure.
+
+    Examples:
+    --------
+    | ${holder} | Prepare Holder | base_certificate_id=${cert} |
+    | ${holder} | Prepare Holder | entity_name=CN=John Doe | object_digest_info=${digest_info} |
+
+    """
+    holder = rfc4212.Holder().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 1))
+
+    if target is not None:
+        holder = target
+
+    holder = _patch_holder_structure_with_base_cert_id(holder, base_certificate_id)
+
+    if entity_name is not None:
+        holder["entityName"].extend(prepareutils.parse_to_general_names(entity_name))
+    if object_digest_info is not None:
+        holder["objectDigestInfo"] = object_digest_info
+    return holder
 
