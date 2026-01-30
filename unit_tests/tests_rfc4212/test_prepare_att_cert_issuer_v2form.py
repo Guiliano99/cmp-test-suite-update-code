@@ -4,11 +4,11 @@
 
 import unittest
 from pyasn1.type import tag, univ
-from pyasn1_alt_modules import rfc9480, rfc5755
+from pyasn1_alt_modules import rfc5280, rfc5755
 
 from resources import other_cert_utils
 from resources.asn1utils import try_decode_pyasn1
-from resources.prepareutils import prepare_name
+from resources.certbuildutils import build_certificate
 from unit_tests.utils_for_test import try_encode_pyasn1
 
 
@@ -17,10 +17,7 @@ class TestPrepareAttCertIssuerV2Form(unittest.TestCase):
 
     def setUp(self):
         """Set up a test certificate for use in test cases."""
-        self.cert = rfc9480.CMPCertificate()
-        tbs = self.cert['tbsCertificate']
-        tbs['serialNumber'] = 12345
-        tbs["issuer"] = prepare_name("CN=Test Issuer")
+        self.cert = build_certificate(common_name="CN=Test Issuer", is_ca=True, serial_number=12345)[0]
 
     def test_prepare_basic(self):
         """
@@ -30,12 +27,10 @@ class TestPrepareAttCertIssuerV2Form(unittest.TestCase):
         """
         v2form = other_cert_utils.prepare_att_cert_issuer_v2form(self.cert)
 
-        # Verify issuerName is set
         self.assertTrue(v2form['issuerName'].isValue)
         self.assertFalse(v2form['baseCertificateID'].isValue)
         self.assertFalse(v2form['objectDigestInfo'].isValue)
 
-        # Test encoding and decoding
         der_data = try_encode_pyasn1(v2form)
         decoded_obj, rest = try_decode_pyasn1(der_data, rfc5755.V2Form().subtype(
             implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)))
@@ -49,13 +44,11 @@ class TestPrepareAttCertIssuerV2Form(unittest.TestCase):
         """
         v2form = other_cert_utils.prepare_att_cert_issuer_v2form(self.cert, add_base_certificate_id=True)
 
-        # Verify both issuerName and baseCertificateID are set
         self.assertTrue(v2form['issuerName'].isValue)
         self.assertTrue(v2form['baseCertificateID'].isValue)
         self.assertEqual(int(v2form['baseCertificateID']['serial']), 12345)
         self.assertFalse(v2form['objectDigestInfo'].isValue)
 
-        # Test encoding and decoding
         der_data = try_encode_pyasn1(v2form)
         decoded_obj, rest = try_decode_pyasn1(der_data, rfc5755.V2Form().subtype(
             implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)))
@@ -82,13 +75,10 @@ class TestPrepareAttCertIssuerV2Form(unittest.TestCase):
             object_digest_info=digest_obj_info
         )
 
-        # Verify issuerName is set
         self.assertTrue(v2form['issuerName'].isValue)
         self.assertFalse(v2form['baseCertificateID'].isValue)
-        # Due to bug, objectDigestInfo is assigned to digestedObjectType field
-        self.assertTrue(v2form['digestedObjectType'].isValue)
+        self.assertTrue(v2form['objectDigestInfo'].isValue)
 
-        # Test encoding and decoding
         der_data = try_encode_pyasn1(v2form)
         decoded_obj, rest = try_decode_pyasn1(der_data, rfc5755.V2Form().subtype(
             implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)))
@@ -119,7 +109,6 @@ class TestPrepareAttCertIssuerV2Form(unittest.TestCase):
         self.assertTrue(v2form['baseCertificateID'].isValue)
         self.assertTrue(v2form["objectDigestInfo"].isValue)
 
-        # Test encoding and decoding
         der_data = try_encode_pyasn1(v2form)
         decoded_obj, rest = try_decode_pyasn1(der_data, rfc5755.V2Form().subtype(
             implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)))
@@ -139,14 +128,10 @@ class TestPrepareAttCertIssuerV2Form(unittest.TestCase):
             add_digest_obj_info=True
         )
 
-        # Verify only issuerName is set (digest not added due to bug)
         self.assertTrue(v2form['issuerName'].isValue)
         self.assertFalse(v2form['baseCertificateID'].isValue)
-        # Due to the bug, objectDigestInfo is NOT set when object_digest_info kwarg is not provided
-        self.assertFalse(v2form['objectDigestInfo'].isValue)
-        self.assertFalse(v2form['digestedObjectType'].isValue)
+        self.assertTrue(v2form['objectDigestInfo'].isValue)
 
-        # Test encoding and decoding
         der_data = try_encode_pyasn1(v2form)
         decoded_obj, rest = try_decode_pyasn1(der_data, rfc5755.V2Form().subtype(
             implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)))
@@ -160,11 +145,8 @@ class TestPrepareAttCertIssuerV2Form(unittest.TestCase):
         """
         custom_issuer = "CN=Custom Issuer"
         v2form = other_cert_utils.prepare_att_cert_issuer_v2form(self.cert, issuer_name=custom_issuer)
-
-        # Verify issuerName is set
         self.assertTrue(v2form['issuerName'].isValue)
 
-        # Test encoding and decoding
         der_data = try_encode_pyasn1(v2form)
         decoded_obj, rest = try_decode_pyasn1(der_data, rfc5755.V2Form().subtype(
             implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)))
@@ -181,11 +163,9 @@ class TestPrepareAttCertIssuerV2Form(unittest.TestCase):
 
         v2form = other_cert_utils.prepare_att_cert_issuer_v2form(self.cert, target=target)
 
-        # Verify the target is the same object
         self.assertIs(v2form, target)
         self.assertTrue(v2form['issuerName'].isValue)
 
-        # Test encoding and decoding
         der_data = try_encode_pyasn1(v2form)
         decoded_obj, rest = try_decode_pyasn1(der_data, rfc5755.V2Form().subtype(
             implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)))
@@ -197,19 +177,14 @@ class TestPrepareAttCertIssuerV2Form(unittest.TestCase):
         WHEN prepare_att_cert_issuer_v2form is called with add_base_certificate_id=True.
         THEN it returns a V2Form with baseCertificateID containing the issuerUID.
         """
-        # Add issuer unique ID to the certificate
-        from pyasn1_alt_modules import rfc5280
         uid = rfc5280.UniqueIdentifier().fromOctetString(b"IssuerUID").subtype(
             implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 1))
         self.cert['tbsCertificate']['issuerUniqueID'] = uid
 
         v2form = other_cert_utils.prepare_att_cert_issuer_v2form(self.cert, add_base_certificate_id=True)
-
-        # Verify baseCertificateID includes issuerUID
         self.assertTrue(v2form['baseCertificateID'].isValue)
         self.assertTrue(v2form['baseCertificateID']['issuerUID'].isValue)
 
-        # Test encoding and decoding
         der_data = try_encode_pyasn1(v2form)
         decoded_obj, rest = try_decode_pyasn1(der_data, rfc5755.V2Form().subtype(
             implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)))

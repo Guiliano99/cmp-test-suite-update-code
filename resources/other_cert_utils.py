@@ -490,7 +490,7 @@ def prepare_att_cert_issuer_v2form(  # noqa: D417 undocumented params
         else:
             digest_obj_info = kwargs["object_digest_info"]
 
-        _form_structer = _patch_object_digest_info_to_structure(v_form_structer, digest_obj_info)
+        v_form_structer = _patch_object_digest_info_to_structure(v_form_structer, digest_obj_info)
 
     return v_form_structer
 
