@@ -269,6 +269,13 @@ def compute_hash_from_alg_id(alg_id: rfc9480.AlgorithmIdentifier, data: bytes) -
             hash_alg = get_hash_from_oid(oid, only_hash=True)
         except ValueError as e:
             raise BadAlg(f"Unsupported hash algorithm: {oid}") from e
+
+        if hash_alg is None:
+            raise BadAlg(
+                f"Unsupported hash algorithm: {may_return_oid_to_name(oid)}.\n"
+                f"Got algorithm identifier:\n{alg_id.prettyPrint()}"
+            )
+
         return compute_hash(hash_alg, data)
 
     raise BadAlg(
