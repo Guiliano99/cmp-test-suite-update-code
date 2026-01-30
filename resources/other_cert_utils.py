@@ -5,7 +5,8 @@
 """Helper for RFC 4212 alternative certificate formats, like an `AttributeCertificate` or an OpenPGP certificate."""
 
 import logging
-from datetime import datetime
+import os
+from datetime import datetime, timezone, timedelta
 from typing import Optional, Sequence, Union
 
 from pyasn1.type import tag, univ
@@ -298,6 +299,82 @@ def prepare_holder(  # noqa: D417 undocumented params
         holder["objectDigestInfo"] = object_digest_info
     return holder
 
+
+@keyword(name="Prepare AttCertTemplate")
+def prepare_att_cert_template(  # noqa: D417 undocumented params
+    version: Optional[Union[str, int]] = None,
+    holder: Optional[rfc4212.Holder] = None,
+    issuer: Optional[rfc4212.AttCertIssuer] = None,
+    signature: Optional[rfc4212.AlgorithmIdentifier] = None,
+    serial_number: Optional[int] = None,
+    not_before_time: Optional[Union[str, float, datetime]] = None,
+    not_after_time: Optional[Union[str, float, datetime]] = None,
+    attributes: Optional[Sequence[rfc4212.Attribute]] = None,
+    issuer_unique_id: Optional[rfc4212.UniqueIdentifier] = None,
+    extensions: Optional[rfc4212.Extensions] = None,
+    target: Optional[rfc4212.AttCertTemplate] = None,
+) -> rfc4212.AttCertTemplate:
+    """Prepare an `AttCertTemplate` structure.
+
+    This structure is used to specify the template for an Attribute Certificate
+    request in CMP messages. All fields are optional, and if `not_before_time` and
+    `not_after_time` are both `None`, the current time is used as the `not_before_time`.
+
+    Arguments:
+    ---------
+        - `version`: The version number of the attribute certificate. Defaults to `None`.
+        - `holder`: The holder of the attribute certificate. Defaults to `None`.
+        - `issuer`: The issuer of the attribute certificate. Defaults to `None`.
+        - `signature`: The signature algorithm identifier. Defaults to `None`.
+        - `serial_number`: The serial number of the attribute certificate. Defaults to `None`.
+        - `not_before_time`: The notBeforeTime value (str, float, or datetime). Defaults to `current time`
+        if `not_after_time` after is also `None`.
+        - `not_after_time`: The notAfterTime value (str, float, or datetime). Defaults to `None`.
+        - `attributes`: A sequence of attributes. Defaults to `None`.
+        - `issuer_unique_id`: The issuer unique identifier. Defaults to `None`.
+        - `extensions`: The extensions of the attribute certificate. Defaults to `None`.
+        - `target`: Optional `AttCertTemplate` object to populate. Defaults to `None`.
+
+    Returns:
+    -------
+        - The populated `AttCertTemplate` structure.
+
+    Examples:
+    --------
+    | ${template} | Prepare AttCertTemplate | version=1 | serial_number=12345 |
+    | ${template} | Prepare AttCertTemplate | holder=${holder} | issuer=${issuer} | not_before_time=2026-01-01 |
+
+    """
+    att_template = target or rfc4212.AttCertTemplate()
+    if version is not None:
+        att_template["version"] = int(version)
+    if holder is not None:
+        att_template["holder"] = holder
+    if issuer is not None:
+        att_template["issuer"] = issuer
+    if signature is not None:
+        att_template["signature"] = signature
+    if serial_number is not None:
+        att_template["serialNumber"] = int(serial_number)
+
+    if not_before_time is None and not_after_time is None:
+        not_before_time =  datetime.now(timezone.utc) - timedelta(seconds=3)
+
+    if not_before_time is not None or not_after_time is not None:
+        att_template["attrCertValidityPeriod"] = _prepare_optional_att_cert_validity(
+            not_before_time=not_before_time,
+            not_after_time=not_after_time,
+        )
+    if attributes is not None:
+        attr_values = univ.SequenceOf(componentType=rfc4212.Attribute())  # type: ignore
+        for entry in attributes:
+            attr_values.append(entry)
+        att_template["attributes"] = attr_values
+    if issuer_unique_id is not None:
+        att_template["issuerUniqueID"] = issuer_unique_id
+    if extensions is not None:
+        att_template["extensions"].extend(extensions)
+    return att_template
 
 
 def _patch_object_digest_info_to_structure(
