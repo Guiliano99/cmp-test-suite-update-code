@@ -83,6 +83,7 @@ docs:
 	python -m robot.libdoc --pythonpath=./ resources/envdatautils.py doc/envdatautils.html
 	python -m robot.libdoc --pythonpath=./ resources/extra_issuing_logic.py doc/extra_issuing_logic.html
 	python -m robot.libdoc --pythonpath=./ resources/ca_ra_utils.py doc/ca_ra_utils.html
+	python -m robot.libdoc --pythonpath=./ resources/other_cert_utils.py doc/other_cert_utils.html
 	python -m robot.libdoc --pythonpath=./ pq_logic/hybrid_prepare.py doc/hybrid_prepare.html
 	python -m robot.libdoc --pythonpath=./ pq_logic/pq_verify_logic.py doc/pq_verify_logic.html
     # Test documentation
