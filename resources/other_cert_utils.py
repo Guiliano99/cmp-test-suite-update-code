@@ -6,7 +6,7 @@
 
 import logging
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Sequence, Union
 
 from pyasn1.type import base, tag, univ
@@ -358,7 +358,7 @@ def prepare_att_cert_template(  # noqa: D417 undocumented params
         att_template["serialNumber"] = int(serial_number)
 
     if not_before_time is None and not_after_time is None:
-        not_before_time =  datetime.now(timezone.utc) - timedelta(seconds=3)
+        not_before_time = datetime.now(timezone.utc) - timedelta(seconds=3)
 
     if not_before_time is not None or not_after_time is not None:
         att_template["attrCertValidityPeriod"] = _prepare_optional_att_cert_validity(
