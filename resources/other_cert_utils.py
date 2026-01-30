@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Optional, Sequence, Union
 
 from pyasn1.type import tag, univ
-from pyasn1_alt_modules import rfc5280, rfc5755, rfc9480
+from pyasn1_alt_modules import rfc4211, rfc4212, rfc5280, rfc5755, rfc9480
 from robot.api.deco import keyword, not_keyword
 
 from resources import asn1utils, convertutils, oid_mapping, prepare_alg_ids, prepareutils
@@ -298,3 +298,121 @@ def prepare_holder(  # noqa: D417 undocumented params
         holder["objectDigestInfo"] = object_digest_info
     return holder
 
+
+
+def _patch_object_digest_info_to_structure(
+    structure: rfc5755.V2Form, object_digest_info: Optional[rfc5755.ObjectDigestInfo] = None
+) -> rfc5755.V2Form:
+    """Patch an `AttCertIssuer` structure with an `ObjectDigestInfo` structure.
+
+    :param structure: The structure to patch.
+    :param object_digest_info: Optional pre-constructed `ObjectDigestInfo` structure.
+    :return: The patched `AttCertIssuer` structure.
+    """
+    if object_digest_info is None:
+        return structure
+
+    structure_obj_digest_info = structure["objectDigestInfo"]
+
+    structure_obj_digest_info["digestedObjectType"] = object_digest_info["digestedObjectType"]
+    structure_obj_digest_info["objectDigest"] = object_digest_info["objectDigest"]
+    structure_obj_digest_info["digestAlgorithm"] = object_digest_info["digestAlgorithm"]
+
+    if structure_obj_digest_info["otherObjectTypeID"].isValue:
+        structure_obj_digest_info["otherObjectTypeID"] = object_digest_info["otherObjectTypeID"]
+
+    return structure
+
+
+def _patch_v2form_to_structure(
+    structure: rfc4212.AttCertIssuer, v2form_structure: Optional[rfc5755.V2Form] = None
+) -> rfc4212.AttCertIssuer:
+    """Patch an `AttCertIssuer` structure with a `V2Form` structure.
+
+    :param structure: The structure to patch.
+    :param v2form_structure: Optional pre-constructed `V2Form` structure.
+    :return: The patched `AttCertIssuer` structure.
+    """
+    if v2form_structure is None:
+        return structure
+
+    structure["v2Form"]["issuerName"] = v2form_structure["issuerName"]
+
+    if v2form_structure["issuerSerial"].isValue:
+        structure["v2Form"]["issuerSerial"] = v2form_structure["issuerSerial"]
+
+    if v2form_structure["digestedObjectType"].isValue:
+        structure["v2Form"]["digestedObjectType"] = v2form_structure["digestedObjectType"]
+
+    return structure
+
+
+@keyword(name="Prepare AttCertIssuer V2Form")
+def prepare_att_cert_issuer_v2form(  # noqa: D417 undocumented params
+    ca_cert: rfc9480.CMPCertificate,
+    add_base_certificate_id: bool = False,
+    add_digest_obj_info: bool = False,
+    hash_alg: str = "sha256",
+    **kwargs,
+) -> rfc5755.V2Form:
+    """Prepare a `V2Form` structure for an attribute certificate issuer.
+
+    This structure is used to specify the issuer information for an Attribute Certificate
+    in version 2 format. The function populates the V2Form object with issuer details,
+    including optional issuer serial information and object digest information.
+
+    Arguments:
+    ---------
+        - `ca_cert`: Certificate authority (CA) certificate in the form of a CMPCertificate.
+        - `add_base_certificate_id`: Boolean flag indicating whether to add the issuer's serial information in \
+        the V2Form. Defaults to `False`.
+        - `add_digest_obj_info`: Boolean flag specifying whether to include object digest information. \
+        Defaults to `False`.
+        - `hash_alg`: The hashing algorithm to use for object digest calculations. Defaults to "sha256".
+
+    `**kwargs`: Optional keyword arguments that may include:
+    ------------
+            - `target`: A pre-constructed `V2Form` structure to be used as the base.
+            - `issuer_name`: Specifies the issuer name override as an alternative to extracting from the \
+            provided CA certificate.
+            - `object_digest_info`: A pre-constructed `ObjectDigestInfo` structure to be included in the V2Form.
+
+    Returns:
+    -------
+        - A populated `V2Form` structure containing all relevant issuer details.
+
+    Examples:
+    --------
+    | ${v2form} | Prepare AttCertIssuer V2Form | ${ca_cert} |
+    | ${v2form} | Prepare AttCertIssuer V2Form | ${ca_cert} | add_base_certificate_id=True | add_digest_obj_info=True |
+    | ${v2form} | Prepare AttCertIssuer V2Form | ${ca_cert} | hash_alg=sha512 | issuer_name=CN=Custom CA |
+
+    """
+    v_form_structer = rfc5755.V2Form().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0))
+
+    if kwargs.get("target") is not None:
+        v_form_structer = kwargs["target"]
+
+    if kwargs.get("issuer_name") is not None:
+        issuer_name = prepareutils.parse_to_general_names(kwargs["issuer_name"])
+    else:
+        issuer_name = ca_cert["tbsCertificate"]["issuer"]
+
+    v_form_structer["issuerName"] = prepareutils.parse_to_general_names(issuer_name, "directoryName")
+
+    if add_base_certificate_id:
+        iss_ser_target = rfc5755.IssuerSerial().subtype(
+            implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)
+        )
+
+        v_form_structer["baseCertificateID"] = prepare_issuer_serial_from_cert(ca_cert, target=iss_ser_target)
+
+    if add_digest_obj_info:
+        if kwargs.get("object_digest_info") is None:
+            digest_obj_info = prepare_object_digest_info(ca_cert, hash_alg=hash_alg)
+        else:
+            digest_obj_info = kwargs["object_digest_info"]
+
+        _form_structer = _patch_object_digest_info_to_structure(v_form_structer, digest_obj_info)
+
+    return v_form_structer
