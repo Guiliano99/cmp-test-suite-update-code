@@ -9,7 +9,7 @@ import os
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Sequence, Union
 
-from pyasn1.type import tag, univ
+from pyasn1.type import base, tag, univ
 from pyasn1_alt_modules import rfc4211, rfc4212, rfc5280, rfc5755, rfc9480
 from robot.api.deco import keyword, not_keyword
 
@@ -493,3 +493,66 @@ def prepare_att_cert_issuer_v2form(  # noqa: D417 undocumented params
         _form_structer = _patch_object_digest_info_to_structure(v_form_structer, digest_obj_info)
 
     return v_form_structer
+
+
+@keyword(name="Prepare OpenPGPCertTemplateExtended")
+def prepare_openpgp_cert_template_extended(  # noqa: D417 undocumented params
+    native_template: Optional[bytes] = None,
+    controls: Optional[rfc4211.Controls] = None,
+    target: Optional[Union[rfc4212.OpenPGPCertTemplateExtended, bytes]] = None,
+) -> rfc4212.OpenPGPCertTemplateExtended:
+    """Prepare an `OpenPGPCertTemplateExtended` structure.
+
+    Used to create or populate an OpenPGP certificate template structure to issue an OpenPGP
+    certificate.
+
+    Arguments:
+    ---------
+       - `native_template`: The native OpenPGP certificate template in bytes.
+       - `controls`: Optional additional `Controls` for the openpgp certificate template.
+       - `target`: Optional pre-constructed `OpenPGPCertTemplateExtended` structure or
+       der encoded bytes to be used as the base.
+
+    Returns:
+    -------
+       - The populated `OpenPGPCertTemplateExtended` structure.
+
+    Raises:
+    ------
+       - `ValueError`: If both `native_template` and `target` are specified or if neither is specified.
+       - `BadAsn1Data`: If the der encoded `target` is not decode-able
+
+    Examples:
+    --------
+    | ${openpgp_cert_template} | Prepare OpenPGPCertTemplateExtended | native_template=${native_template_bytes} |
+    | ${openpgp_cert_template} | Prepare OpenPGPCertTemplateExtended | target=${der_encoded_bytes} | \
+    controls=${controls} |
+
+    """
+    if isinstance(target, bytes):
+        data, rest = asn1utils.try_decode_pyasn1(target, rfc4212.OpenPGPCertTemplateExtended())  # type: ignore
+        data: rfc4212.OpenPGPCertTemplateExtended
+        if rest:
+            logging.debug(
+                "The trailing data has to be added inside the `prepare_alt_cert_template_cert_request` function."
+            )
+        return data
+
+    if target is not None and controls is None:
+        return target
+
+    if native_template is not None and target is not None:
+        raise ValueError("Cannot specify both `native_template` and `target` arguments.")
+
+    if native_template is None and target is None:
+        raise ValueError("Either `native_template` or `target` argument must be specified.")
+
+    if target is None:
+        target = rfc4212.OpenPGPCertTemplateExtended()
+        target["nativeTemplate"] = rfc4212.OpenPGPCertTemplate(native_template)
+
+    if controls is not None:
+        target["controls"].extend(controls)
+
+    return target
+
