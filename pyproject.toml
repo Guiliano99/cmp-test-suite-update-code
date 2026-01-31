@@ -2,6 +2,45 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+[project]
+name = "cmp-test-suite"
+version = "0.0.2"
+description = "CMP Protocol Compliance Test Suite"
+requires-python = ">=3.11"
+dependencies = [
+    "cryptography==46.0.3",
+    "pyasn1==0.6.2",
+    "pyasn1-alt-modules==0.4.7",
+    "robotframework==7.4.1",
+    "pkilint==0.13.1",
+    "robotframework-requests==0.9.7",
+    "pycryptodome==3.23.0",
+    "tinyec==0.4.0",
+    "bitstring==4.3.1",
+    "pyhsslms==2.0.0",
+    "Flask==3.1.2",
+    "jinja2==3.1.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "safety>=3.7.0,<4.0.0",
+    "pylint>=4.0.4,<5.0.0",
+    "ruff>=0.14.14,<1.0.0",
+    "robotframework-robocop==7.2.0",
+    "robotframework-tidy==4.18.0",
+    "pyright[nodejs]==1.1.408",
+    "codespell==2.4.1",
+    "reuse==6.2.0",
+]
+pq = [
+    # Post-quantum cryptography support
+    # Note: Requires system dependencies (libssl-dev, cmake)
+    # Install with: uv pip install -e ".[pq]"
+    # The package name in the repo metadata is 'liboqs-python' not 'liboqs-python-stateful-sig'
+    "liboqs-python @ git+https://github.com/Guiliano99/liboqs-python-stateful-sig.git",
+]
+
 [tool.robotidy]
 diff = true
 overwrite = false
