@@ -197,3 +197,4 @@ data/EJBCA/*.tar.gz
 /data/cert_logs/
 /liboqs-python/
 /liboqs-python-stateful-sig/
+/uv.lock

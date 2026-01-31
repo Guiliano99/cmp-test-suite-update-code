@@ -11,3 +11,4 @@ data/EJBCA/*.tar.gz
 data/pqc-certificates
 .robotcode_cache
 .robocop_cache
+/uv.lock
