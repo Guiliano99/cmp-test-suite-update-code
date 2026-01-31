@@ -41,6 +41,19 @@ pq = [
     "liboqs-python @ git+https://github.com/Guiliano99/liboqs-python-stateful-sig.git",
 ]
 
+[build-system]
+requires = ["setuptools>=80.10.2"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# Explicitly specify which directories are Python packages
+packages = ["mock_ca", "pq_logic", "resources", "tests", "tests_mock_ca", "tests_pq_and_hybrid", "unit_tests", "client_tests"]
+
+[tool.setuptools.package-data]
+# Include non-Python files that are part of the packages
+"*" = ["*.robot", "*.resource", "*.pem", "*.der", "*.crt", "*.key", "*.json", "*.txt"]
+
+
 [tool.robotidy]
 diff = true
 overwrite = false
