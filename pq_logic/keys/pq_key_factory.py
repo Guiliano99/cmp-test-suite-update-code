@@ -49,6 +49,8 @@ from resources.oid_mapping import may_return_oid_to_name
 from resources.oidutils import (
     FRODOKEM_NAME_2_OID,
     MCELIECE_NAME_2_OID,
+    ML_DSA_NAME_2_OID,
+    ML_KEM_NAME_2_OID,
     PQ_KEM_NAME_2_OID,
     PQ_NAME_2_OID,
     PQ_OID_2_NAME,
@@ -276,7 +278,8 @@ class PQKeyFactory(AbstractKeyFactory):
     def get_all_kem_algs() -> List[str]:
         """Return a list of all supported post-quantum KEM algorithms."""
         return (
-            ["ml-kem-512", "ml-kem-768", "ml-kem-1024", "sntrup761"]
+            list(ML_KEM_NAME_2_OID.keys())
+            + ["sntrup761"]
             + list(MCELIECE_NAME_2_OID.keys())
             + list(FRODOKEM_NAME_2_OID.keys())
         )
@@ -293,6 +296,59 @@ class PQKeyFactory(AbstractKeyFactory):
     def supported_algorithms() -> List[str]:
         """Return a list of supported post-quantum algorithms."""
         return ["slh-dsa"] + PQKeyFactory.get_all_callable_algs()
+
+    @classmethod
+    def get_supported_algs(cls, alg_type: str) -> List[str]:
+        """Get a list of supported algorithm variants for a given PQ algorithm family.
+
+        :param alg_type: The algorithm family name (e.g., "ml-kem", "frodokem", "mceliece", "ml-dsa", "slh-dsa").
+        :return: A list of supported algorithm variants for the given family.
+        :raises ValueError: If the provided algorithm family name is not supported.
+
+        Examples:
+            - "ml-kem" returns ["ml-kem-512", "ml-kem-768", "ml-kem-1024"].
+            - "frodokem" returns all FrodoKEM variants.
+            - "mceliece" returns all McEliece variants.
+            - "ml-dsa" returns ["ml-dsa-44", "ml-dsa-65", "ml-dsa-87"] without the pre-hash variants.
+            - "slh-dsa" returns all SLH-DSA variants without the pre-hash variants.
+            - "falcon" returns all Falcon variants.
+
+        """
+        alg_name = alg_type.lower()
+        alg_name = alg_name.replace("classic-mceliece", "mceliece", 1)
+
+        if alg_name in ["ml-kem", "frodokem", "mceliece", "falcon"]:
+            return cls._get_alg_family(cls.supported_algorithms(), alg_name)
+
+        if alg_name in ["sntrup", "sntrup761"]:
+            return ["sntrup761"]
+
+        if alg_name == "ml-dsa":
+            out = []
+            for x in ML_DSA_NAME_2_OID:
+                if x in PQ_SIG_PRE_HASH_NAME_2_OID:
+                    continue
+                out.append(x)
+            return out
+
+        if alg_name == "slh-dsa":
+            out = []
+            for x in SLH_DSA_NAME_2_OID:
+                if x in PQ_SIG_PRE_HASH_NAME_2_OID:
+                    continue
+                out.append(x)
+            return out
+
+        if alg_name == "ml-dsa-prehash":
+            return cls._get_alg_family(PQ_SIG_PRE_HASH_NAME_2_OID.keys(), "ml-dsa")
+
+        if alg_name == "slh-dsa-prehash":
+            return cls._get_alg_family(PQ_SIG_PRE_HASH_NAME_2_OID.keys(), "slh-dsa")
+
+        raise ValueError(
+            f"Unsupported PQ algorithm family: {alg_name}. "
+            f"Supported families are: {(cls._prefixes + ['ml-dsa-prehash', 'slh-dsa-prehash'])}."
+        )
 
     @staticmethod
     def generate_pq_kem_key(algorithm: str) -> PQKEMPrivateKey:
@@ -364,7 +420,7 @@ class PQKeyFactory(AbstractKeyFactory):
         :return: Whether the name starts with a recognized prefix or not.
         """
         return _check_starts_with(
-            algorithm, prefixes=["ml-dsa", "ml-kem", "slh-dsa", "sntrup761", "mceliece", "falcon", "frodokem"]
+            algorithm, prefixes=PQKeyFactory.get_supported_keys()
         )
 
     @staticmethod
