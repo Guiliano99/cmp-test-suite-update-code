@@ -26,7 +26,8 @@ from pq_logic.keys.serialize_utils import prepare_ec_private_key
 from pq_logic.keys.trad_kem_keys import DHKEMPrivateKey, RSADecapKey
 from pq_logic.keys.trad_key_factory import generate_trad_key
 from pq_logic.keys.xwing import XWingPrivateKey
-from pq_logic.tmp_oids import CHEMPAT_OID_2_NAME, COMPOSITE_KEM_NAME_2_OID, COMPOSITE_SIG_OID_TO_NAME
+from pq_logic.tmp_oids import CHEMPAT_OID_2_NAME, COMPOSITE_SIG_OID_TO_NAME, \
+    COMPOSITE_KEM_MLKEM_NAME_2_OID
 from resources.exceptions import BadAlg, InvalidKeyCombination, InvalidKeyData, MismatchingKey
 from resources.oid_mapping import KEY_CLASS_MAPPING, may_return_oid_to_name
 from resources.oidutils import (
@@ -359,7 +360,7 @@ class HybridKeyFactory:
             return list(CHEMPAT_OID_2_NAME.values())
 
         if alg_name == "composite-kem":
-            return list(COMPOSITE_KEM_NAME_2_OID.keys())
+            return list(COMPOSITE_KEM_MLKEM_NAME_2_OID.keys())
 
         if alg_name == "composite-sig":
             return list(COMPOSITE_SIG_OID_TO_NAME.values())
