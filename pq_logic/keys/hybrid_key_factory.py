@@ -26,7 +26,7 @@ from pq_logic.keys.serialize_utils import prepare_ec_private_key
 from pq_logic.keys.trad_kem_keys import DHKEMPrivateKey, RSADecapKey
 from pq_logic.keys.trad_key_factory import generate_trad_key
 from pq_logic.keys.xwing import XWingPrivateKey
-from pq_logic.tmp_oids import CHEMPAT_OID_2_NAME
+from pq_logic.tmp_oids import CHEMPAT_OID_2_NAME, COMPOSITE_KEM_NAME_2_OID, COMPOSITE_SIG_OID_TO_NAME
 from resources.exceptions import BadAlg, InvalidKeyCombination, InvalidKeyData, MismatchingKey
 from resources.oid_mapping import KEY_CLASS_MAPPING, may_return_oid_to_name
 from resources.oidutils import (
@@ -338,6 +338,34 @@ class HybridKeyFactory:
             "composite-kem",
             "chempat",
         ]
+
+    @classmethod
+    def get_supported_algs(cls, alg_type: str) -> List[str]:
+        """Return a list of supported hybrid algorithms for the given type.
+
+        :param alg_type: The type of hybrid algorithm (e.g., 'chempat', 'composite-kem', 'composite-sig', 'xwing').
+        :return: A list of supported algorithm names.
+        :raises ValueError: If the hybrid algorithm type is unsupported.
+
+        Examples:
+            - `chempat` returns all Chempat algorithm names.
+            - `composite-kem` returns all Composite KEM algorithm names.
+            - `composite-sig` returns all Composite Signature algorithm names.
+            - `xwing` returns ["xwing"].
+
+        """
+        alg_name = alg_type.lower()
+        if alg_name == "chempat":
+            return list(CHEMPAT_OID_2_NAME.values())
+
+        if alg_name == "composite-kem":
+            return list(COMPOSITE_KEM_NAME_2_OID.keys())
+
+        if alg_name == "composite-sig":
+            return list(COMPOSITE_SIG_OID_TO_NAME.values())
+        if alg_name == "xwing":
+            return ["xwing"]
+        raise ValueError(f"Unsupported hybrid algorithm: {alg_name}")
 
     @staticmethod
     def _generate_default_hybrid_key(
