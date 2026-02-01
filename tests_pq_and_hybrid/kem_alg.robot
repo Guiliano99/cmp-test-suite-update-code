@@ -86,3 +86,26 @@ Build And Exchange KEM Certificate Request
     ${protected_ir}=    Default Protect PKIMessage    ${ir}
     ${response}=    Exchange Migration PKIMessage    ${protected_ir}    ${CA_BASE_URL}    ${PQ_ISSUING_SUFFIX}
     RETURN    ${response}   ${key}
+
+
+*** Test Cases ***
+ML-KEM Valid Requests - All Variants
+    [Documentation]    Test all ML-KEM variants for valid `IR` requests.
+    ...
+    ...                According to FIPS 203 (ML-KEM specification), all security levels should be tested:
+    ...                - ML-KEM-512 (NIST Security Level 1)
+    ...                - ML-KEM-768 (NIST Security Level 3)
+    ...                - ML-KEM-1024 (NIST Security Level 5)
+    [Tags]    positive  pq-kem  ml-kem
+    [Template]    Test All Variants For Algorithm Family
+    ml-kem    ${False}
+
+ML-KEM Invalid Key Sizes - All Variants
+    [Documentation]    Test all ML-KEM variants for invalid key size handling.
+    ...
+    ...                This test verifies that the CA properly rejects requests with invalid key sizes
+    ...                for all ML-KEM algorithm variants.
+    [Tags]    negative  pq-kem  ml-kem
+    [Template]    Test All Variants For Algorithm Family
+    ml-kem    ${True}
+
