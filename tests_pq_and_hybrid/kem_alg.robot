@@ -42,6 +42,24 @@ Request With PQ KEM Key
         Certificate Must Be Valid    ${cert}
     END
 
+Test All Variants For Algorithm Family
+    [Documentation]    Helper keyword to test all variants of an algorithm family.
+    ...                This keyword fetches all supported algorithms for the given family
+    ...                and tests each variant with the specified validity.
+    ...
+    ...                Note: Logs each algorithm being tested for better error traceability.
+    [Arguments]    ${algorithm_family}    ${invalid_key_size}
+    ${algs}=    Get Supported Algorithms By Type    ${algorithm_family}
+    FOR    ${algorithm}    IN    @{algs}
+        Log    Testing algorithm variant: ${algorithm} (invalid_key_size=${invalid_key_size})    level=INFO
+        TRY
+            Request With PQ KEM Key    ${algorithm}    ${invalid_key_size}
+        EXCEPT    AS    ${error}
+            Log    FAILED for algorithm ${algorithm}: ${error}    level=ERROR
+            Fail    Algorithm ${algorithm} failed: ${error}
+        END
+    END
+
 Build And Exchange KEM Certificate Request
     [Documentation]    Build a KEM certificate request and exchange it with the CA to get a certificate.
     ...
