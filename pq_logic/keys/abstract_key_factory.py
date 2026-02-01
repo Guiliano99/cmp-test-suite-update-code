@@ -61,6 +61,15 @@ class AbstractKeyFactory(ABC):
         :return: List of all supported algorithm names.
         """
 
+    @classmethod
+    @abstractmethod
+    def get_supported_algs(cls, alg_type: str) -> List[str]:
+        """Return a list of supported algorithms for the given key type.
+
+        :param alg_type: The key type (e.g., "rsa", "ecdsa", "xmss", etc.).
+        :return: List of supported algorithm names for the given key type.
+        """
+
     @staticmethod
     @abstractmethod
     def get_supported_keys():
