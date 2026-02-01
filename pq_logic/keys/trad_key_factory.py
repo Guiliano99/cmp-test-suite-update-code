@@ -6,7 +6,7 @@
 
 import logging
 import os
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import dh, dsa, ec, ed448, ed25519, rsa, x448, x25519
@@ -24,6 +24,7 @@ from pq_logic.keys.serialize_utils import ecc_private_key_to_bytes, prepare_ec_p
 from resources.asn1utils import try_decode_pyasn1
 from resources.exceptions import BadAlg, BadAsn1Data, InvalidKeyData, MismatchingKey
 from resources.oid_mapping import get_curve_instance, may_return_oid_to_name
+from resources.oidutils import RSA_OID_2_NAME
 from resources.typingutils import PrivateKey, PublicKey, TradPrivateKey
 
 
@@ -176,6 +177,58 @@ def generate_trad_key(algorithm="rsa", **params) -> TradPrivateKey:  # noqa: D41
         raise ValueError(f"Unsupported algorithm: {algorithm}")
 
     return private_key
+
+
+@not_keyword
+def get_supported_algs(alg_name: str) -> List[str]:
+    """Get a list of supported algorithm variants for a given traditional algorithm family.
+
+    :param alg_name: The algorithm family name (e.g., "rsa", "ecc", "ecdsa", "ed25519").
+    :return: A list of supported algorithm variants for the given family.
+    :raises ValueError: If the provided algorithm family name is not supported.
+
+    Examples:
+    - "rsa" returns ["rsa"]
+    - "ed25519" and so on returns ["ed25519"]
+    - "rsa-sig" returns all supported RSA signature variants (PKCS#1 v1.5)
+
+    """
+    alg_name = alg_name.lower()
+
+    if alg_name in ["rsa", "bad-rsa-key", "rsa-kem"]:
+        return ["rsa"]
+
+    if alg_name == "rsa-sig":
+        return list(RSA_OID_2_NAME.keys())
+
+    if alg_name == "rsa-pss":
+        raise NotImplementedError("The return of the supported `RSA-PSS` variants are not implemented yet.")
+
+    if alg_name == "ecdsa":
+        raise NotImplementedError("The return of the supported `ECDSA` variants are not implemented yet.")
+
+    if alg_name == "ecdh":
+        raise NotImplementedError("The return of the supported `ECDH` variants are not implemented yet.")
+
+    if alg_name in ["ed25519", "ed448", "x25519", "x448", "dsa", "dh"]:
+        return [alg_name]
+
+    supported_families = [
+        "rsa",
+        "ecdsa",
+        "ecc",
+        "ed25519",
+        "ed448",
+        "x25519",
+        "x448",
+        "dsa",
+        "dh",
+        "rsa-sig",
+        "rsa-pss",
+    ]
+    raise ValueError(
+        f"Unsupported traditional algorithm family: {alg_name}. Supported families are: {', '.join(supported_families)}"
+    )
 
 
 def _prepare_one_asym_key(
