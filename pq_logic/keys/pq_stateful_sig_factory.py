@@ -80,6 +80,32 @@ class PQStatefulSigFactory(AbstractKeyFactory):
             "hss": HSSPrivateKey.supported_algorithms(),
         }
 
+    @classmethod
+    def get_supported_algs(cls, alg_type: str) -> List[str]:
+        """Get a list of supported algorithm variants for a given stateful signature algorithm family.
+
+        :param alg_type: The algorithm family name (e.g., "xmss", "xmssmt", "hss").
+        :return: A list of supported algorithm variants for the given family.
+        :raises ValueError: If the provided algorithm family name is not supported.
+
+        Examples:
+            - "xmss" returns all XMSS variants available in liboqs.
+            - "xmssmt" returns all XMSS^MT variants available in liboqs.
+            - "hss" returns all HSS variants.
+
+        """
+        alg_type = alg_type.lower()
+        if alg_type in ["lms"]:
+            raise ValueError("LMS is not supported. Please use HSS instead.")
+
+        if alg_type not in PQStatefulSigFactory.get_supported_keys():
+            raise ValueError(
+                f"Unsupported stateful signature algorithm family: {alg_type}. "
+                f"Supported families are: {', '.join(PQStatefulSigFactory.get_supported_keys())}"
+            )
+
+        return PQStatefulSigFactory.get_algorithms_by_family()[alg_type]
+
     @staticmethod
     def generate_pq_stateful_key(algorithm: str, **kwargs) -> PQHashStatefulSigPrivateKey:
         """Generate a stateful PQ object based on the specified type.
