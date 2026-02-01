@@ -419,9 +419,7 @@ class PQKeyFactory(AbstractKeyFactory):
         :param algorithm: The algorithm name to check.
         :return: Whether the name starts with a recognized prefix or not.
         """
-        return _check_starts_with(
-            algorithm, prefixes=PQKeyFactory.get_supported_keys()
-        )
+        return _check_starts_with(algorithm, prefixes=PQKeyFactory.get_supported_keys())
 
     @staticmethod
     def get_pq_alg_name(algorithm: str) -> str:
