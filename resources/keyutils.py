@@ -1453,3 +1453,29 @@ def get_pq_stateful_sig_index_from_sig(  # noqa D417 undocumented-params
         return key.get_leaf_index(signature)
 
     raise NotImplementedError(f"Unsupported key type for signature index extraction. Got: {type(key).__name__}")
+
+
+@keyword(name="Get Supported Algorithms By Type")
+def get_supported_algs_by_type(alg_name: str) -> List[str]:  # noqa D417 undocumented-param
+    """Get a list of supported algorithm names for a given key algorithm.
+
+    Arguments:
+    ---------
+        - `alg_name`: The key algorithm name (e.g., "rsa", "ecc", "dsa", "ed25519", "composite-sig").
+
+    Returns:
+    -------
+        - A list of supported algorithm names for the given key algorithm.
+
+    Raises:
+    ------
+        - `ValueError`: If the provided algorithm name is not supported.
+
+    Examples:
+    --------
+    | ${supported_algs}= | Get Supported Algs | rsa |
+    | ${supported_algs}= | Get Supported Algs | ecc |
+
+    """
+    alg_name = alg_name.lower()
+    return pq_logic.combined_factory.CombinedKeyFactory.get_supported_algs(alg_name)
