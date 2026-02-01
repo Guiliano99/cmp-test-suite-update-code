@@ -393,6 +393,72 @@ class CombinedKeyFactory:
         return trad_names + pq_names + hybrid_names
 
     @staticmethod
+    def get_supported_algs(alg_name: str) -> List[str]:
+        """Get a list of supported algorithm variants for a given algorithm family.
+
+        :param alg_name: The algorithm family name (e.g., "ml-kem", "frodokem", "mceliece", "ml-dsa", "slh-dsa").
+        :return: A list of supported algorithm variants for the given family.
+        :raises ValueError: If the provided algorithm family name is not supported.
+
+        Examples:
+        - "ml-kem" returns ["ml-kem-512", "ml-kem-768", "ml-kem-1024"]
+        - "frodokem" returns all FrodoKEM variants (640/976/1344 with AES/SHAKE)
+        - "mceliece" returns all McEliece variants
+        - "ml-dsa" returns ["ml-dsa-44", "ml-dsa-65", "ml-dsa-87"]
+        - "slh-dsa" returns all SLH-DSA variants
+        - "rsa" returns ["rsa"]
+        - "ecdsa" or "ecc" returns ["ecdsa"]
+        - "xmss" returns all XMSS variants
+        - "hss" returns all HSS/LMS variants
+
+        """
+        alg_name = alg_name.lower()
+
+        # TODO change this.
+        trad_families = [
+            "rsa",
+            "ecdsa",
+            "ecc",
+            "ec",
+            "ecdh",
+            "ed25519",
+            "ed448",
+            "x25519",
+            "x448",
+            "dsa",
+            "dh",
+            "bad-rsa-key",
+            "rsa-kem",
+            "rsa-sigrsa-pss",
+        ]
+        if alg_name in trad_families:
+            from pq_logic.keys.trad_key_factory import get_supported_algs as trad_get_supported_algs
+
+            return trad_get_supported_algs(alg_name)
+
+        if alg_name in PQKeyFactory.get_supported_keys() + ["slh-dsa-prehash", "ml-dsa-prehash"]:
+            return PQKeyFactory.get_supported_algs(alg_name)
+
+        if alg_name in ["xmss", "xmssmt", "xmss-mt", "hss", "lms"]:
+            return pq_logic.keys.pq_stateful_sig_factory.PQStatefulSigFactory.get_supported_algs(alg_name)
+
+        if alg_name in ["xwing", "x-wing"]:
+            return ["xwing"]
+
+        if alg_name in HybridKeyFactory.supported_algorithms():
+            return HybridKeyFactory.get_supported_algs(alg_name)
+
+        supported_families = (
+            trad_families
+            + PQKeyFactory.get_supported_keys()
+            + ["slh-dsa-prehash", "ml-dsa-prehash"]
+            + HybridKeyFactory.supported_algorithms()
+        )
+        raise ValueError(
+            f"Unsupported algorithm family: {alg_name}. Supported families are: {', '.join(supported_families)}"
+        )
+
+    @staticmethod
     def load_chempat_key(spki: rfc5280.SubjectPublicKeyInfo):
         """Load a Chempat public key from an SPKI structure.
 
