@@ -28,6 +28,10 @@ Test Tags           pqc  verbose-alg   verbose-tests   verbose-kem-tests
 Suite Setup         Set Up PQ KEM Suite
 
 
+*** Comments ***
+# TODO: Decide whether to add `cr` request as well.
+
+
 *** Keywords ***
 Request With PQ KEM Key
     [Documentation]  Send a valid Initialization Request for a PQ KEM key.
