@@ -8,6 +8,8 @@ Documentation  Contain common keywords for setup the CMP tests, like overwriting
 Resource            ../config/${environment}.robot
 Resource            ../resources/keywords.resource
 
+Keyword Tags  setup-keywords
+
 
 *** Variables ***
 ${environment}          cloudpki
