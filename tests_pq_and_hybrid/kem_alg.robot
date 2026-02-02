@@ -9,6 +9,7 @@
 Documentation    Tests for PQ KEM algorithms and Hybrid KEM algorithms to verify all known combinations.
 
 Resource            ../resources/keywords.resource
+Resource            ../resources/setup_keywords.resource
 Library             Collections
 Library             OperatingSystem
 Library             ../resources/utils.py
@@ -24,7 +25,7 @@ Library             ../pq_logic/pq_verify_logic.py
 
 Test Tags           pqc  verbose-alg   verbose-tests   verbose-kem-tests
 
-Suite Setup         Set Up Test Suite
+Suite Setup         Set Up PQ KEM Suite
 
 
 *** Keywords ***
