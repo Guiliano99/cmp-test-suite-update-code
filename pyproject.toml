@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 dependencies = [
     "cryptography==46.0.4",
     "pyasn1==0.6.2",
-    "pyasn1-alt-modules==0.4.7",
+    "pyasn1-alt-modules==0.4.8",
     "robotframework==7.4.1",
     "pkilint==0.13.1",
     "robotframework-requests==0.9.7",
@@ -40,10 +40,6 @@ pq = [
     # The package name in the repo metadata is 'liboqs-python' not 'liboqs-python-stateful-sig'
     "liboqs-python @ git+https://github.com/Guiliano99/liboqs-python-stateful-sig.git",
 ]
-
-[build-system]
-requires = ["setuptools>=80.10.2"]
-build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 # Explicitly specify which directories are Python packages
