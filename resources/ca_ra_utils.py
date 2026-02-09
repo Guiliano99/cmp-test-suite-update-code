@@ -2403,6 +2403,8 @@ def _process_one_cert_request(
                     certs=certs,
                     strict_subject_check=kwargs.get("private_key_possession_strict_subject_check", True),
                     allow_different_san=kwargs.get("private_key_possession_allow_diff_san", False),
+                    cert_must_be_present=kwargs.get("private_key_possession_cert_must_be_present", True),
+                    enforce_key_strength=kwargs.get("private_key_possession_enforce_key_strength", True),
                 )
 
             else:
