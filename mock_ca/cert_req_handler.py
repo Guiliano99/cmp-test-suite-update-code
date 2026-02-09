@@ -12,7 +12,7 @@ from pyasn1_alt_modules import rfc9480, rfc9481
 
 from mock_ca.db_config_vars import RFC9883ValidationConfig
 from mock_ca.mock_fun import MockCAState
-from mock_ca.operation_dbs import NonSigningKeyCertsAndKeys, StatefulSigState
+from mock_ca.operation_dbs import NonSigningKeyCertsAndKeys, StatefulSigState, RFC9883LinkDB
 from mock_ca.stfl_validator import STFLPKIMessageValidator
 from pq_logic.hybrid_sig.chameleon_logic import load_chameleon_csr_delta_key_and_sender
 from pq_logic.keys.abstract_wrapper_keys import HybridKEMPrivateKey
@@ -74,6 +74,7 @@ from resources.exceptions import (
     TransactionIdInUse,
     UnsupportedVersion,
     WrongIntegrity,
+    CertRevoked,
 )
 from resources.keyutils import load_public_key_from_cert_template
 from resources.oidutils import ID_AT_STATEMENT_OF_POSSESSION
@@ -162,6 +163,7 @@ class CertReqHandler:
             private_key_possession_cert_must_be_present=False,
             private_key_possession_enforce_key_strength=True,
         )
+        self.rfc9883_link_db = RFC9883LinkDB()
         self.issuing_params.update(
             {
                 "kga_cert_chain": self.kga_cert_chain,
@@ -424,15 +426,23 @@ class CertReqHandler:
             certs=certs,
         )
 
-    def process_p10cr(self, pki_message: PKIMessageTMP, verify_ra_verified: bool = True):
+    def process_p10cr(
+        self,
+        pki_message: PKIMessageTMP,
+        verify_ra_verified: bool = True,
+        rev_handler: Optional["RevocationHandler"] = None,
+    ):
         """Process a `P10CR` message.
 
         :param pki_message: The received `PKIMessage`.
         :param verify_ra_verified: If the `raVerified` fields should be validated. Defaults to `True`
+        :param rev_handler: An optional revocation handler to check for revoked signer certificates.
         :return: The response `PKIMessage`.
         """
         if csr_contains_attribute(pki_message["body"]["p10cr"], ID_AT_STATEMENT_OF_POSSESSION):
-            return self._process_rfc9883_p10cr(pki_message, verify_ra_verified=verify_ra_verified)
+            return self._process_rfc9883_p10cr(
+                pki_message, verify_ra_verified=verify_ra_verified, rev_handler=rev_handler
+            )
 
         logging.debug("CertReqHandler: Processing P10CR message")
         self.state.cert_state_db.check_request_for_compromised_key(pki_message)
@@ -453,13 +463,19 @@ class CertReqHandler:
             include_ski=True,
             verify_ra_verified=verify_ra_verified,
         )
+
         return self.process_after_request(
             request=pki_message,
             response=response,
             certs=[cert],
         )
 
-    def _process_rfc9883_p10cr(self, pki_message: PKIMessageTMP, verify_ra_verified: bool = True):
+    def _process_rfc9883_p10cr(
+        self,
+        pki_message: PKIMessageTMP,
+        verify_ra_verified: bool = True,
+        rev_handler: Optional["RevocationHandler"] = None,
+    ):
         """Process an RFC 9883 CSR PKIMessage.
 
         :param pki_message: The received `PKIMessage`.
@@ -479,6 +495,11 @@ class CertReqHandler:
             cert_must_be_present=self._rfc9883_validation_config.private_key_possession_cert_must_be_present,
             enforce_key_strength=self._rfc9883_validation_config.private_key_possession_enforce_key_strength,
         )
+        if rev_handler is not None:
+            if rev_handler.is_revoked(signer_certificate):
+                raise CertRevoked("The signer certificate is revoked.")
+            if rev_handler.is_updated(signer_certificate):
+                raise CertRevoked("The signer certificate is updated.")
 
         # TODO validate signer certificate with OpenSSL, if other certs are also allowed.
         # currently only issued certs are allowed.
@@ -499,6 +520,9 @@ class CertReqHandler:
             pki_message=response,
             text="Processed RFC 9883 PrivateKeyPossessionStatement request.",
         )
+        status = get_pkistatusinfo(response)
+        if status["status"].prettyPrint() == "accepted":
+            self.rfc9883_link_db.add_link(signer_cert=signer_certificate, new_cert=cert)
 
         return self.process_after_request(
             request=pki_message,
@@ -712,6 +736,7 @@ class CertReqHandler:
         pki_message: PKIMessageTMP,
         verify_ra_verified: bool = True,
         must_be_protected: Optional[bool] = None,
+        rev_handler: Optional["RevocationHandler"] = None,
     ) -> "PKIMessageTMP":
         """Process a certificate request message.
 
@@ -721,6 +746,7 @@ class CertReqHandler:
         `nested` messages). Defaults to `None`.
         (uses the `must_be_protected` attribute of the class if `None`).
         raise the exception to the nested request handler. Defaults to `False`.
+        :param rev_handler: An optional revocation handler to check for revoked signer certificates.
         :return: The processed PKI response.
         :raises NotImplementedError: If the message type is unsupported.
         """
@@ -745,7 +771,9 @@ class CertReqHandler:
             elif msg_type == "cr":
                 response = self.process_cr(pki_message, verify_ra_verified=verify_ra_verified)
             elif msg_type == "p10cr":
-                response = self.process_p10cr(pki_message, verify_ra_verified=verify_ra_verified)
+                response = self.process_p10cr(
+                    pki_message, verify_ra_verified=verify_ra_verified, rev_handler=rev_handler
+                )
             elif msg_type == "kur":
                 response = self.process_kur(pki_message)
             elif msg_type == "ccr":
