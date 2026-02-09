@@ -520,3 +520,49 @@ class BadRandomState:
 
     bad_hss_random: Optional[bytes] = None
     bad_random_count: int = 0
+
+
+@dataclass
+class RFC9883LinkDB:
+    """A class to store the link database for RFC9883.
+
+    Attributes
+    ----------
+        - `link_db`: The link database.
+    """
+
+    link_db: Dict[bytes, rfc9480.CMPCertificate] = field(default_factory=dict)
+    _hash_alg: str = "sha256"
+
+    def add_link(self, signer_cert: rfc9480.CMPCertificate, new_cert: rfc9480.CMPCertificate) -> None:
+        """Add a link to the database.
+
+        :param signer_cert: The signer certificate to add.
+        :param new_cert: The new certificate to add.
+        """
+
+        der_signer = encode_to_der(signer_cert)
+        hash_signer = compute_hash(self._hash_alg, der_signer)
+        self.link_db[hash_signer] = new_cert
+
+    def contains_signer_cert(self, hash_signer: rfc9480.CMPCertificate) -> bool:
+        """Check if the signer certificate is in the database.
+
+        :param hash_signer: The hash of the signer certificate to check.
+        :return: `True` if the signer certificate is in the database, `False` otherwise.
+        """
+
+        der_signer = encode_to_der(hash_signer)
+        hash_signer_bytes = compute_hash(self._hash_alg, der_signer)
+        return hash_signer_bytes in self.link_db
+
+    def get_linked_cert(self, signer_cert: rfc9480.CMPCertificate) -> rfc9480.CMPCertificate:
+        """Get the linked certificate for the given signer certificate.
+
+        :param signer_cert: The signer certificate to get the linked certificate for.
+        :return: The linked certificate.
+        """
+
+        der_signer = encode_to_der(signer_cert)
+        hash_signer_bytes = compute_hash(self._hash_alg, der_signer)
+        return self.link_db[hash_signer_bytes]
