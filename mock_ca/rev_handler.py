@@ -21,6 +21,7 @@ from mock_ca.mock_fun import (
     KeySecurityChecker,
     RevokedEntry,
 )
+from mock_ca.operation_dbs import RFC9883LinkDB
 from pq_logic.pq_verify_logic import verify_hybrid_pkimessage_protection
 from resources import certutils, cmputils
 from resources.asn1_structures import PKIMessageTMP
@@ -194,7 +195,7 @@ class RevocationHandler:
                             "The certificate is not trusted and cannot be used for revoking another certificate."
                         )
 
-    def revive_cert(self, cert: rfc9480.CMPCertificate):
+    def revive_cert(self, cert: rfc9480.CMPCertificate, rfc9883_db_link: Optional[RFC9883LinkDB] = None):
         """Check if a certificate is revoked based on its serial number."""
         serial_number = int(cert["tbsCertificate"]["serialNumber"])
         self.rev_db.change_cert_state(
@@ -203,8 +204,18 @@ class RevocationHandler:
             error_suffix="Called from `revive_cert`",
         )
         logging.info("Removed certificate %d from revoked list.", serial_number)
+        if rfc9883_db_link is not None:
+            if rfc9883_db_link.contains_signer_cert(cert):
+                linked_cert = rfc9883_db_link.get_linked_cert(cert)
+                self.rev_db.change_cert_state(
+                    cert=linked_cert,
+                    new_state=CertStateEnum.REVIVED,
+                    error_suffix="Called from `revive_cert` as linked cert",
+                )
 
-    def mark_as_revoked(self, cert: rfc9480.CMPCertificate, reason: str = "unspecified") -> None:
+    def mark_as_revoked(
+        self, cert: rfc9480.CMPCertificate, reason: str = "unspecified", rfc9883_db_link: Optional[RFC9883LinkDB] = None
+    ) -> None:
         """Mark a certificate as revoked and update the state."""
         serial_number = int(cert["tbsCertificate"]["serialNumber"])
         revoked_entry = RevokedEntry(reason=reason, cert=cert, revoked_date=datetime.now(timezone.utc))
@@ -217,20 +228,34 @@ class RevocationHandler:
         serial_numbers = [int(x["tbsCertificate"]["serialNumber"]) for x in self.rev_db.revoked_certs]
         logging.warning("Revoked certificate %d for reason: %s.", serial_number, reason)
         logging.warning("Current revoked certificates: %s", str(serial_numbers))
+        if rfc9883_db_link is not None:
+            if rfc9883_db_link.contains_signer_cert(cert):
+                linked_cert = rfc9883_db_link.get_linked_cert(cert)
+                self.rev_db.change_cert_state(
+                    cert=linked_cert,
+                    new_state=CertStateEnum.REVOKED,
+                    revoke_entry=revoked_entry,
+                    error_suffix="Called from `mark_as_revoked` as linked cert",
+                )
 
     def _process_revive_response(
-        self, response: PKIMessageTMP, cert_to_revive: List[rfc9480.CMPCertificate]
+        self,
+        response: PKIMessageTMP,
+        cert_to_revive: List[rfc9480.CMPCertificate],
+        rfc9883_db_link: Optional[RFC9883LinkDB] = None,
     ) -> List[rfc9480.CMPCertificate]:
         """Process the revive response and update the revocation state, if needed.
 
         :param response: The PKIMessage response from the revive request.
         :param cert_to_revive: The list of certificates to revive.
+        :param rfc9883_db_link: The RFC9883LinkDB for checking linked certificates, if applicable.
+        :return: The list of revived certificates.
         """
         certs_revive = []
         logging.info("Revoked certs before revive request: %d", len(self.rev_db.revoked_certs))
         for i, status_info in enumerate(response["body"]["rp"]["status"]):
             if status_info["status"].prettyPrint() == "accepted":
-                self.revive_cert(cert_to_revive[i])
+                self.revive_cert(cert_to_revive[i], rfc9883_db_link)
                 logging.info(
                     "Revived certificate at index: %d with serial number: %d",
                     i,
@@ -275,6 +300,7 @@ class RevocationHandler:
         self,
         pki_message: PKIMessageTMP,
         issued_certs: List[rfc9480.CMPCertificate],
+        rfc9883_db_link: Optional[RFC9883LinkDB] = None,
     ) -> Tuple[PKIMessageTMP, List[rfc9480.CMPCertificate]]:
         """Handle a revive request and update the revocation state."""
         try:
@@ -295,7 +321,7 @@ class RevocationHandler:
             )
             certs = [x["cert"] for x in entry]  # type: ignore
             certs: List[rfc9480.CMPCertificate]
-            revive_certs = self._process_revive_response(response, certs)
+            revive_certs = self._process_revive_response(response, certs, rfc9883_db_link)
 
         except CMPTestSuiteError as e:
             return self.build_rp_error_response(pki_message, e), []
@@ -323,8 +349,16 @@ class RevocationHandler:
         pki_message: PKIMessageTMP,
         issued_certs: List[rfc9480.CMPCertificate],
         shared_secret: Optional[bytes] = None,
+        rfc9883_db_link: Optional[RFC9883LinkDB] = None,
     ) -> Tuple[PKIMessageTMP, List[rfc9480.CMPCertificate]]:
-        """Process a revocation request and update the revocation state."""
+        """Process a revocation request and update the revocation state.
+
+        :param pki_message: The PKIMessage revocation request.
+        :param issued_certs: The list of issued certificates.
+        :param shared_secret: The shared secret for KEM-based protection, if applicable.
+        :param rfc9883_db_link: The RFC9883LinkDB for checking linked certificates, if applicable.
+        :return: A tuple containing the PKIMessage response and a list of revived certificates.
+        """
         try:
             self.verify_protection(pki_message=pki_message, shared_secret=shared_secret)
             validate_request_message_nonces_and_tx_id(pki_message)
@@ -349,7 +383,7 @@ class RevocationHandler:
                 logging.info(
                     "Certificate is revoked, but reason is removeFromCRL. Proceeding to remove it from the CRL."
                 )
-                return self._handle_revive_request(pki_message, issued_certs)
+                return self._handle_revive_request(pki_message, issued_certs, rfc9883_db_link)
 
             logging.debug("length revoked certs: %d", len(self.rev_db.revoked_certs))
             logging.debug("Length of issued certs: %d", len(issued_certs))
@@ -364,10 +398,10 @@ class RevocationHandler:
             logging.info("Status: %s", display_pki_status_info(status_info))
 
             if reason != "removeFromCRL" and status_info["status"].prettyPrint() == "accepted":
-                self.mark_as_revoked(entry[0]["cert"], reason)  # type: ignore
+                self.mark_as_revoked(entry[0]["cert"], reason, rfc9883_db_link)  # type: ignore
 
             elif reason == "removeFromCRL" and status_info["status"].prettyPrint() == "accepted":
-                self.revive_cert(entry[0]["cert"])  # type: ignore
+                self.revive_cert(entry[0]["cert"], rfc9883_db_link)  # type: ignore
 
             elif status_info["status"].prettyPrint() != "accepted":
                 pass
