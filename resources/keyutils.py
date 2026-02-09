@@ -41,14 +41,14 @@ from robot.api.deco import keyword, not_keyword
 
 import pq_logic.combined_factory
 from pq_logic.keys import serialize_utils
-from pq_logic.keys.abstract_pq import PQSignaturePrivateKey, PQSignaturePublicKey
+from pq_logic.keys.abstract_pq import PQKEMPublicKey, PQSignaturePrivateKey, PQSignaturePublicKey
 from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPrivateKey, PQHashStatefulSigPublicKey
-from pq_logic.keys.abstract_wrapper_keys import AbstractCompositePrivateKey
+from pq_logic.keys.abstract_wrapper_keys import AbstractCompositePrivateKey, HybridPublicKey, TradKEMPublicKey
 from pq_logic.keys.composite_sig07 import CompositeSig07PrivateKey
 from pq_logic.keys.kem_keys import MLKEMPrivateKey
 from pq_logic.keys.key_pyasn1_utils import load_enc_key
 from pq_logic.keys.sig_keys import MLDSAPrivateKey, SLHDSAPrivateKey
-from pq_logic.keys.stateful_sig_keys import XMSSMTPrivateKey, XMSSPrivateKey
+from pq_logic.keys.stateful_sig_keys import XMSSMTPrivateKey, XMSSMTPublicKey, XMSSPrivateKey, XMSSPublicKey
 from pq_logic.keys.trad_kem_keys import RSAEncapKey
 from pq_logic.keys.xwing import XWingPrivateKey
 from pq_logic.tmp_oids import COMPOSITE_SIG07_OID_TO_NAME, id_rsa_kem_spki
@@ -1354,3 +1354,194 @@ def get_digest_alg_for_cmp(  # noqa D417 undocumented-param
         return pub_key.hash_alg
 
     return get_digest_hash_alg_from_alg_id(alg_id)
+
+
+# Security strength values follow NIST SP 800-57 Part 1 Revision 5, Tables 2 and 4.
+# Table 2 provides the traditional key equivalence for RSA/DSA and ECC key sizes,
+# while Table 4 lists the target security strengths for the NIST PQC levels.
+_NIST_LEVEL_TO_STRENGTH = {
+    1: 128,
+    2: 192,
+    3: 192,
+    4: 256,
+    5: 256,
+}
+
+
+def _rsa_security_strength(key_size: int) -> int:
+    """Return an approximate security strength (in bits) for an RSA key size.
+
+    Mapping follows NIST SP 800-57 Part 1 Rev. 5 Table 2.
+    """
+    if key_size < 1024:
+        return 64
+
+    if key_size <= 1024:
+        return 80
+
+    if key_size <= 2048:
+        return 112
+
+    if key_size <= 3072:
+        return 128
+
+    if key_size <= 7680:
+        return 192
+
+    if key_size <= 15360:
+        return 256
+
+    return 256
+
+
+def _ecc_security_strength(key_size: int) -> int:
+    """Return the security strength (in bits) for an ECC-style curve size.
+
+    Mapping follows NIST SP 800-57 Part 1 Rev. 5 Table 2.
+    """
+    # Table 2 (ECC column: f is the field size in bits):
+    # - f = 160–223  -> strength 80
+    # - f = 224–255  -> strength 112
+    # - f = 256–383  -> strength 128
+    # - f = 384–511  -> strength 192
+    # - f = 512+     -> strength 256
+    if key_size <= 223:
+        return 80
+
+    if key_size <= 255:
+        return 112
+
+    if key_size <= 383:
+        return 128
+
+    if key_size <= 511:
+        return 192
+
+    return 256
+
+
+def _get_pq_stfl_nist_security_strength(key: PQHashStatefulSigPublicKey) -> int:
+    """Return the PQ security strength (in bits) for a PQ stateful signature key.
+
+    XMSS and XMSS^MT security strength is determined by the hash function output size.
+    According to RFC 8391 Section 5. Parameter Sets.
+    The security strength is halved when considering PQ security strength, because of the `Grover` algorithm.
+
+    :param key: The PQ stateful signature public key.
+    :return: The security strength in bits.
+    :raises NotImplementedError: If the key type is not supported.
+    """
+    if isinstance(key, XMSSPublicKey):
+        return key.key_bit_security
+    if isinstance(key, XMSSMTPublicKey):
+        return key.key_bit_security
+
+    raise NotImplementedError(
+        f"Security strength estimation is only implemented for XMSS and XMSSMT keys. Got: {type(key)}"
+    )
+
+
+def _nist_level_strength(level: Optional[int]) -> int:
+    """Translate a claimed NIST level into an approximate security strength.
+
+    Mapping follows NIST SP 800-57 Part 1 Rev. 5 Table 4.
+    """
+    if level is None:
+        return 0
+
+    return _NIST_LEVEL_TO_STRENGTH.get(int(level), 0)
+
+
+@not_keyword
+def estimate_key_security_strength(key: Union[PrivateKey, PublicKey]) -> int:
+    """Estimate the security strength of a key in bits.
+
+    :param key: The key to estimate the security strength for.
+    :return: The estimated security strength in bits.
+    :raises NotImplementedError: If the key type is not supported for security strength estimation.
+    """
+    if isinstance(key, PrivateKey):
+        key = key.public_key()
+
+    if isinstance(key, PQHashStatefulSigPublicKey):
+        return _get_pq_stfl_nist_security_strength(key)
+
+    if isinstance(
+        key,
+        (
+            PQKEMPublicKey,
+            PQSignaturePublicKey,
+        ),
+    ):
+        return _nist_level_strength(getattr(key, "nist_level", None))
+
+    if hasattr(key, "nist_level"):
+        return _nist_level_strength(getattr(key, "nist_level"))
+
+    if isinstance(key, rsa.RSAPublicKey):
+        return _rsa_security_strength(key.key_size)
+
+    if isinstance(key, dsa.DSAPublicKey):
+        return _rsa_security_strength(key.key_size)
+
+    if isinstance(key, EllipticCurvePublicKey):
+        return _ecc_security_strength(key.curve.key_size)
+
+    if isinstance(
+        key,
+        (
+            ed25519.Ed25519PublicKey,
+            x25519.X25519PublicKey,
+        ),
+    ):
+        return 128
+
+    if isinstance(
+        key,
+        (
+            ed448.Ed448PublicKey,
+            x448.X448PublicKey,
+        ),
+    ):
+        return 224
+
+    if isinstance(key, TradKEMPublicKey):
+        return estimate_key_security_strength(key._public_key)
+
+    if isinstance(key, HybridPublicKey):
+        pq_strength = estimate_key_security_strength(getattr(key, "pq_key"))
+        trad_strength = estimate_key_security_strength(getattr(key, "trad_key"))
+        return min(pq_strength, trad_strength)
+
+    else:
+        raise NotImplementedError(f"Security strength estimation not implemented for key type: {type(key)}")
+
+
+@keyword(name="Get Key Security Strength")
+def get_key_security_strength(  # noqa D417 undocumented-params
+    key: Union[PrivateKey, PublicKey],
+) -> int:
+    """Return the estimated security strength (in bits) for the provided key.
+
+    Arguments:
+    ---------
+        - `key`: The key instance to estimate the security strength for.
+
+    Returns:
+    -------
+        - The estimated security strength in bits.
+
+    Raises:
+    ------
+        - `ValueError`: If the security strength cannot be estimated for the given key type.
+        - `NotImplementedError`: If the key type is not supported for security strength estimation.
+
+    Examples:
+    --------
+    | ${strength}= | Get Key Security Strength | ${public_key} |
+
+    """
+    strength = estimate_key_security_strength(key)
+    if strength == 0:
+        raise ValueError(f"Could not estimate security strength for key type: {type(key)}")
+    return strength
