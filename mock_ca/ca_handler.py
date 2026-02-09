@@ -739,7 +739,7 @@ class CAHandler:
                     pki_message=pki_message, cc_certs=self.get_cc_certs(), exclude_stateful_sig_check=True
                 )
                 self.stfl_validator.add_pq_stateful_pki_message(pki_message=pki_message)
-                response = self.cert_req_handler.process_cert_request(pki_message)
+                response = self.cert_req_handler.process_cert_request(pki_message, rev_handler=self.rev_handler)
             elif pki_message["body"].getName() == "rr":
                 try:
                     self.cert_req_handler.validate_header(pki_message, must_be_protected=True)
@@ -858,6 +858,7 @@ class CAHandler:
             pki_message=pki_message,
             issued_certs=self.state.issued_certs,
             shared_secret=self.state.get_kem_mac_shared_secret(pki_message=pki_message),
+            rfc9883_db_link=self.cert_req_handler.rfc9883_link_db,
         )
         return response
 
