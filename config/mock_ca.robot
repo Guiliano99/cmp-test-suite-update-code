@@ -91,7 +91,7 @@ ${STRICT}   ${True}
 ${ALLOW_NULL_INSTEAD_OF_ABSENT}   ${False}
 
 ##### About Algorithms
-${DEFAULT_KEY_LENGTH}    2048
+${DEFAULT_KEY_LENGTH}    3072
 ${DEFAULT_ALGORITHM}    rsa
 ${DEFAULT_ECC_CURVE}   secp256r1
 ${DEFAULT_MAC_ALGORITHM}   password_based_mac
@@ -102,6 +102,7 @@ ${DEFAULT_KEY_AGREEMENT_ALG}   x25519
 ${DEFAULT_KEY_ENCIPHERMENT_ALG}   ml-kem-768
 ${DEFAULT_ML_DSA_ALG}    ml-dsa-87
 ${DEFAULT_ML_KEM_ALG}    ml-kem-768
+${DEFAULT_RFC9883_KEM_ALG}   ml-kem-512
 
 ##### Extra Issuing Logic
 ${CA_RSA_ENCR_CERT}    data/unittest/ca_encr_cert_rsa.pem
@@ -229,6 +230,7 @@ ${CHAMELEON_SUFFIX}   chameleon
 ${RELATED_CERT_SUFFIX}   related-cert
 ${MULTI_AUTH_SUFFIX}   multi-auth
 ${CERT_DISCOVERY_SUFFIX}   cert-discovery
+${RFC9883_SUFFIX}    issuing
 
 # CMP and LwCMP certificates and keys
 ${UPDATED_CERT}    ${None}
@@ -258,3 +260,5 @@ ${RELATED_KEY}   ${None}
 ${RELATED_CERT_SEC}   ${None}
 ${RELATED_KEY_SEC}   ${None}
 
+# RFC 9883 Config varaibles
+${ALLOW_ONLY_ONE_LINKED_CERT}   ${True}

@@ -51,6 +51,7 @@ ${DEFAULT_KEY_AGREEMENT_ALG}   x25519
 ${DEFAULT_KEY_ENCIPHERMENT_ALG}   ml-kem-768
 ${DEFAULT_ML_DSA_ALG}    ml-dsa-87
 ${DEFAULT_ML_KEM_ALG}    ml-kem-768
+${DEFAULT_RFC9883_KEM_ALG}   ml-kem-512
 
 ##### Extra Issuing Logic
 ${CA_RSA_ENCR_CERT}    ${None}
@@ -127,3 +128,4 @@ ${CHAMELEON_SUFFIX}    ${None}
 ${RELATED_CERT_SUFFIX}    ${None}
 ${MULTI_AUTH_SUFFIX}    ${None}
 ${CERT_DISCOVERY_SUFFIX}    ${None}
+${RFC9883_SUFFIX}       ${None}
