@@ -1881,12 +1881,68 @@ def _validate_cert_against_issuer_and_ser_num(
         )
 
 
+def _validate_private_key_pop_statement_itself(
+    private_key_pop_statement: PrivateKeyPossessionStatement,
+    cert_must_be_present: bool = True,
+) -> None:
+    """Validate the PrivateKeyPossessionStatement structure itself.
+
+    :param private_key_pop_statement: The PrivateKeyPossessionStatement to validate.
+    :param cert_must_be_present: Whether the cert field must be present. Defaults to `True`.
+    :raises BadRequest: If the PrivateKeyPossessionStatement is not well-formed.
+    """
+    cert = private_key_pop_statement["cert"]
+    if not cert.isValue:
+        if cert_must_be_present:
+            raise BadRequest("The `cert` field in the PrivateKeyPossessionStatement must be present.")
+        return
+
+    issuer_and_ser = private_key_pop_statement["signer"]
+    try:
+        _validate_cert_against_issuer_and_ser_num(issuer_and_ser, cert)
+    except BadCertId as e:
+        raise BadRequest("The `cert` does not match the `signer` field in the `PrivateKeyPossessionStatement`") from e
+
+
+@not_keyword
+def validate_signer_key_strength(
+    signer_cert: rfc9480.CMPCertificate,
+    key_establishment_key: PublicKey,
+    must_be_stronger: bool = True,
+) -> Tuple[int, int]:
+    """Validate that the signature key is not weaker than the key-establishment key.
+
+    According to RFC 9883 Section 6 the signature key SHOULD be at least as strong as the key-establishment key.
+
+    :param signer_cert: The signer's certificate containing the signature key.
+    :param key_establishment_key: The public key used for key establishment.
+    :param must_be_stronger: If True, the signature key must be stronger than the key-establishment key. \
+    Defaults to `True`.
+    :return: A tuple containing the signature key strength and the key-establishment key strength.
+    :raises BadCertTemplate: If must_be_stronger is `True` and the signature key is weaker than the \
+    key-establishment key.
+    """
+    signer_key = certutils.load_public_key_from_cert(signer_cert)
+    signature_strength = keyutils.get_key_security_strength(signer_key)
+    establishment_strength = keyutils.get_key_security_strength(key_establishment_key)
+
+    if must_be_stronger and signature_strength < establishment_strength:
+        raise BadCertTemplate(
+            "Signature key security strength "
+            f"({signature_strength} bits) is weaker than key establishment strength "
+            f"({establishment_strength} bits)."
+        )
+
+    return signature_strength, establishment_strength
+
+
 @not_keyword
 def validate_private_key_pop_statement_cert_template(
     cert_template: rfc4211.CertTemplate,
     signer_cert: rfc9480.CMPCertificate,
     strict_subject_check: bool = True,
     allow_different_san: bool = False,
+    enforce_key_strength: bool = False,
 ) -> None:
     """Validate that the CertTemplate inside the PrivateKeyPossessionStatement matches the signer certificate.
 
@@ -1895,6 +1951,8 @@ def validate_private_key_pop_statement_cert_template(
     :param strict_subject_check: Whether the subject and SAN must be the same as in the signer certificate.
     Defaults to `True`.
     :param allow_different_san: Whether to allow different SANs when the subject is not a NULL-DN. Defaults to `False`.
+    :param enforce_key_strength: Whether to validate that the signature key is not weaker than the \
+    key-establishment key. Defaults to `False`.
     :raises BadCertTemplate: If the CertTemplate does not match the signer's certificate or the public
     key is a signing key.
     """
@@ -1917,6 +1975,13 @@ def validate_private_key_pop_statement_cert_template(
     public_key = keyutils.load_public_key_from_cert_template(cert_template, must_be_present=True)
     if isinstance(public_key, VerifyKey):
         raise BadCertTemplate("The PrivateKeyPossessionStatement CertTemplate public key must not be a signing key.")
+
+    if enforce_key_strength:
+        validate_signer_key_strength(
+            signer_cert=signer_cert,
+            key_establishment_key=public_key,
+            must_be_stronger=enforce_key_strength,
+        )
 
 
 def _validate_san_against_signer_cert(
@@ -2041,6 +2106,7 @@ def validate_private_key_pop_statement_csr(
     signer_cert: rfc9480.CMPCertificate,
     strict_subject_check: bool = True,
     allow_different_san: bool = True,
+    enforce_key_strength: bool = False,
 ) -> None:
     """Validate that the CSR against the signer certificate according to RFC 9883.
 
@@ -2049,6 +2115,8 @@ def validate_private_key_pop_statement_csr(
     :param strict_subject_check: Whether the subject must be the same as in the signer certificate. Defaults to `True`.
     :param allow_different_san: Whether to allow different SANs when the subject is not a NULL-DN and the same. \
     Defaults to `True`.
+    :param enforce_key_strength: Whether to validate that the signature key is not weaker than the \
+    key-establishment key. Defaults to `False`.
     :raises BadCertTemplate: If the CSR does not match the signer's certificate or the public key is a signing key.
     """
     csr_info = csr["certificationRequestInfo"]
@@ -2073,6 +2141,13 @@ def validate_private_key_pop_statement_csr(
     public_key = keyutils.load_public_key_from_spki(csr_info["subjectPublicKeyInfo"])
     if isinstance(public_key, VerifyKey):
         raise BadCertTemplate("The CSR public key must not be a signing key.")
+
+    if enforce_key_strength:
+        validate_signer_key_strength(
+            signer_cert=signer_cert,
+            key_establishment_key=public_key,
+            must_be_stronger=enforce_key_strength,
+        )
 
 
 def _find_and_get_private_key_pop_statement(  # noqa D417 undocumented-param
@@ -2149,6 +2224,8 @@ def validate_csr_private_key_pop_statement(  # noqa D417 undocumented-params
     signer_cert: Union[rfc9480.CMPCertificate, Sequence[rfc9480.CMPCertificate]],
     strict_subject_check: bool = True,
     allow_different_san: bool = True,
+    cert_must_be_present: bool = True,
+    enforce_key_strength: bool = False,
 ) -> rfc9480.CMPCertificate:
     """Validate the CRS according to RFC 9883 Section 4 PKCS#10.
 
@@ -2160,6 +2237,10 @@ def validate_csr_private_key_pop_statement(  # noqa D417 undocumented-params
     Defaults to `True`.
     - `allow_different_san`: Whether to allow different SANs when the subject is not a NULL-DN and the same. \
     Defaults to `True`.
+    - `cert_must_be_present`: Whether the cert field in the PrivateKeyPossessionStatement must be present. \
+    Defaults to `True`.
+    - `enforce_key_strength`: Whether to validate that the signature key is not weaker than the key-establishment key. \
+    Defaults to `False`.
 
     Retunrs:
     -------
@@ -2168,6 +2249,7 @@ def validate_csr_private_key_pop_statement(  # noqa D417 undocumented-params
     Raises:
     ------
     - `BadAsn1Data`: If the `PrivateKeyPossessionStatement` is invalid.
+    - `BadRequest`: If the `PrivateKeyPossessionStatement` cert field is missing or does not match the signer.
     - `SignerNotTrusted`: If the certificate inside the `PrivateKeyPossessionStatement` is not \
     found among the provided certificates.
     - `BadCertId`: If no matching certificate is found for the issuer and serial number in the \
@@ -2186,6 +2268,8 @@ def validate_csr_private_key_pop_statement(  # noqa D417 undocumented-params
         priv_obj = certutils.get_csr_private_key_possession_statement(csr)
     except ValueError as e:
         raise BadAsn1Data("The `PrivateKeyPossessionStatement` inside the CSR is invalid.") from e
+
+    _validate_private_key_pop_statement_itself(priv_obj, cert_must_be_present=cert_must_be_present)
     found_cert = _validate_signer_cert_against_possession_statement(
         priv_obj,
         signer_cert=signer_cert,  # type: ignore
@@ -2196,6 +2280,7 @@ def validate_csr_private_key_pop_statement(  # noqa D417 undocumented-params
         found_cert,
         strict_subject_check=strict_subject_check,
         allow_different_san=allow_different_san,
+        enforce_key_strength=enforce_key_strength,
     )
     certutils.verify_possession_statement_signature(
         csr,
@@ -2210,6 +2295,8 @@ def validate_private_key_pop_statement_cmrf(  # noqa D417 undocumented-params
     certs: Union[rfc9480.CMPCertificate, List[rfc9480.CMPCertificate]],
     strict_subject_check: bool = True,
     allow_different_san: bool = False,
+    cert_must_be_present: bool = True,
+    enforce_key_strength: bool = True,
 ) -> Optional[rfc9480.CMPCertificate]:
     """Validate that the CertReqMsg is conform against RFC 9883 Section 5 (CRMF).
 
@@ -2220,10 +2307,15 @@ def validate_private_key_pop_statement_cmrf(  # noqa D417 undocumented-params
     - `strict_subject_check`: Whether to strictly check the subject in the POPOSigningKeyInput. \
     Defaults to `True`.
     - `allow_different_san`: Whether to allow different SANs when the subject is not a NULL-DN. Defaults to `False`.
+    - `cert_must_be_present`: Whether the cert field in the PrivateKeyPossessionStatement must be present. \
+    Defaults to `True`.
+    - `enforce_key_strength`: Whether to validate that the signature key is not weaker than the key-establishment key. \
+    Defaults to `True`.
 
     Raises:
     ------
     - `ValueError`: If the `regInfo` field is missing in the CertReqMsg.
+    - `BadRequest`: If the `PrivateKeyPossessionStatement` cert field is missing or does not match the signer.
     - `BadAsn1Data`: If the `PrivateKeyPossessionStatement` is invalid.
     - `SignerNotTrusted`: If the certificate inside the `PrivateKeyPossessionStatement` is not \
     found among the provided certificates.
@@ -2247,6 +2339,7 @@ def validate_private_key_pop_statement_cmrf(  # noqa D417 undocumented-params
     if private_key_pop is None:
         raise ValueError("The `PrivateKeyPossessionStatement` is missing in the CertReqMsg `regInfo` field.")
 
+    _validate_private_key_pop_statement_itself(private_key_pop, cert_must_be_present=cert_must_be_present)
     # Determine embedded or referenced certificate
     found_cert: Optional[rfc9480.CMPCertificate] = None
     if private_key_pop["cert"].isValue:
@@ -2275,6 +2368,7 @@ def validate_private_key_pop_statement_cmrf(  # noqa D417 undocumented-params
         found_cert,
         strict_subject_check=strict_subject_check,
         allow_different_san=allow_different_san,
+        enforce_key_strength=enforce_key_strength,
     )
     validate_private_key_pop_statement_popo(cert_req_msg, found_cert)
 
@@ -2455,7 +2549,7 @@ def validate_reg_info_field(
 @keyword(name="Prepare POPOSigningKeyInput")
 def prepare_poposigningkeyinput(  # noqa D417 undocumented-params
     public_key: PublicKey,
-    sender: Optional[str] = None,
+    sender: Optional[Union[str, rfc9480.Name, rfc9480.CMPCertificate]] = None,
     pkmac_value_alg_id: Optional[rfc9480.AlgorithmIdentifier] = None,
     pkmac_value: Optional[bytes] = None,
 ) -> rfc4211.POPOSigningKeyInput:
@@ -2490,11 +2584,16 @@ def prepare_poposigningkeyinput(  # noqa D417 undocumented-params
     )
 
     if sender is not None:
-        name_obj = prepareutils.prepare_name(sender, 4)
+        if isinstance(sender, rfc9480.CMPCertificate):
+            name_obj = sender["tbsCertificate"]["subject"]
+        elif isinstance(sender, rfc9480.Name):
+            name_obj = sender
+        else:
+            name_obj = prepareutils.prepare_name(sender, 4)
         general_name = rfc9480.GeneralName().subtype(
             implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatConstructed, 0)
         )
-        general_name = general_name.setComponentByName("directoryName", name_obj)
+        general_name["directoryName"]["rdnSequence"] = name_obj["rdnSequence"]
         popo_signing_key_input["authInfo"]["sender"] = general_name
     else:
         pkmac = rfc4211.PKMACValue()
