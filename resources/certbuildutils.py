@@ -13,7 +13,7 @@ import pyasn1.error
 from cryptography import x509
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import base, tag, univ, useful
-from pyasn1_alt_modules import rfc4211, rfc5280, rfc5652, rfc6402, rfc6664, rfc8954, rfc9480, rfc9481
+from pyasn1_alt_modules import rfc4211, rfc5280, rfc5652, rfc6402, rfc6664, rfc8954, rfc9480, rfc9481, rfc9883
 from pyasn1_alt_modules.rfc2459 import AttributeValue
 from robot.api.deco import keyword, not_keyword
 
@@ -1561,16 +1561,22 @@ def csr_add_extensions(  # noqa D417 undocumented-param
 
 
 @not_keyword
-def prepare_single_value_attr(attr_type: univ.ObjectIdentifier, attr_value: Any) -> rfc5652.Attribute:
+def prepare_single_value_attr(
+    attr_type: univ.ObjectIdentifier, attr_value: Any, add_second_time: bool = False
+) -> rfc5652.Attribute:
     """Prepare an attribute for a CSR.
 
     :param attr_type: The Object Identifier (OID) for the attribute.
     :param attr_value: The value of the attribute to be encoded.
+    :param add_second_time: Whether to add the same attribute value a second time to the attribute values,
+    for testing purposes. Defaults to `False`.
     :return: The populated `Attribute` structure.
     """
     attr = rfc5652.Attribute()
     attr["attrType"] = attr_type
     attr["attrValues"][0] = encoder.encode(attr_value)
+    if add_second_time:
+        attr["attrValues"][1] = encoder.encode(attr_value)
     return attr
 
 
@@ -1579,41 +1585,77 @@ def prepare_private_key_possession_statement(
     signer_cert: Optional[rfc9480.CMPCertificate] = None,
     issuer_and_serial: Optional[rfc5652.IssuerAndSerialNumber] = None,
     include_cert: bool = True,
-    modify_serial_number: bool = False,
-    modify_issuer: bool = False,
-    issuer: Optional[str] = None,
-    serial_number: Optional[Union[str, int]] = None,
-) -> PrivateKeyPossessionStatement:
-    """Prepare the RFC 9883 `PrivateKeyPossessionStatement` structure.
+) -> rfc9883.PrivateKeyPossessionStatement:
+    """Prepare a `PrivateKeyPossessionStatement` structure.
 
     :param signer_cert: The signer's certificate to include in the statement. Defaults to `None`.
-    :param issuer_and_serial: An optional `IssuerAndSerialNumber` structure. If not provided, it \
-    will be created from the `signer_cert`, `issuer`, and `serial_number` parameters.
+    :param issuer_and_serial: An optional `IssuerAndSerialNumber` structure. If not provided, it will \
+    be created from the `signer_cert`. Defaults to `None`.
     :param include_cert: Whether to include the signer's certificate in the statement. Defaults to `True`.
-    :param modify_serial_number: Whether to modify the serial number for testing purposes. Defaults to `False`.
-    :param modify_issuer: Whether to modify the issuer for testing purposes. Defaults to `False`.
-    :param issuer: The issuer name in OpenSSL notation, used if `issuer_and_serial` is not provided. Defaults to `None`.
-    :param serial_number: The serial number, used if `issuer_and_serial` is not provided. Defaults to `None`.
     :return: The populated `PrivateKeyPossessionStatement` structure.
+    :raises `ValueError`: If neither `signer_cert` nor `issuer_and_serial` is provided.
+
     """
+    if issuer_and_serial is None and signer_cert is None:
+        raise ValueError("Either `signer_cert` or `issuer_and_serial` must be provided.")
+
     if issuer_and_serial is None:
-        if signer_cert is None and (issuer is None or serial_number is None):
-            raise ValueError("Either `signer_cert` or both `issuer` and `serial_number` must be provided.")
         issuer_and_serial = prepare_issuer_and_serial_number(
             cert=signer_cert,
-            modify_serial_number=modify_serial_number,
-            modify_issuer=modify_issuer,
-            issuer=issuer,
-            serial_number=serial_number,
         )
 
-    statement = PrivateKeyPossessionStatement()
+    statement = rfc9883.PrivateKeyPossessionStatement()
     statement["signer"] = issuer_and_serial
 
     if include_cert and signer_cert is not None:
-        statement["cert"] = signer_cert
+        statement["cert"] = signer_cert  # type: ignore
 
     return statement
+
+
+@keyword(name="Prepare PrivateKeyPossessionStatement Attribute")
+def prepare_private_key_possession_statement_attribute(  # noqa D417 undocumented-param
+    signer_cert: Optional[rfc9480.CMPCertificate] = None,
+    issuer_and_serial: Optional[rfc5652.IssuerAndSerialNumber] = None,
+    include_cert: bool = True,
+    add_second_time: bool = False,
+) -> rfc5652.Attribute:
+    """Prepare a `PrivateKeyPossessionStatement` wrapped in an `Attribute` structure for inclusion in a CSR.
+
+    Arguments:
+    ---------
+        - `signer_cert`: The signer's certificate to include in the statement. Defaults to `None`.
+        - `issuer_and_serial`: An optional `IssuerAndSerialNumber` structure. If not provided, it \
+        will be created from the `signer_cert`. Defaults to `None`.
+        - `include_cert`: Whether to include the signer's certificate in the statement. Defaults to `True`.
+        - `add_second_time`: Whether to add the same statement a second time to the attribute values, for testing \
+        purposes. Defaults to `False`.
+
+    Returns:
+    -------
+        - An `Attribute` object containing the `PrivateKeyPossessionStatement`.
+
+    Raises:
+    ------
+        - `ValueError`: If neither `signer_cert` nor `issuer_and_serial` is provided.
+
+    Examples:
+    --------
+    | ${attr}= | Prepare PrivateKeyPossessionStatement Attribute | signer_cert=${cert} | include_cert=True |
+    | ${attr}= | Prepare PrivateKeyPossessionStatement Attribute | issuer_and_serial=${ias} | include_cert=False | \
+    modify_serial_number=True |
+
+    """
+    statement = prepare_private_key_possession_statement(
+        signer_cert=signer_cert,
+        issuer_and_serial=issuer_and_serial,
+        include_cert=include_cert,
+    )
+    return prepare_single_value_attr(
+        attr_type=rfc9883.id_statementOfPossession,
+        attr_value=statement,
+        add_second_time=add_second_time,
+    )
 
 
 # TODO add function to prepare RelativeDistinguishedName structure
