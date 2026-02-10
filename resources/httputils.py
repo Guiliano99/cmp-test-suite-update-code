@@ -201,6 +201,7 @@ def start_unsafe_tcp_server(  # noqa: D417 Missing argument descriptions in the 
 
     """
     received_data = bytearray()
+    port = int(port)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind((host, port))
         sock.listen(1)
