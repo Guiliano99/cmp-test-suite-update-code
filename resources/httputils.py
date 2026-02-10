@@ -139,7 +139,7 @@ def start_ssl_server(  # noqa: D417 Missing argument descriptions in the docstri
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.bind((host, port))
             sock.listen(1)
-            logging.info(f"Listening on {host}:{port}")
+            logging.info("Listening on %s:%d", host, port)
 
             # Accept a client connection
             with context.wrap_socket(sock, server_side=True) as secure_sock:
@@ -204,7 +204,7 @@ def start_unsafe_tcp_server(  # noqa: D417 Missing argument descriptions in the 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind((host, port))
         sock.listen(1)
-        logging.info(f"Server listening on {host}:{port}")
+        logging.info("Server listening on %s:%d", host, port)
 
         # Accept a client connection
         conn, addr = sock.accept()
@@ -265,9 +265,9 @@ def ssl_client(
 
     with socket.create_connection((server_host, server_port)) as sock:
         with context.wrap_socket(sock, server_hostname=server_host) as secure_sock:
-            logging.info(f"Connected to {server_host}:{server_port}")
+            logging.info("Connected to %s:%d", server_host, server_port)
             secure_sock.sendall(message)
-            logging.info(f"Sent: {message}")
+            logging.info("Sent: %s", message)
 
 
 def _unsafe_client() -> Optional[bytes]:
