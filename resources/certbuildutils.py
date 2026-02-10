@@ -1588,6 +1588,22 @@ def csr_contains_attribute(csr: rfc6402.CertificationRequest, attr_oid: univ.Obj
     return False
 
 
+@not_keyword
+def get_csr_attribute(
+    csr: rfc6402.CertificationRequest, attr_oid: univ.ObjectIdentifier
+) -> Optional[rfc5652.Attribute]:
+    """Retrieve an attribute from a CSR based on its OID.
+
+    :param csr: The `CertificationRequest` object to search for the attribute.
+    :param attr_oid: The Object Identifier (OID) of the attribute to retrieve.
+    :return: The `Attribute` object if found, or `None` if not found.
+    """
+    for attribute in csr["certificationRequestInfo"]["attributes"]:
+        if attribute["attrType"] == attr_oid:
+            return attribute
+    return None
+
+
 # TODO add function to prepare RelativeDistinguishedName structure
 
 
