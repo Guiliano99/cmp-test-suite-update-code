@@ -38,6 +38,7 @@ from pyasn1_alt_modules import (
     rfc9688,
     rfc9690,
     rfc9708,
+    rfc9883,
 )
 
 from pq_logic.tmp_oids import (
@@ -846,7 +847,6 @@ ALL_KNOWN_OIDS_2_NAME["id_ecMQV"] = rfc6664.id_ecMQV
 ALL_KNOWN_OIDS_2_NAME.update(ALL_SIG_ALG_OID_2_NAME)
 ALL_KNOWN_OIDS_2_NAME.update(EXTENSION_OID_2_NAME)
 ALL_KNOWN_OIDS_2_NAME.update(COMPOSITE_KEM_OID_2_NAME)
-ALL_KNOWN_NAMES_2_OID = {y: x for x, y in ALL_KNOWN_OIDS_2_NAME.items()}
 
 
 ENC_KEY_AGREEMENT_TYPES_OID_2_NAME = {
@@ -936,3 +936,6 @@ CERT_ATTR_OID_2_CORRECT_STRUCTURE = {
     id_at_streetAddress: X520StreetAddress(),
     id_at_organizationIdentifier: X520OrganizationIdentifier(),
 }
+
+ALL_KNOWN_OIDS_2_NAME.update({rfc9883.id_statementOfPossession: "id_statementOfPossession"})
+ALL_KNOWN_NAMES_2_OID = {y: x for x, y in ALL_KNOWN_OIDS_2_NAME.items()}
