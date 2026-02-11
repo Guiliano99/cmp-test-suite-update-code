@@ -1777,3 +1777,37 @@ Build KEMBasedMAC General Message
     ${cert_chain}=   Build Cert Chain From Dir    ${kem_cert}     cert_chain_dir=./data/cert_logs
     ${genm}=   Patch ExtraCerts    ${genm}    ${cert_chain}
     RETURN    ${genm}
+
+Build PrivateKeyPossessionStatement CSR
+    [Documentation]    Build a Certificate Signing Request (CSR) that includes a PrivateKeyPossessionStatement.
+    ...
+    ...                The private key possession statement is used to issue an second certificate, which is not a \
+    ...                a signing key. So the signature is created with a prior issued certificate, which is used for \
+    ...                the proof of possession. This allows to issuance of a KEM certificate.
+    ...
+    ...                Arguments:
+    ...                ---------
+    ...                - `key` (PrivateKey): The private key to use for the CSR.
+    ...                - `sign_key` (PrivateKey): The private key to use for signing the CSR. If not provided, \
+    ...                the `key` will be used for signing.
+    ...                - `private_key_poss_stmt` (PrivateKeyPossessionStatement): The PrivateKeyPossessionStatement \
+    ...                to include in the CSR.
+    ...                - `bad_pop` (bool): Whether to intentionally create a bad proof of possession. Defaults to `False`.
+    ...
+    ...                Returns:
+    ...                -------
+    ...                - The built and signed CSR.
+    ...
+    ...                Examples:
+    ...                --------
+    ...                | ${csr}= | Build PrivateKeyPossStatement CSR | ${key} | ${sign_key} | ${private_key_poss_stmt} |
+    ...                | ${csr}= | Build PrivateKeyPossStatement CSR | ${key} | ${sign_key} | ${private_key_poss_stmt} | \
+    ...               ${bad_pop} |
+    ...
+    [Tags]   csr  private_key_poss_stmt  migration   linked-certs
+    [Arguments]    ${key}   ${sign_key}    ${private_key_poss_stmt}   ${bad_pop}=False
+    ${spki}=   Prepare SubjectPublicKeyInfo    ${key}
+    ${csr}=   Add Attribute To CSR    ${key}   ${private_key_poss_stmt}   bad_pop=${bad_pop}
+    ${csr}=   Build CSR   ${sign_key}   spki=${spki}    bad_pop=${bad_pop}
+    RETURN    ${csr}
+    
