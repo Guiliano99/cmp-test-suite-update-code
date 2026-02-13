@@ -438,18 +438,19 @@ def print_extensions(extensions: rfc9480.Extensions) -> List[str]:
         out.append(f"Extension {name} ID: {extn_id}, Critical: {critical}, Value: {extn_value}")
     return out
 
-def compare_pyasn1_objects(first: base.Asn1Type, second: base.Asn1Type) -> bool:
+def compare_pyasn1_objects(first: base.Asn1Type, second: base.Asn1Type) -> Tuple[bool, List[str]]:
     """Compare if two pyasn1 structures, by first encoding them and then compare the bytes.
 
     :param first: The first object to compare.
     :param second: The second object to compare.
-    :return: True if the structures are identical; False otherwise.
+    :return: `True` if the structures are identical; `False` otherwise which includes a list of differences.
     """
     result = encoder.encode(first) == encoder.encode(second)
+    out: List[str] = []
     if not result:
         for field in first.keys():  # type: ignore
             if encoder.encode(first[field]) != encoder.encode(first[field]):  # type: ignore
-                print(f"{field}: {first[field].prettyPrint()} != {second[field].prettyPrint()}")  # type: ignore
+                out.append(f"{field}: {first[field].prettyPrint()} != {second[field].prettyPrint()}")  # type: ignore
 
     return result
 
