@@ -64,6 +64,7 @@ from resources.oid_mapping import (
 from resources.oidutils import (
     ECMQV,
     HKDF_NAME_2_OID,
+    HYBRID_SIG_OID_2_NAME,
     KDF_OID_2_NAME,
     KEM_OID_2_NAME,
     KEY_WRAP_NAME_2_OID,
@@ -72,9 +73,11 @@ from resources.oidutils import (
     KM_KD_ALG,
     KM_KT_ALG,
     KM_KW_ALG,
+    ML_DSA_OID_2_NAME,
     MSG_SIG_ALG,
     PQ_SIG_OID_2_NAME,
     PROT_SYM_ALG,
+    SLH_DSA_OID_2_NAME,
 )
 from resources.suiteenums import KeyUsageStrictness
 from resources.typingutils import ECDHPrivateKey, EnvDataPrivateKey, PrivateKey, Strint
@@ -1247,15 +1250,24 @@ def validate_signed_data_structure(
 
 
 def _check_is_hybrid_or_pq_sig_alg_cert_chain(certs: List[rfc9480.CMPCertificate]) -> bool:
-    """Check if the certificate chain contains hybrid or PQ signature algorithm certificates.
+    """Check if the parsed signature certificate chain can be validated with OpenSSL.
 
-    :param certs: A list of CMP certificates.
+    :param certs: A list of CMPCertificates.
     :return: True if the certificate chain contains hybrid or PQ signature algorithm certificates, False otherwise.
     """
     for cert in certs:
-        sig_alg = cert["tbsCertificate"]["subjectPublicKeyInfo"]["algorithm"]["algorithm"]
-        if sig_alg in COMPOSITE_SIG_OID_TO_NAME or sig_alg in PQ_SIG_OID_2_NAME:
+        spki_oid = cert["tbsCertificate"]["subjectPublicKeyInfo"]["algorithm"]["algorithm"]
+
+        # To skip traditional algorithm and not store them into a new mapping,
+        # so that OpenSSL can complain.
+        if spki_oid not in HYBRID_SIG_OID_2_NAME and spki_oid not in PQ_SIG_OID_2_NAME:
+            continue
+
+        if spki_oid in HYBRID_SIG_OID_2_NAME:
             return True
+        if spki_oid in PQ_SIG_OID_2_NAME:
+            if spki_oid not in SLH_DSA_OID_2_NAME and spki_oid not in ML_DSA_OID_2_NAME:
+                return True
     return False
 
 
