@@ -346,3 +346,30 @@ def get_issuing_distribution_point(
     )
     idp_pyasn1: rfc5280.IssuingDistributionPoint
     return idp_pyasn1
+
+
+@not_keyword
+def csr_contains_attribute(csr: rfc6402.CertificationRequest, oid: univ.ObjectIdentifier) -> bool:
+    """Check if a CSR contains a specific attribute.
+
+    :param csr: The CSR to check.
+    :param oid: The OID of the attribute to check for.
+    """
+    for attr in csr["certificationRequestInfo"]["attributes"]:
+        if attr["attrType"] == oid:
+            return True
+    return False
+
+
+@not_keyword
+def csr_get_attributes(csr: rfc6402.CertificationRequest, oid: univ.ObjectIdentifier) -> Optional[rfc5652.Attribute]:
+    """Get a specific attribute from a CSR.
+
+    :param csr: The CSR to get the attribute from.
+    :param oid: The OID of the attribute to get.
+    :return: The attribute if found, else None.
+    """
+    for attr in csr["certificationRequestInfo"]["attributes"]:
+        if attr["attrType"] == oid:
+            return attr
+    return None
