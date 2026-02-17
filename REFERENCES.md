@@ -17,6 +17,7 @@ when working with the Mock CA.
     - [Transport CMP](#transport-cmp)
     - [Algorithm Profiles](#algorithm-profiles)
     - [Drafts](#drafts)
+    - [Remote Attestation](#remote-attestation)
   - [Software](#software)
   - [Post-Quantum Key Encapsulation Mechanism (KEM)](#post-quantum-key-encapsulation-mechanism-kem)
     - [ML-KEM](#ml-kem)
@@ -63,6 +64,11 @@ when working with the Mock CA.
 ### Drafts
 
 - [draft-ietf-lamps-rfc4210bis (CMP)](https://datatracker.ietf.org/doc/draft-ietf-lamps-rfc4210bis/)
+
+### Remote Attestation
+
+- [draft-ietf-lamps-csr-attestation-22 (CSR Attestation)](https://datatracker.ietf.org/doc/html/draft-ietf-lamps-csr-attestation-22)
+- [draft-ietf-lamps-attestation-freshness-05 (Attestation Freshness)](https://datatracker.ietf.org/doc/html/draft-ietf-lamps-attestation-freshness-05)
 
 ## Software
 
