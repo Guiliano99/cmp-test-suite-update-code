@@ -382,3 +382,20 @@ class BodyRelevantError(CMPTestSuiteError):
         self.message = message
         self.pki_message = pki_message
         super().__init__(message, error_details=error_details, failinfo=failinfo)
+
+
+###########################
+# Remote Attestation Errors
+############################
+
+
+class RemoteAttestationError(BadRequest):
+    """Raised when a remote attestation error is raised."""
+
+
+class BadRemoteAttestationASN1(BadDataFormat):
+    """Raised when the remote attestation is invalid."""
+
+
+class BadNonceRequest(RemoteAttestationError):
+    """Raised when the `nonceRequest` is invalid."""
