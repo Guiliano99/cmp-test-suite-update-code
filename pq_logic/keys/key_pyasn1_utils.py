@@ -4,7 +4,6 @@
 
 """Utility functions for handling keys in PyASN1 format."""
 
-import base64
 import os
 from typing import Optional, Tuple, Union
 
@@ -97,52 +96,12 @@ def load_enc_key(password: str, data: bytes) -> bytes:
     """Load PEM formatted encrypted key.
 
     :param password: Password for decryption.
-    :param data: PEM encoded encrypted key.
-    :return: The decrypted_key in DER-encoded `OneAsymmetricKey` bytes.
+    :param data: PEM encoded encrypted key (PKCS#8 ``-----BEGIN ENCRYPTED PRIVATE KEY-----`` format).
+    :return: The decrypted key in DER-encoded `OneAsymmetricKey` bytes.
     """
-    lines = data.splitlines()
+    from resources.cryptoutils import decrypt_private_key_pkcs8
 
-    # 1. Check the BEGIN line
-    begin_line = lines[0].rstrip()
-    if not (begin_line.startswith(b"-----BEGIN ") and begin_line.endswith(b" PRIVATE KEY-----")):
-        raise ValueError(f"Invalid PEM format found in first line: {begin_line}")
-
-    # 2. Skip a line if "Proc-Type:" is present
-    idx = 1
-    if lines[idx].startswith(b"Proc-Type:"):
-        idx += 1  # if you want, also parse it to confirm "4,ENCRYPTED"
-
-    # 3. Check the DEK-Info line
-    if not lines[idx].startswith(b"DEK-Info:"):
-        raise ValueError("Missing DEK-Info header")
-    dek_info_line = lines[idx]
-    idx += 1
-
-    # Parse the DEK-Info line
-    _, dek_info = dek_info_line.split(b": ", 1)
-    algo, iv_hex = dek_info.split(b",")
-    if algo not in [b"AES-256-CBC", b"AES-192-CBC", b"AES-128-CBC"]:
-        raise ValueError(f"Unsupported encryption algorithm: {algo}")
-    iv = bytes.fromhex(iv_hex.decode("utf-8"))
-    if len(iv) != 16:
-        raise ValueError("IV must be 16 bytes long")
-
-    if idx < len(lines) and lines[idx].strip() == b"":
-        idx += 1
-
-    base64_lines = []
-    while idx < len(lines):
-        line = lines[idx]
-        if line.startswith(b"-----END "):
-            break
-        base64_lines.append(line)
-        idx += 1
-
-    enc_data = base64.b64decode(b"".join(base64_lines))
-
-    # 6. Decrypt with your derive_and_encrypt_key (which does both encryption/decryption)
-    key_data, _ = derive_and_encrypt_key(password=password, data=enc_data, decrypt=True, iv=iv)
-    return key_data
+    return decrypt_private_key_pkcs8(encrypted_pem=data, password=password)
 
 
 @not_keyword
