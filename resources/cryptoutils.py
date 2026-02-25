@@ -13,9 +13,11 @@ hash-based message authentication codes (HMAC), Galois Message Authentication Co
 and password-based key derivation (PBKDF2).
 """
 
+import base64
 import logging
 import math
 import os
+import textwrap
 from typing import Optional, Tuple, Union
 
 from Crypto.PublicKey import RSA
@@ -33,7 +35,7 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import univ
-from pyasn1_alt_modules import rfc3565, rfc8018, rfc9480, rfc9481
+from pyasn1_alt_modules import rfc3565, rfc5208, rfc8018, rfc9480, rfc9481
 from pyasn1_alt_modules.rfc5084 import GCMParameters
 from robot.api.deco import not_keyword
 from tinyec import registry
@@ -45,13 +47,13 @@ from pq_logic.keys.abstract_wrapper_keys import AbstractHybridRawPublicKey, KEMP
 from pq_logic.keys.composite_kem import CompositeKEMPrivateKey, CompositeKEMPublicKey
 from pq_logic.keys.composite_sig import CompositeSigPrivateKey, CompositeSigPublicKey
 from pq_logic.keys.trad_kem_keys import DHKEMPublicKey, RSADecapKey, RSAEncapKey
-from resources import convertutils, envdatautils, keyutils, oid_mapping
+from resources import convertutils, envdatautils, keyutils, oid_mapping, prepare_alg_ids
 from resources.asn1_structures import KemCiphertextInfoAsn1
 from resources.data_objects import FixedSHAKE128, FixedSHAKE256
 from resources.exceptions import BadAlg, BadAsn1Data, InvalidKeyCombination
 from resources.oid_mapping import compute_hash, get_hash_from_oid, hash_name_to_instance
 from resources.oidutils import AES_CBC_OID_2_NAME, AES_GCM_OID_2_NAME, CURVE_2_COFACTORS, KM_KW_ALG
-from resources.typingutils import ECDHPrivateKey, ECDHPublicKey, SignKey, VerifyKey
+from resources.typingutils import ECDHPrivateKey, ECDHPublicKey, PrivateKey, SignKey, VerifyKey
 
 
 def sign_data(  # noqa D417 undocumented-param
@@ -429,6 +431,81 @@ def compute_password_based_mac(
     signature = compute_hmac(data=data, key=initial_input, hash_alg=mac_hash_alg or hash_alg)
     logging.info("Signature: %s", signature.hex())
     return signature
+
+
+@not_keyword
+def encrypt_private_key_pkcs8(
+    private_key: PrivateKey,
+    password: Union[str, bytes],
+    iterations: int = 600000,
+    salt_length: int = 16,
+    iv_length: int = 16,
+) -> bytes:
+    """Encrypt a private key using PKCS#8 with PBKDF2 and AES-256-CBC.
+
+    Uses RFC structures:
+    - RFC 5208: PKCS#8 (EncryptedPrivateKeyInfo)
+    - RFC 8018: PBES2, PBKDF2
+
+    :param private_key: Private key object supporting `private_bytes`.
+    :param password: Password for encryption (bytes or UTF-8 string).
+    :param iterations: PBKDF2 iteration count. Defaults to 600000.
+    :param salt_length: Salt length in bytes. Defaults to 16.
+    :param iv_length: IV length in bytes. Defaults to 16.
+    :return: PEM-encoded encrypted private key.
+    :raises ValueError: If inputs are invalid.
+    """
+    if isinstance(password, str):
+        password = password.encode("utf-8")
+
+    if not password:
+        raise ValueError("Password must not be empty.")
+
+    if iv_length != 16:
+        raise ValueError("IV length must be 16 bytes for AES-CBC.")
+
+    private_key_der = private_key.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+
+    salt = os.urandom(salt_length)
+    iv = os.urandom(iv_length)
+
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=iterations,
+    )
+    encryption_key = kdf.derive(password)
+
+    encrypted_key = compute_aes_cbc(key=encryption_key, data=private_key_der, iv=iv, decrypt=False)
+
+    kdf_alg_id = prepare_alg_ids.prepare_pbkdf2_alg_id(salt=salt, iterations=iterations, key_length=32, hash_alg="sha256")
+
+    enc_scheme = rfc9480.AlgorithmIdentifier()
+    enc_scheme["algorithm"] = rfc3565.id_aes256_CBC
+    enc_scheme["parameters"] = univ.OctetString(iv)
+
+    pbes2_params = rfc8018.PBES2_params()
+    pbes2_params["keyDerivationFunc"] = kdf_alg_id
+    pbes2_params["encryptionScheme"] = enc_scheme
+
+    pbes2_alg_id = rfc9480.AlgorithmIdentifier()
+    pbes2_alg_id["algorithm"] = rfc8018.id_PBES2
+    pbes2_alg_id["parameters"] = pbes2_params
+
+    encrypted_private_key_info = rfc5208.EncryptedPrivateKeyInfo()
+    encrypted_private_key_info["encryptionAlgorithm"] = pbes2_alg_id
+    encrypted_private_key_info["encryptedData"] = univ.OctetString(encrypted_key)
+
+    encrypted_der = encoder.encode(encrypted_private_key_info)
+    pem_data = base64.b64encode(encrypted_der).decode("ascii")
+    pem_body = "\n".join(textwrap.wrap(pem_data, 64))
+    pem = "-----BEGIN ENCRYPTED PRIVATE KEY-----\n" + pem_body + "\n-----END ENCRYPTED PRIVATE KEY-----\n"
+    return pem.encode("ascii")
 
 
 @not_keyword
