@@ -53,7 +53,7 @@ from resources.data_objects import FixedSHAKE128, FixedSHAKE256
 from resources.exceptions import BadAlg, BadAsn1Data, InvalidKeyCombination
 from resources.oid_mapping import compute_hash, get_hash_from_oid, hash_name_to_instance
 from resources.oidutils import AES_CBC_OID_2_NAME, AES_GCM_OID_2_NAME, CURVE_2_COFACTORS, KM_KW_ALG
-from resources.typingutils import ECDHPrivateKey, ECDHPublicKey, PrivateKey, SignKey, VerifyKey
+from resources.typingutils import ECDHPrivateKey, ECDHPublicKey, SignKey, VerifyKey
 
 
 def sign_data(  # noqa D417 undocumented-param
@@ -435,7 +435,7 @@ def compute_password_based_mac(
 
 @not_keyword
 def encrypt_private_key_pkcs8(
-    private_key: PrivateKey,
+    private_key_der: bytes,
     password: Union[str, bytes],
     iterations: int = 600000,
     salt_length: int = 16,
@@ -447,7 +447,7 @@ def encrypt_private_key_pkcs8(
     - RFC 5208: PKCS#8 (EncryptedPrivateKeyInfo)
     - RFC 8018: PBES2, PBKDF2
 
-    :param private_key: Private key object supporting `private_bytes`.
+    :param private_key_der: DER-encoded private key bytes (PKCS#8 format, unencrypted).
     :param password: Password for encryption (bytes or UTF-8 string).
     :param iterations: PBKDF2 iteration count. Defaults to 600000.
     :param salt_length: Salt length in bytes. Defaults to 16.
@@ -464,12 +464,6 @@ def encrypt_private_key_pkcs8(
     if iv_length != 16:
         raise ValueError("IV length must be 16 bytes for AES-CBC.")
 
-    private_key_der = private_key.private_bytes(
-        encoding=serialization.Encoding.DER,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    )
-
     salt = os.urandom(salt_length)
     iv = os.urandom(iv_length)
 
@@ -483,7 +477,9 @@ def encrypt_private_key_pkcs8(
 
     encrypted_key = compute_aes_cbc(key=encryption_key, data=private_key_der, iv=iv, decrypt=False)
 
-    kdf_alg_id = prepare_alg_ids.prepare_pbkdf2_alg_id(salt=salt, iterations=iterations, key_length=32, hash_alg="sha256")
+    kdf_alg_id = prepare_alg_ids.prepare_pbkdf2_alg_id(
+        salt=salt, iterations=iterations, key_length=32, hash_alg="sha256"
+    )
 
     enc_scheme = rfc9480.AlgorithmIdentifier()
     enc_scheme["algorithm"] = rfc3565.id_aes256_CBC
@@ -506,6 +502,66 @@ def encrypt_private_key_pkcs8(
     pem_body = "\n".join(textwrap.wrap(pem_data, 64))
     pem = "-----BEGIN ENCRYPTED PRIVATE KEY-----\n" + pem_body + "\n-----END ENCRYPTED PRIVATE KEY-----\n"
     return pem.encode("ascii")
+
+
+def decrypt_private_key_pkcs8(
+    encrypted_pem: bytes,
+    password: Union[str, bytes],
+) -> bytes:
+    """Decrypt a PKCS#8 encrypted private key PEM and return the raw DER bytes.
+
+    Reverses :func:`encrypt_private_key_pkcs8`. Supports PBES2 with PBKDF2 and AES-256-CBC.
+
+    :param encrypted_pem: PEM-encoded encrypted private key (``-----BEGIN ENCRYPTED PRIVATE KEY-----``).
+    :param password: Password for decryption (bytes or UTF-8 string).
+    :return: DER-encoded unencrypted private key bytes (PKCS#8 format).
+    :raises ValueError: If the password is empty, or the encryption scheme is unsupported.
+    """
+    if isinstance(password, str):
+        password = password.encode("utf-8")
+
+    if not password:
+        raise ValueError("Password must not be empty.")
+
+    pem_str = encrypted_pem.decode("ascii")
+    pem_lines = [
+        line
+        for line in pem_str.splitlines()
+        if "BEGIN ENCRYPTED PRIVATE KEY" not in line and "END ENCRYPTED PRIVATE KEY" not in line
+    ]
+    encrypted_der = base64.b64decode("".join(pem_lines))
+
+    enc_info, rest = decoder.decode(encrypted_der, rfc5208.EncryptedPrivateKeyInfo())
+    if rest:
+        raise BadAsn1Data("EncryptedPrivateKeyInfo")
+
+    if enc_info["encryptionAlgorithm"]["algorithm"] != rfc8018.id_PBES2:
+        raise ValueError("Unsupported encryption algorithm: only PBES2 is supported.")
+
+    pbes2_params, rest = decoder.decode(enc_info["encryptionAlgorithm"]["parameters"], rfc8018.PBES2_params())
+    if rest:
+        raise BadAsn1Data("PBES2_params")
+
+    if pbes2_params["keyDerivationFunc"]["algorithm"] != rfc8018.id_PBKDF2:
+        raise ValueError("Unsupported KDF: only PBKDF2 is supported.")
+
+    pbkdf2_params = pbes2_params["keyDerivationFunc"]["parameters"]
+    if not isinstance(pbkdf2_params, rfc8018.PBKDF2_params):
+        pbkdf2_params, _ = decoder.decode(pbkdf2_params, rfc8018.PBKDF2_params())
+
+    derived_key = compute_pbkdf2_from_parameter(pbkdf2_params, password)
+
+    enc_scheme_oid = pbes2_params["encryptionScheme"]["algorithm"]
+    if enc_scheme_oid not in AES_CBC_OID_2_NAME:
+        raise ValueError(f"Unsupported encryption scheme: {enc_scheme_oid}. Only AES-CBC is supported.")
+
+    iv_param = pbes2_params["encryptionScheme"]["parameters"]
+    if isinstance(iv_param, univ.Any):
+        iv_param, _ = decoder.decode(iv_param, univ.OctetString())
+    iv = iv_param.asOctets()
+
+    ciphertext = bytes(enc_info["encryptedData"])
+    return compute_aes_cbc(key=derived_key, data=ciphertext, iv=iv, decrypt=True)
 
 
 @not_keyword
