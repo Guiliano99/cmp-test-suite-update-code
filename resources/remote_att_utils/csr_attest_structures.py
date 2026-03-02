@@ -151,6 +151,12 @@ class AttestationStatement(univ.Sequence):
 # Helper: SEQUENCE SIZE (1..MAX) OF AttestationStatement
 # draft-ietf-lamps-csr-attestation-22, Section 4.1, Figure 2
 class AttestationSequence(univ.SequenceOf):
+    """A collection of AttestationStatement objects.
+
+    AttestationSequence ::= SEQUENCE SIZE (1..MAX) OF AttestationStatement
+
+    """
+
     componentType = AttestationStatement()
     subtypeSpec = constraint.ValueSizeConstraint(1, float("inf"))
 
