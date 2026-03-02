@@ -349,27 +349,34 @@ def get_issuing_distribution_point(
 
 
 @not_keyword
+def get_csr_attributes(crs: rfc6402.CertificationRequest) -> univ.SetOf:
+    """Get the attributes from a CSR."""
+    return crs["certificationRequestInfo"]["attributes"]
+
+
+@not_keyword
 def csr_contains_attribute(csr: rfc6402.CertificationRequest, oid: univ.ObjectIdentifier) -> bool:
     """Check if a CSR contains a specific attribute.
 
     :param csr: The CSR to check.
     :param oid: The OID of the attribute to check for.
     """
-    for attr in csr["certificationRequestInfo"]["attributes"]:
+    for attr in get_csr_attributes(csr):
         if attr["attrType"] == oid:
             return True
     return False
 
 
 @not_keyword
-def csr_get_attributes(csr: rfc6402.CertificationRequest, oid: univ.ObjectIdentifier) -> Optional[rfc5652.Attribute]:
+def csr_get_attribute(csr: rfc6402.CertificationRequest, oid: univ.ObjectIdentifier) -> Optional[rfc5652.Attribute]:
     """Get a specific attribute from a CSR.
 
     :param csr: The CSR to get the attribute from.
     :param oid: The OID of the attribute to get.
     :return: The attribute if found, else None.
     """
-    for attr in csr["certificationRequestInfo"]["attributes"]:
+    for attr in get_csr_attributes(csr):
         if attr["attrType"] == oid:
             return attr
     return None
+
