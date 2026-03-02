@@ -23,6 +23,7 @@ from resources.asn1utils import try_decode_pyasn1
 from resources.exceptions import BadAsn1Data
 from resources.oid_mapping import may_return_oid_to_name
 from resources.oidutils import EXTENSION_NAME_2_OID, EXTENSION_OID_2_SPECS
+from resources.remote_att_utils.csr_attest_structures import AttestationBundle, id_aa_attestation
 
 # TODO refactor.
 
@@ -380,3 +381,19 @@ def csr_get_attribute(csr: rfc6402.CertificationRequest, oid: univ.ObjectIdentif
             return attr
     return None
 
+
+def get_csr_attestation_data(csr: rfc6402.CertificationRequest) -> Optional[AttestationBundle]:
+    """Get the attestation bundle from a CSR attribute.
+
+    :param csr: The CSR to get the attestation data from.
+    :return: The attestation bundle if present, else None.
+    """
+    if not csr_contains_attribute(csr, id_aa_attestation):
+        return None
+
+    # Keep this legacy helper as a thin wrapper around the canonical decoder.
+    from resources.remote_attestation_utils import (
+        get_attestation_evidence_attribute,  # pylint: disable=import-outside-toplevel
+    )
+
+    return get_attestation_evidence_attribute(csr)
