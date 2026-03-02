@@ -50,6 +50,8 @@ from pq_logic.tmp_oids import (
     id_altSignatureExt,
     id_altSubPubKeyExt,
     id_ce_deltaCertificateDescriptor,
+    id_it_nonceRequest,
+    id_it_nonceResponse,
     id_relatedCert,
     id_sntrup761,
 )
@@ -69,6 +71,7 @@ from resources.asn1_structures import (
     X520StreetAddressASN1,
     X520TitleASN1,
 )
+from resources.attest_structures import TcgAttestCertify
 
 # In RFC 9480 Certificate Management Protocol (CMP) Updates
 # Are new extended key usages (EKU) defined, which indicate the role the certificate can have.
@@ -846,7 +849,6 @@ ALL_KNOWN_OIDS_2_NAME["id_ecMQV"] = rfc6664.id_ecMQV
 ALL_KNOWN_OIDS_2_NAME.update(ALL_SIG_ALG_OID_2_NAME)
 ALL_KNOWN_OIDS_2_NAME.update(EXTENSION_OID_2_NAME)
 ALL_KNOWN_OIDS_2_NAME.update(COMPOSITE_KEM_OID_2_NAME)
-ALL_KNOWN_NAMES_2_OID = {y: x for x, y in ALL_KNOWN_OIDS_2_NAME.items()}
 
 
 ENC_KEY_AGREEMENT_TYPES_OID_2_NAME = {
@@ -936,3 +938,31 @@ CERT_ATTR_OID_2_CORRECT_STRUCTURE = {
     id_at_streetAddress: X520StreetAddress(),
     id_at_organizationIdentifier: X520OrganizationIdentifier(),
 }
+
+id_cg_attest_tpm_certify = univ.ObjectIdentifier((2, 23, 133, 20, 1))
+
+NONCE_ATTESTATION_OID_2_NAME = {
+    id_it_nonceRequest: "id_remote_attestation_nonceRequest",
+    id_it_nonceResponse: "id_remote_attestation_nonceResponse",
+}
+
+ALL_KNOWN_OIDS_2_NAME.update(NONCE_ATTESTATION_OID_2_NAME)
+
+id_tcg_dice = univ.ObjectIdentifier((2, 23, 133, 5, 4))
+id_tcg_dice_TcbInfo = id_tcg_dice + (1,)
+id_MultiTcbInfo = id_tcg_dice + (5,)
+id_tcg_dice_MultiTcbInfoComp = id_tcg_dice + (7,)
+
+ATTESTATION_TYPE_OID_2_NAME = {
+    id_tcg_dice_TcbInfo: "id_tcg_dice_TcbInfo",
+    id_cg_attest_tpm_certify: "id_tcg_attest_tpm_certify",
+    id_tcg_dice_MultiTcbInfoComp: "id_tcg_dice_MultiTcbInfoComp",
+}
+
+ATTESTATION_TYPE_2_STRUCTURE = {
+    id_cg_attest_tpm_certify: TcgAttestCertify(),
+}
+
+
+ALL_KNOWN_OIDS_2_NAME.update(ATTESTATION_TYPE_OID_2_NAME)
+ALL_KNOWN_NAMES_2_OID = {y: x for x, y in ALL_KNOWN_OIDS_2_NAME.items()}

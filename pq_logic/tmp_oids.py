@@ -466,3 +466,25 @@ COMPOSITE_KEM_NAME_2_OID.update(COMPOSITE_FRODOKEM_NAME_2_OID)
 COMPOSITE_KEM_NAME_2_OID.update(COMPOSITE_KEM_DHKEMRFC9180_NAME_2_OID)
 
 COMPOSITE_KEM_OID_2_NAME = {oid: name for name, oid in COMPOSITE_KEM_NAME_2_OID.items()}
+
+##################################
+# Remote Attestation OIDs
+# Based on draft-ietf-lamps-attestation-freshness-05 and draft-ietf-lamps-csr-attestation-22
+##################################
+
+# InfoType OIDs for CMP General Messages (from draft-ietf-lamps-attestation-freshness-05)
+# Note: These use placeholder values (TBD1, TBD2) pending IANA assignment
+id_it_nonceRequest = rfc9480.id_it + (9997,)  # TBD1 - Nonce request for remote attestation
+id_it_nonceResponse = rfc9480.id_it + (9998,)  # TBD2 - Nonce response for remote attestation
+
+# Attribute OIDs for CSR (from draft-ietf-lamps-csr-attestation-22)
+# id-aa-attestation = { id-aa 59 } where id-aa = 1.2.840.113549.1.9.16.2
+id_aa_attestation = univ.ObjectIdentifier("1.2.840.113549.1.9.16.2.59")  # AttestationBundle in CSR
+
+id_aa_evidence = id_aa_attestation  # AttestationBundle (evidence)
+id_aa_ar = univ.ObjectIdentifier("1.2.840.113549.1.9.16.2.9998")  # Placeholder for attestation result
+
+# Evidence Type OIDs (placeholders - to be defined in respective attestation specifications)
+id_psa_attestation_token_evidence = univ.ObjectIdentifier("1.2.840.113549.1.9.16.2.9999")  # PSA attestation
+id_cca_platform_attestation_token_evidence = univ.ObjectIdentifier("1.2.840.113549.1.9.16.3.1")  # CCA platform
+id_dummy_attest_csr = univ.ObjectIdentifier("1.2.840.113549.1.9.16.2.9997")  # DummyAttestCSR statement type
