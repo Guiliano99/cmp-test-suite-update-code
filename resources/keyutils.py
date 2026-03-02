@@ -46,7 +46,7 @@ from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPrivateKey
 from pq_logic.keys.abstract_wrapper_keys import AbstractCompositePrivateKey
 from pq_logic.keys.composite_sig import CompositeSigPrivateKey
 from pq_logic.keys.kem_keys import MLKEMPrivateKey
-from pq_logic.keys.key_pyasn1_utils import load_enc_key
+from pq_logic.keys.key_pyasn1_utils import CUSTOM_KEY_TYPES, load_enc_key
 from pq_logic.keys.sig_keys import MLDSAPrivateKey, SLHDSAPrivateKey
 from pq_logic.keys.stateful_sig_keys import (
     HSSPrivateKey,
@@ -61,7 +61,7 @@ from pq_logic.keys.trad_kem_keys import RSAEncapKey
 from pq_logic.keys.xwing import XWingPrivateKey
 from pq_logic.tmp_oids import COMPOSITE_SIG_OID_TO_NAME, id_rsa_kem_spki
 from resources import asn1utils, certutils, oid_mapping, prepare_alg_ids, typingutils, utils
-from resources.convertutils import str_to_bytes, subject_public_key_info_from_pubkey
+from resources.convertutils import subject_public_key_info_from_pubkey
 from resources.exceptions import BadAlg, BadAsn1Data, BadCertTemplate, BadSigAlgID, InvalidKeyCombination, UnknownOID
 from resources.oid_mapping import (
     KEY_CLASS_MAPPING,
@@ -402,9 +402,9 @@ def _extract_pem_private_key_block(data: bytes) -> bytes:
     :return: The matched PEM block, or an empty bytes object if not found.
     """
     pem_pattern = re.compile(
-        rb"-----BEGIN ([A-Za-z0-9-]+) PRIVATE KEY-----"
+        rb"-----BEGIN ((?:[A-Za-z0-9-]+ )?PRIVATE KEY)-----"
         rb".*?"
-        rb"-----END \1 PRIVATE KEY-----",
+        rb"-----END \1-----",
         re.DOTALL,
     )
 
@@ -413,6 +413,29 @@ def _extract_pem_private_key_block(data: bytes) -> bytes:
         return match.group(0)
 
     return b""
+
+
+def _load_pem_block_from_file(filepath: str, data: bytes) -> bytes:
+    """Return private key bytes, preferring PEM extraction and falling back to DER decoders.
+
+    Tries to extract a PEM block directly from *data*. When no block is found (e.g. the
+    file contains extra header text or a non-standard wrapper), the function falls back to
+    :func:`utils.load_and_decode_pem_file` and, as a last resort, to
+    :func:`_extract_and_format_key`.
+
+    :param filepath: Path to the original key file (used only for fallback loaders).
+    :param data: Raw bytes read from *filepath*.
+    :return: PEM text bytes when a block is found; otherwise DER bytes from fallback loaders.
+    """
+    pem_block = _extract_pem_private_key_block(data)
+    if pem_block != b"":
+        return pem_block
+
+    # No recognisable PEM block – try the file-based loaders.
+    try:
+        return utils.load_and_decode_pem_file(filepath)
+    except Exception:  # noqa: BLE001
+        return utils.decode_pem_string(_extract_and_format_key(filepath))
 
 
 def load_private_key_from_file(  # noqa: D417 for RF docs
@@ -447,58 +470,32 @@ def load_private_key_from_file(  # noqa: D417 for RF docs
     with open(filepath, "rb") as key_file:
         data = key_file.read()
 
-    out = _extract_pem_private_key_block(data)
-    from pq_logic.keys.key_pyasn1_utils import CUSTOM_KEY_TYPES
+    # Resolve key bytes once. The helper may return PEM text or already-decoded DER bytes.
+    key_bytes = _load_pem_block_from_file(filepath, data)
+    is_pem = key_bytes.lstrip().startswith(b"-----BEGIN")
+    is_encrypted_pem = is_pem and key_bytes.startswith(b"-----BEGIN ENCRYPTED PRIVATE KEY-----")
+    password_bytes = password.encode("utf-8") if password is not None else None
 
-    if out != b"":
-        is_custom = any((b"-----BEGIN " + key + b" PRIVATE KEY-----") in out for key in CUSTOM_KEY_TYPES)
-        if is_custom:
-            if password is not None:
-                out = load_enc_key(password=password, data=out)
-            else:
-                out = utils.decode_pem_string(out)
+    der_key_data = utils.decode_pem_string(key_bytes) if is_pem else key_bytes
+    is_custom_pem = is_pem and any((b"-----BEGIN " + key + b" PRIVATE KEY-----") in key_bytes for key in CUSTOM_KEY_TYPES)
 
-            return pq_logic.combined_factory.CombinedKeyFactory.load_private_key_from_one_asym_key(data=out)
-
-    pem_data = utils.load_and_decode_pem_file(filepath)
+    if is_custom_pem and not is_encrypted_pem:
+        return pq_logic.combined_factory.CombinedKeyFactory.load_private_key_from_one_asym_key(data=der_key_data)
 
     try:
-        # try to load the key with the password.
-        if password is not None:
-            password = str_to_bytes(password)  # type: ignore
-        return serialization.load_der_private_key(data=pem_data, password=password)  # type: ignore
+        return serialization.load_der_private_key(data=der_key_data, password=password_bytes)  # type: ignore[return-value]
+    except TypeError:
+        # Accept unencrypted keys even if callers keep the default password argument.
+        if password_bytes is not None:
+            return serialization.load_der_private_key(data=der_key_data, password=None)  # type: ignore[return-value]
+        raise
     except ValueError:
-        pass
-
-    try:
-        # The reuse tool will also look for its marker in the entire body of the
-        # file, not just the header - so in the line below it would've been
-        # triggered because `in pem_data:` is not a valid license name.
-        # Hence we don't include the complete marker, but only its prefix.
-        if b"SPDX-License" in pem_data:
-            pem_data2 = _extract_and_format_key(filepath)
-        else:
-            pem_data2 = pem_data
-    except ValueError:
-        pem_data2 = pem_data
-
-    is_custom = any((b"-----BEGIN " + key + b" PRIVATE KEY-----") in pem_data2 for key in CUSTOM_KEY_TYPES)
-    logging.info("is_custom:", is_custom)
-    if is_custom:
-        pem_data = pem_data.replace(b"\r", b"\n")
-        if password is not None:
-            pem_data = load_enc_key(password=password, data=pem_data2)
-
-        return pq_logic.combined_factory.CombinedKeyFactory.load_private_key_from_one_asym_key(data=pem_data)
-
-    if password is not None:
-        password = str_to_bytes(password)  # type: ignore
-
-    private_key = serialization.load_der_private_key(
-        pem_data,
-        password=password,  # type: ignore
-    )
-    return private_key
+        if is_encrypted_pem:
+            if password is None:
+                raise ValueError("The provided key file is encrypted, but no password was given for decryption.")
+            der_data = load_enc_key(password=password, data=key_bytes)
+            return pq_logic.combined_factory.CombinedKeyFactory.load_private_key_from_one_asym_key(data=der_data)
+        return pq_logic.combined_factory.CombinedKeyFactory.load_private_key_from_one_asym_key(data=der_key_data)
 
 
 def load_public_key_from_file(filepath: str) -> PublicKey:  # noqa: D417 for RF docs
@@ -1215,7 +1212,7 @@ def _prepare_spki_for_kga(
             spki["algorithm"]["parameters"]["namedCurve"] = rfc5480.secp256r1
 
     if key_name is not None:
-        key = pq_logic.combined_factory.CombinedKeyFactory.generate_key(key_name).public_key()
+        key = generate_key(key_name).public_key()
         spki_tmp = subject_public_key_info_from_pubkey(
             public_key=key,  # type: ignore[AssignmentTypeError]
             use_rsa_pss=use_pss,
