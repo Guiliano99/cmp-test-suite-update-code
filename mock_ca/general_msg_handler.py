@@ -15,8 +15,9 @@ from pyasn1.type.base import Asn1Type
 from pyasn1_alt_modules import rfc3565, rfc5280, rfc9480, rfc9481
 from pyasn1_alt_modules.rfc9480 import InfoTypeAndValue
 
+from mock_ca.remote_attestation_handler import RemoteAttestationHandler
 from mock_ca.rev_handler import RevocationHandler
-from pq_logic.tmp_oids import id_it_KemCiphertextInfo
+from pq_logic.tmp_oids import id_it_KemCiphertextInfo, id_it_nonceRequest
 from resources import cmputils, keyutils
 from resources.asn1_structures import (
     AlgorithmIdentifiers,
@@ -52,6 +53,7 @@ from resources.oidutils import (
 )
 from resources.prepare_alg_ids import get_all_supported_ecc_alg_ids, prepare_alg_id
 from resources.protectionutils import get_protection_type_from_pkimessage
+from resources.remote_att_utils.attest_nonce_freshness_structures import NonceRequestValueASN1
 from resources.typingutils import EnvDataPrivateKey, SignKey
 from resources.utils import get_openssl_name_notation
 from unit_tests.utils_for_test import compare_pyasn1_objects, try_decode_pyasn1
@@ -144,6 +146,7 @@ class GeneralMessageHandler:
         self.crl_url = crl_url
         self.supports_implicit_confirm = True
         self.known_cert_profiles = ["base"]
+        self.remote_att_handler = RemoteAttestationHandler()
 
     def _check_general_message(self, pki_message: PKIMessageTMP) -> None:
         """Check the general message."""
@@ -265,6 +268,9 @@ class GeneralMessageHandler:
 
         if oid == rfc9480.id_it_certProfile:
             return self._process_cert_profile(entry), "The certificate profile is not implemented."
+
+        if oid == univ.ObjectIdentifier("1.2.840.113549.1.9.16.2.8888") or oid == id_it_nonceRequest:
+            return self._process_get_nonce_request(entry, pki_message=pki_message)
 
         raise NotImplementedError(f"The processing of the info type {entry['infoType']} is not implemented.")
 
@@ -748,3 +754,27 @@ class GeneralMessageHandler:
 
         logging.warning("The shared secret was not found, for the transaction ID: %s", tx_id)
         return False
+
+    def _process_get_nonce_request(
+        self, entry: rfc9480.InfoTypeAndValue, pki_message: PKIMessageTMP
+    ) -> Tuple[rfc9480.InfoTypeAndValue, str]:
+        """Process the get nonce request.
+
+        :param entry: The entry to process.
+        :param pki_message: The PKI message containing the entry.
+        :return: The info type and value with the prepared NonceResponseValue, text message.
+        """
+        # GenMsg: {id-it TBD1}, NonceRequestValue
+        # GenRep: {id-it TBD2}, NonceResponseValue | < absent >
+        logging.debug("Processing nonce request entry: %s", entry.prettyPrint())
+
+        if not entry["infoValue"].isValue:
+            raise BadRequest("The info value for the nonce request is not set.")
+
+        nonce_requests = _try_decode_mock_ca(entry["infoValue"], NonceRequestValueASN1())  # type: ignore
+        nonce_requests: NonceRequestValueASN1
+        logging.debug("Decoded nonce requests: %s", nonce_requests.prettyPrint())
+        return self.remote_att_handler.process_attr_type_and_value_entry(
+            nonce_requests,
+            pki_message["header"]["transactionID"].asOctets(),
+        ), "The nonce response value is prepared."

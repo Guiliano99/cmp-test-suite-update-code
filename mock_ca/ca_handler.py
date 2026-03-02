@@ -116,7 +116,7 @@ from resources.protectionutils import (
 )
 from resources.suiteenums import ProtectedType
 from resources.typingutils import ECDHPrivateKey, EnvDataPrivateKey, PublicKey, SignKey, VerifyKey
-from resources.utils import load_and_decode_pem_file
+from resources.utils import load_and_decode_pem_file, log_asn1
 from unit_tests.utils_for_test import load_ca_cert_and_key, load_env_data_certs
 
 
@@ -1536,17 +1536,17 @@ def handle_issuing() -> Response:
     try:
         data = request.get_data()
         pki_message = parse_pkimessage(data)
+        logging.debug("Received PKI message: %s", pki_message.prettyPrint())
+        log_asn1(pki_message)
     except ValueError:
         e = BadAsn1Data("Error: Could not decode the request", overwrite=True)
         pki_message = handler.build_error_from_exception(e)
         return _build_response(pki_message, status=400)
 
     try:
-        # Access the raw data from the request body
         response = handler.process_normal_request(pki_message)
         return _build_response(response, for_msg=True)
     except Exception as e:  # pylint: disable=broad-except
-        # Handle any errors gracefully
         return Response(f"Error: {str(e)}", status=500, content_type="text/plain")
 
 
@@ -1558,9 +1558,7 @@ def handle_chameleon():
     """
     data = request.get_data()
     pki_message = parse_pkimessage(data)
-    pki_message = handler.process_chameleon(
-        pki_message=pki_message,
-    )
+    pki_message = handler.process_chameleon(pki_message=pki_message)
     return _build_response(pki_message)
 
 
@@ -1572,9 +1570,7 @@ def handle_sun_hybrid():
     """
     data = request.get_data()
     pki_message = parse_pkimessage(data)
-    response = handler.process_sun_hybrid(
-        pki_message=pki_message,
-    )
+    response = handler.process_sun_hybrid(pki_message=pki_message)
     return _build_response(response)
 
 
@@ -1585,11 +1581,8 @@ def handle_multi_auth():
     :return: The DER-encoded response.
     """
     data = request.get_data()
-
     pki_message = parse_pkimessage(data)
-    pki_message = handler.process_multi_auth(
-        pki_message=pki_message,
-    )
+    pki_message = handler.process_multi_auth(pki_message=pki_message)
     return _build_response(pki_message)
 
 
@@ -1639,6 +1632,10 @@ def handle_catalyst_issuing():
     pki_message = parse_pkimessage(data)
     pki_message = handler.process_catalyst_issuing(pki_message)
     return _build_response(pki_message)
+
+
+# Register /genm as an alias for handle_issuing without a redundant wrapper function.
+app.add_url_rule("/genm", endpoint="handle_genm", view_func=handle_issuing, methods=["POST"])
 
 
 if __name__ == "__main__":
