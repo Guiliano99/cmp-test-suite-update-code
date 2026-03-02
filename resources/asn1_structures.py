@@ -6,12 +6,14 @@
 
 Will be removed as soon as the draft becomes an RFC.
 """
+
 from typing import TypeAlias
+
 from pkilint.itu.x520_name import ub_business_category, ub_postal_code, ub_street_address
 from pyasn1.type import char, constraint, namedtype, tag, univ
-from pyasn1_alt_modules import rfc5280, rfc5652, rfc9480
+from pyasn1_alt_modules import rfc5280, rfc9480
 
-from resources.remote_att_utils import attest_structures, attest_nonce_freshness_structures, csr_attest_structures
+from resources.remote_att_utils import attest_nonce_freshness_structures, attest_structures, csr_attest_structures
 
 
 class OIDs(univ.SequenceOf):
@@ -576,7 +578,6 @@ AttestationBundle: TypeAlias = csr_attest_structures.AttestationBundle
 
 ## Nonce Freshness
 # https://datatracker.ietf.org/doc/draft-ietf-lamps-attestation-freshness/
-
 
 
 NonceResponseASN1: TypeAlias = attest_nonce_freshness_structures.NonceResponseASN1
