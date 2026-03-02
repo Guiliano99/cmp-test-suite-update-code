@@ -6,10 +6,12 @@
 
 Will be removed as soon as the draft becomes an RFC.
 """
-
+from typing import TypeAlias
 from pkilint.itu.x520_name import ub_business_category, ub_postal_code, ub_street_address
 from pyasn1.type import char, constraint, namedtype, tag, univ
-from pyasn1_alt_modules import rfc5280, rfc9480
+from pyasn1_alt_modules import rfc5280, rfc5652, rfc9480
+
+from resources.remote_att_utils import attest_structures, attest_nonce_freshness_structures, csr_attest_structures
 
 
 class OIDs(univ.SequenceOf):
@@ -558,3 +560,50 @@ class X520OrganizationNameASN1(X520nameASN1):
     """Defines the ASN.1 structure for the `X520OrganizationName`."""
 
     size_max = rfc5280.ub_organization_name
+
+
+###########################
+# Remote Attestation
+###########################
+
+## CSR Attestation
+# https://datatracker.ietf.org/doc/html/draft-ietf-lamps-csr-attestation-22
+
+AttestationStatement: TypeAlias = csr_attest_structures.AttestationStatement
+AttestationSequence: TypeAlias = csr_attest_structures.AttestationSequence
+AttestCertSequence: TypeAlias = csr_attest_structures.AttestCertSequence
+AttestationBundle: TypeAlias = csr_attest_structures.AttestationBundle
+
+## Nonce Freshness
+# https://datatracker.ietf.org/doc/draft-ietf-lamps-attestation-freshness/
+
+
+
+NonceResponseASN1: TypeAlias = attest_nonce_freshness_structures.NonceResponseASN1
+NonceRequestValueASN1: TypeAlias = attest_nonce_freshness_structures.NonceRequestValueASN1
+
+NonceRequestASN1: TypeAlias = attest_nonce_freshness_structures.NonceRequestASN1
+NonceRequestValueASN1: TypeAlias = attest_nonce_freshness_structures.NonceRequestValueASN1
+
+## Specific Remote Attestation structures
+
+
+TcgAttestCertify = attest_structures.TcgAttestCertify
+
+
+### Dummy Format
+
+
+class DummyAttestCSR(univ.Sequence):
+    """Defines the ASN.1 structure for `DummyAttestCSR`.
+
+    DummyAttestCSR ::= SEQUENCE {
+        algId   AlgorithmIdentifier,
+        mac     BIT STRING
+    }
+    """
+
+    componentType = namedtype.NamedTypes(
+        namedtype.NamedType("algId", rfc5280.AlgorithmIdentifier()),
+        namedtype.NamedType("mac", univ.BitString()),
+    )
