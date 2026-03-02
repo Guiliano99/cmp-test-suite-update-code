@@ -115,7 +115,20 @@ SPDX-License-Identifier: Apache-2.0
 | get_root_ca_cert_update| Description not provided.                                                                     |
 
 ---
+#### Remote Attestation & Nonce Freshness
 
+| Tag                  | Description                                                                                     |
+|----------------------|-------------------------------------------------------------------------------------------------|
+| nonce-freshness      | Tests for remote attestation nonce handling based on draft-ietf-lamps-attestation-freshness.   |
+| remote-attestation   | Tests related to remote attestation evidence and verification in CSRs.                          |
+| nonce_length         | Tests validating nonce length requirements (minimum 64 bits entropy).                           |
+| nonce-order          | Tests verifying that nonce request/response order is preserved.                                 |
+| nonce-expiry         | Tests for nonce expiration time validation.                                                     |
+| nonce-reuse          | Tests ensuring nonces are unique and not reused.                                                |
+| nonce_entropy        | Tests validating nonce randomness and entropy requirements.                                     |
+| psa_verifiers        | Tests specific to PSA (Platform Security Architecture) attestation verifiers.                   |
+
+---
 #### Extras
 
 | Tag               | Description                                                                                         |
