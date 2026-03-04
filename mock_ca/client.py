@@ -12,16 +12,16 @@ import requests
 from pyasn1.codec.der import decoder, encoder
 from pyasn1_alt_modules import rfc9480
 
+sys.path.append(".")
+
+from resources import cmputils, keyutils, protectionutils
+from resources.asn1_structures import PKIMessageTMP
 from resources.certutils import build_cmp_chain_from_pkimessage
+from resources.cmputils import build_cmp_revoke_request, parse_pkimessage
 from resources.convertutils import ensure_is_sign_key
 from resources.protectionutils import protect_pkimessage
 from resources.typingutils import SignKey
 from resources.utils import display_pki_status_info
-
-sys.path.append(".")
-from resources import cmputils, keyutils, protectionutils
-from resources.asn1_structures import PKIMessageTMP
-from resources.cmputils import build_cmp_revoke_request, parse_pkimessage
 
 
 def send_request_to_static_cert1() -> None:
