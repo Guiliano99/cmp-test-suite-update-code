@@ -18,7 +18,7 @@ Reference: https://datatracker.ietf.org/doc/html/draft-ietf-lamps-csr-attestatio
 from typing import List, Union
 
 from pyasn1.type import constraint, namedtype, tag, univ
-from pyasn1_alt_modules import rfc2986, rfc9480
+from pyasn1_alt_modules import rfc9480
 
 # ---------------------------------------------------------------------------
 # Object Identifier
@@ -27,21 +27,6 @@ from pyasn1_alt_modules import rfc2986, rfc9480
 # id-aa-attestation OBJECT IDENTIFIER ::= { id-aa 59 }
 # draft-ietf-lamps-csr-attestation-22, Section 4.3
 id_aa_attestation = univ.ObjectIdentifier((1, 2, 840, 113549, 1, 9, 16, 2, 59))
-
-# ---------------------------------------------------------------------------
-# AttestAttrSet / Attributes helper
-# ---------------------------------------------------------------------------
-
-
-# AttestAttrSet ATTRIBUTE ::= { ... }  -- None defined in this document
-# Modelled as a SET OF Attribute (rfc2986.Attribute) per the ASN.1 Information
-# Object Class ATTRIBUTE convention used in the draft.
-# draft-ietf-lamps-csr-attestation-22, Section 4.1
-class AttestAttrSet(univ.SetOf):
-    """Set of additional attributes for an AttestationStatement (open type)."""
-
-    componentType = rfc2986.Attribute()
-
 
 # ---------------------------------------------------------------------------
 # OtherCertificateFormat
@@ -102,10 +87,8 @@ class LimitedCertChoices(univ.Choice):
 
 # AttestationStatement ::= SEQUENCE {
 #     type           ATTESTATION-STATEMENT.&id({AttestationStatementSet}),
-#     bindsPublicKey [0] BOOLEAN DEFAULT TRUE,
 #     stmt           ATTESTATION-STATEMENT.&Type(
-#                        {AttestationStatementSet}{@type}),
-#     attrs          [1] Attributes {{AttestAttrSet}} OPTIONAL
+#                        {AttestationStatementSet}{@type})
 # }
 # draft-ietf-lamps-csr-attestation-22, Section 4.1, Figure 1
 class AttestationStatement(univ.Sequence):
@@ -113,33 +96,11 @@ class AttestationStatement(univ.Sequence):
 
     The 'stmt' field carries the raw attestation payload as an open type.
     Formats that are not ASN.1-encoded MUST be wrapped in an OCTET STRING.
-    The 'attrs' field carries supplementary attributes that inform verification
-    of 'stmt'; no attribute types are defined by this draft.
     """
 
     componentType = namedtype.NamedTypes(
         namedtype.NamedType("type", univ.ObjectIdentifier()),
-        namedtype.DefaultedNamedType(
-            "bindsPublicKey",
-            univ.Boolean(True).subtype(
-                implicitTag=tag.Tag(
-                    tag.tagClassContext,
-                    tag.tagFormatSimple,
-                    0,
-                )
-            ),
-        ),
         namedtype.NamedType("stmt", univ.Any()),
-        namedtype.OptionalNamedType(
-            "attrs",
-            AttestAttrSet().subtype(
-                implicitTag=tag.Tag(
-                    tag.tagClassContext,
-                    tag.tagFormatConstructed,
-                    1,
-                )
-            ),
-        ),
     )
 
 
@@ -178,8 +139,7 @@ class AttestCertSequence(univ.SequenceOf):
 class AttestationBundle(univ.Sequence):
     """Container carried in a PKCS#10 attribute or CRMF extension.
 
-    'attestations' holds one or more AttestationStatement objects; at least
-    one SHOULD be cryptographically bound to the CSR's public key.
+    'attestations' holds one or more AttestationStatement objects.
     'certs' is an unordered collection of certificates that may be needed
     to validate any of the AttestationStatement instances.
     """
@@ -208,16 +168,12 @@ def _prepare_stmt(stmt: Union[univ.Sequence, bytes]) -> Union[univ.Sequence, uni
 def prepare_attestation_statement(
     stmt_id: univ.ObjectIdentifier,
     stmt: Union[univ.Sequence, bytes],
-    attest_attrs: Union[AttestAttrSet, univ.SetOf] | None = None,
-    binds_public_key: bool = True,
 ) -> AttestationStatement:
     """Prepare an `AttestationStatement` structure for a CSR attribute.
 
     Args:
         stmt_id: OID identifying the attestation statement format.
         stmt: Statement payload as ASN.1 object or raw DER bytes.
-        attest_attrs: Optional supplementary attributes for verification.
-        binds_public_key: Whether the statement binds to the CSR public key.
 
     Returns:
         A populated `AttestationStatement`.
@@ -234,14 +190,6 @@ def prepare_attestation_statement(
           to include an already-constructed ASN.1 object, or pass `bytes`
           containing a DER-encoded blob; bytes are wrapped in `univ.Any` via
           `_prepare_stmt`.
-        - `attest_attrs`: Optional supplementary attributes that assist
-          verification of `stmt`.  Must be an `AttestAttrSet` or a
-          `univ.SetOf` whose elements will be appended to the `attrs` field.
-          Pass `None` (default) to omit the optional `attrs` field entirely.
-        - `binds_public_key`: When `True` (default), the resulting statement
-          asserts that the evidence is cryptographically bound to the public
-          key in the enclosing CSR.  Set to `False` only for supplementary
-          statements (e.g. endorsement certificates) that do not bind the key.
 
     Returns:
     -------
@@ -256,17 +204,12 @@ def prepare_attestation_statement(
     Examples:
     --------
     | ${stmt}= | Prepare Attestation Statement | ${oid} | ${der_bytes} |
-    | ${stmt}= | Prepare Attestation Statement | ${oid} | ${der_bytes} | binds_public_key=False |
-    | ${stmt}= | Prepare Attestation Statement | ${oid} | ${sequence} | attest_attrs=${attrs} |
+    | ${stmt}= | Prepare Attestation Statement | ${oid} | ${sequence} |
 
     """
     attestation_statement = AttestationStatement()
     attestation_statement["type"] = stmt_id
     attestation_statement["stmt"] = _prepare_stmt(stmt)
-    if attest_attrs is not None:
-        attestation_statement["attrs"].extend(attest_attrs)
-
-    attestation_statement["bindsPublicKey"] = binds_public_key
     return attestation_statement
 
 
@@ -306,9 +249,7 @@ def prepare_attestation_bundle(
     Arguments:
     ---------
         - `attestations`: Non-empty list of `AttestationStatement` objects to
-          include in the `attestations` field.  At least one statement SHOULD
-          be cryptographically bound to the public key in the enclosing CSR
-          (i.e. its `bindsPublicKey` field must be `True`).
+          include in the `attestations` field.
         - `certs`: Optional list of `LimitedCertChoices` objects (X.509
           certificates or other certificate formats) that may be needed to
           validate one or more of the `AttestationStatement` instances.  Pass
@@ -335,46 +276,6 @@ def prepare_attestation_bundle(
     if certs is not None:
         bundle["certs"].extend(_parse_certs_to_limited_choices(certs))  # type: ignore
     return bundle
-
-
-def prepare_attest_attr_set(attrs: list[rfc2986.Attribute] | AttestAttrSet) -> AttestAttrSet:
-    """Prepare an `AttestAttrSet` structure for an `AttestationStatement`.
-
-    Args:
-        attrs: Attributes to copy into the returned `AttestAttrSet`.
-
-    Returns:
-        A populated `AttestAttrSet`.
-
-    Copies all elements from the provided iterable into a new `AttestAttrSet`.
-    The resulting set is intended to be passed to `prepare_attestation_statement`
-    via its `attest_attrs` argument and will be encoded in the optional `attrs`
-    field of the resulting `AttestationStatement`.
-
-    Arguments:
-    ---------
-        - `attrs`: A list of `rfc2986.Attribute` objects (or an existing
-          `AttestAttrSet`) whose elements will be copied into the returned
-          `AttestAttrSet`.  Each element must be a fully populated
-          `rfc2986.Attribute` instance.
-
-    Returns:
-    -------
-        - A populated `AttestAttrSet` containing all elements from `attrs`.
-
-    Raises:
-    ------
-        - No explicit exceptions are raised; invalid pyasn1 assignments will
-          propagate as `pyasn1` errors from the underlying library.
-
-    Examples:
-    --------
-    | ${attr_set}= | Prepare Attest Attr Set | ${raw_attrs} |
-
-    """
-    attest_attr_set = AttestAttrSet()
-    attest_attr_set.extend(attrs)
-    return attest_attr_set
 
 
 def get_attestation_bundle_certs(attestation_bundle: AttestationBundle) -> List[rfc9480.CMPCertificate]:
