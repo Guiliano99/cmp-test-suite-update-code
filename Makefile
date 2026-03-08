@@ -4,6 +4,8 @@
 
 help:
 	@echo  'Commands:'
+	@echo  '  setup         - Set up the python environment (creating env. and install dependencies)'
+	@echo  '  setup-dev     - Set up the python environment for development (creating env. and install dependencies, including dev dependencies)'
 	@echo  '  test         - Run all compliance tests (results will be in reports/)'
 	@echo  '  test-verbose - Run all compliance tests, including verbose tests (results will be in reports/)'
 	@echo  '  test-pq-hybrid         - Run all PQ and Hybrid compliance tests (results will be in reports/)'
@@ -22,6 +24,15 @@ help:
 	@echo  '  test-mock-ca-verbose   -  Run all tests against the mock CA server '
 	@echo  ''
 
+setup:
+	@echo "Setting up the python environment..."
+	chmod +x scripts/setup.sh
+	./scripts/setup.sh
+
+setup-dev:
+	@echo "Setting up the python environment for development (including dev dependencies)..."
+	chmod +x scripts/setup.sh
+	./scripts/setup.sh dev=1
 
 # By default, run the tests against the local environment from config/local.robot
 # You can override it, e.g., `make test env=cloudpki`
