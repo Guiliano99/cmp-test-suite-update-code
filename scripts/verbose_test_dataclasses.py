@@ -58,15 +58,20 @@ ALL_REQUEST_BODY_NAMES = [
 
 def get_body_name_tags(body_name: str) -> List[str]:
     """Return tags based on the body name."""
+
+    add_tag = []
+    if "ccr" in body_name:
+        add_tag.append("cmp")
+
     if body_name in ["added-protection", "batch"]:
-        return ["nested", body_name]
+        return ["nested", body_name] + add_tag
     if body_name.startswith("added-protection-inner-"):
         inner = body_name.replace("added-protection-inner-", "")
-        return ["nested", "added-protection", inner]
+        return ["nested", "added-protection", inner]  + add_tag
     if body_name.startswith("batch-inner-"):
         inner = body_name.replace("batch-inner-", "")
-        return ["nested", "batch", inner]
-    return [body_name]
+        return ["nested", "batch", inner]  + add_tag
+    return [body_name]  + add_tag
 
 
 class AbstractTestCase(ABC):
