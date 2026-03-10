@@ -20,6 +20,9 @@ ${INITIAL_KEY_PASSWORD}   ${None}
 
 # Test the LWCMP version.
 ${LWCMP}   ${True}
+# Supported CMP protocol versions (comma-separated or single number, e.g., "2,3" or "3").
+# Used to skip tests for versions that are supported by the CA.
+${SUPPORTED_VERSIONS}   2,3
 # Whether to enforce the algorithm to be set in the
 # Algorithm Profile RFC9481.
 # Does not affect the PQ signature algorithms.
