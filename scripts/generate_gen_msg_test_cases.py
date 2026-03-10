@@ -42,6 +42,52 @@ MAC_BODY_NAMES = [
     "batch_inner_p10cr",
 ]
 
+def _generate_bad_pvno_test_cases(allowed_versions: List[int]) -> List[TestCase]:
+    """Generate test cases for bad version validation."""
+    body_names = ALL_BODY_NAMES
+    allowed_versions = allowed_versions
+    test_cases = []
+    description = "A PKIMessage **MUST** have the `version` field set to 2.\nRef: RFC 9483, Section 3.1."
+    for case, func, arg, failinfo in [
+        (
+            "CA MUST Reject {} With PVNO Set To -1",
+            "Build With Bad Version",
+            "-1",
+            "UnsupportedVersion",
+        ),
+        (
+            "CA MUST Reject {} With PVNO Set To 0",
+            "Build With Bad Version",
+            "0",
+            "UnsupportedVersion",
+        ),
+        (
+            "CA MUST Reject {} With PVNO Set To Not Defined Value",
+            "Build With Bad Version",
+            str(max(allowed_versions) + 1),
+            "UnsupportedVersion",
+        ),
+        (
+            "CA MUST Reject {} With PVNO Set To Too Large Int",
+            "Build With Bad Version",
+            str(2**31),
+            "badDataFormat",
+        ),
+
+    ]:
+        for body_name in body_names:
+            tags = get_body_name_tags(body_name)
+
+            test_case = TestCase(
+                name=case.format(body_name.upper()),
+                args=[[body_name, arg, failinfo]],
+                description=description,
+                tags=["negative", "pvno"] + tags,
+                functions=[func],
+            )
+            test_cases.append(test_case)
+    return test_cases
+
 
 def _generate_sender_nonce_test_cases() -> List[TestCase]:
     """Generate test cases for sender nonce validation."""
@@ -420,7 +466,8 @@ def _generate_mac_wrong_integrity_test_cases() -> List[TestCase]:
 
 def generate_test_case() -> List[str]:
     """Generate all test cases for the CMP `PKIHeader` validation."""
-    out = _generate_sender_nonce_test_cases()
+    out = _generate_bad_pvno_test_cases([1,2,3])
+    out += _generate_sender_nonce_test_cases()
     out += _generate_recip_nonce_test_cases()
     out += _generate_transaction_id_test_cases()
     out += _generate_message_time_test_cases()
