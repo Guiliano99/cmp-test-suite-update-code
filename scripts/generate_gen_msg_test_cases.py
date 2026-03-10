@@ -53,19 +53,19 @@ def _generate_bad_pvno_test_cases(allowed_versions: List[int]) -> List[TestCase]
             "CA MUST Reject {} With PVNO Set To -1",
             "Build With Bad Version",
             "-1",
-            "UnsupportedVersion",
+            "unsupportedVersion",
         ),
         (
             "CA MUST Reject {} With PVNO Set To 0",
             "Build With Bad Version",
             "0",
-            "UnsupportedVersion",
+            "unsupportedVersion",
         ),
         (
             "CA MUST Reject {} With PVNO Set To Not Defined Value",
             "Build With Bad Version",
             str(max(allowed_versions) + 1),
-            "UnsupportedVersion",
+            "unsupportedVersion",
         ),
         (
             "CA MUST Reject {} With PVNO Set To Too Large Int",
