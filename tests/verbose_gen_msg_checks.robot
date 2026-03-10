@@ -483,6 +483,13 @@ Validate Negative Response
     Check For Resource Minimizing    ${body_name}
     PKIStatusInfo Failinfo Bit Must Be    ${response}   ${failinfo}   ${exclusive}
 
+Build With Bad Version
+     [Documentation]    Build requests with bad version
+     [Arguments]    ${body_name}   ${pvno}   ${failinfo}
+     ${body}=  Build Body By Name    ${body_name}   sender,senderKID   pvno=${pvno}
+     ${response}=   Exchange PKIMessage    ${body}
+     Validate Negative Response   ${response}   ${body_name}   ${failinfo}   True
+
 Build Without senderNonce
     [Documentation]    Build requests with bad sender nonce
     [Arguments]    ${body_name}
@@ -713,6 +720,30 @@ Build Message For Negative Header Validation
 
 
 *** Test Cases ***
+CA MUST Reject IR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    ir
+     Build With Bad Version    ir    -1    UnsupportedVersion
+
+CA MUST Reject IR With PVNO Set To 0
+    [Documentation]    A PKIMessage **MUST** have the `version` field set to 2.
+    ...    Ref: RFC 9483, Section 3.1.
+    [Tags]    negative    pvno    ir
+    Build With Bad Version    ir    0    UnsupportedVersion
+
+CA MUST Reject IR With PVNO Set To Not Defined Value
+    [Documentation]    A PKIMessage **MUST** have the `version` field set to 2.
+    ...    Ref: RFC 9483, Section 3.1.
+    [Tags]    negative    pvno    ir
+    Build With Bad Version    ir    4    UnsupportedVersion
+
+CA MUST Reject IR With PVNO Set To Too Large Int
+    [Documentation]    A PKIMessage **MUST** have the `version` field set to 2.
+    ...    Ref: RFC 9483, Section 3.1.
+    [Tags]    negative    pvno    ir
+    Build With Bad Version    ir    2147483648    badDataFormat
+
 CA MUST Reject IR Without SenderNonce
      [Documentation]    A PKIMessage **MUST** have a `senderNonce` set which is 16-Bytes long. Ref: RFC 9483, Section 3.1.
      [Tags]    negative    senderNonce    ir
