@@ -233,8 +233,9 @@ def prepare_pki_message(
     if "messageTime" not in to_exclude:
         if message_time is None:
             # the date is not correctly converted, so that it could happen for test cases,
-            # that the messageTime is in the future. So a slightly older time is used
-            date_time = datetime.now(timezone.utc) - timedelta(seconds=3)
+            # that the messageTime is in the future. So a slightly older time is used.
+            # This error occurs for WSL2.0!
+            date_time = datetime.now(timezone.utc) - timedelta(seconds=6)
             message_time = useful.GeneralizedTime().fromDateTime(date_time)
 
         msg_time_obj = prepareutils.convert_to_generalized_time(
