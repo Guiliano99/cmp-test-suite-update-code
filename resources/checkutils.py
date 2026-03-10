@@ -47,6 +47,7 @@ from resources.exceptions import (
     BadValueBehavior,
     BodyRelevantError,
     CMPTestSuiteError,
+    UnsupportedVersion,
 )
 from resources.oid_mapping import (
     get_hash_from_oid,
@@ -1566,6 +1567,26 @@ def validate_sender_and_recipient(  # noqa D417 undocumented-param
             raise ValueError(f"Recipient mismatch, we sent from {request_sender}, we got {response_recipient}")
 
 
+@not_keyword
+def validate_pkimessage_pvno(
+    pkimessage: PKIMessageTMP,
+) -> None:
+    """Validate the `pvno` field in the PKIMessage header to ensure it is set to a supported version.
+
+    :param pkimessage: The PKIMessage object containing the `pvno` field to be validated.
+    :raises UnsupportedVersion: If the `pvno` field is not set to either 2 or 3.
+    :raises BadDataFormat: If the `pvno` field is greater than the maximum integer value allowed.
+    """
+    pvno = int(pkimessage["header"]["pvno"])
+    if pvno > (2**64 - 1):
+        raise BadDataFormat(f"The pvno of the PKIMessage was greater than an int is allowed to be. {pvno}")
+
+    if int(pkimessage["header"]["pvno"]) not in [2, 3]:
+        raise UnsupportedVersion(
+            f"Header version is {pkimessage['header']['pvno']}. Only versions 2 and 3 are supported."
+        )
+
+
 @keyword(name="Validate PKIMessage Header")
 def validate_pkimessage_header(  # noqa D417 undocumented-param
     pki_message_response: PKIMessageTMP,
@@ -1598,7 +1619,8 @@ def validate_pkimessage_header(  # noqa D417 undocumented-param
 
     Raises:
     ------
-        - `ValueError`: The protocol version is not set to 2 or 3.
+        - `UnsupportedVersion`: The protocol version is not set to 2 or 3.
+        - `BadDataFormat`: The protocol version is greater than and Integer value is.
         - `ValueError`: The required protection is not present.
         - `ValueError`: `senderKID` or `sender` validation fails when required.
         - `ValueError`: The `GeneralInfo` field values (e.g., `implicitConfirm`, `confirmWaitTime`, `certProfile`) \
@@ -1618,9 +1640,7 @@ def validate_pkimessage_header(  # noqa D417 undocumented-param
     | Validate PKIMessage Header | ${pki_message_response} | protection=False |
 
     """
-    if int(pki_message_response["header"]["pvno"]) not in [2, 3]:
-        raise ValueError(f"Header version is {pki_message_response['header']['pvno']}")
-
+    validate_pkimessage_pvno(pki_message_response)
     check_is_protection_present(pki_message_response, must_be_protected=protection)
     check_sender_cmp_protection(pki_message_response, must_be_protected=protection, allow_failure=allow_failure_sender)
     validate_senderkid_for_cmp_protection(

@@ -41,6 +41,7 @@ from resources.checkutils import (
     check_message_time_field,
     check_sender_cmp_protection,
     validate_cert_profile_for_ca,
+    validate_pkimessage_pvno,
     validate_request_message_nonces_and_tx_id,
     validate_senderkid_for_cmp_protection,
     validate_wrong_integrity,
@@ -69,7 +70,6 @@ from resources.exceptions import (
     NotAuthorized,
     SignerNotTrusted,
     TransactionIdInUse,
-    UnsupportedVersion,
     WrongIntegrity,
 )
 from resources.keyutils import load_public_key_from_cert_template
@@ -586,8 +586,7 @@ class CertReqHandler:
         for_nested: bool = False,
     ) -> None:
         """Validate the header of a PKIMessage."""
-        if int(pki_message["header"]["pvno"]) not in [2, 3]:
-            raise UnsupportedVersion("The protocol version number was not 2 or 3.")
+        validate_pkimessage_pvno(pki_message)
 
         if must_be_protected is None:
             must_be_protected = self.must_be_protected
