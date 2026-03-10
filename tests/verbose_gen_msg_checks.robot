@@ -742,7 +742,7 @@ CA MUST Reject IR With PVNO Set To Too Large Int
     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2.
     ...    Ref: RFC 9483, Section 3.1.
     [Tags]    negative    pvno    ir
-    Build With Bad Version    ir    2147483648    badDataFormat
+    Build With Bad Version    ir    18446744073709551616    badDataFormat
 
 CA MUST Reject IR Without SenderNonce
      [Documentation]    A PKIMessage **MUST** have a `senderNonce` set which is 16-Bytes long. Ref: RFC 9483, Section 3.1.

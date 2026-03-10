@@ -42,6 +42,7 @@ MAC_BODY_NAMES = [
     "batch_inner_p10cr",
 ]
 
+
 def _generate_bad_pvno_test_cases(allowed_versions: List[int]) -> List[TestCase]:
     """Generate test cases for bad version validation."""
     body_names = ALL_BODY_NAMES
@@ -70,10 +71,9 @@ def _generate_bad_pvno_test_cases(allowed_versions: List[int]) -> List[TestCase]
         (
             "CA MUST Reject {} With PVNO Set To Too Large Int",
             "Build With Bad Version",
-            str(2**31),
+            str(2**64),
             "badDataFormat",
         ),
-
     ]:
         for body_name in body_names:
             tags = get_body_name_tags(body_name)
@@ -466,7 +466,7 @@ def _generate_mac_wrong_integrity_test_cases() -> List[TestCase]:
 
 def generate_test_case() -> List[str]:
     """Generate all test cases for the CMP `PKIHeader` validation."""
-    out = _generate_bad_pvno_test_cases([1,2,3])
+    out = _generate_bad_pvno_test_cases([1, 2, 3])
     out += _generate_sender_nonce_test_cases()
     out += _generate_recip_nonce_test_cases()
     out += _generate_transaction_id_test_cases()
