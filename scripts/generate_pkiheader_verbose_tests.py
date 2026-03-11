@@ -75,6 +75,11 @@ def _generate_supported_version_test_cases() -> List[TestCase]:
     for version in PVNO_VERSIONS_TO_CHECK:
         if _check_version_support(version, PVNO_VERSIONS_TO_CHECK):
             for body_name in ALL_BODY_NAMES:
+
+                if body_name == "added-protection":
+                    # Irrelevant for added-protection, as the version is determined by the inner message.
+                    continue
+
                 tags = get_body_name_tags(body_name)
                 test_case = TestCase(
                     name=f"CA MUST Accept {body_name.upper()} With PVNO Set To {version}",
