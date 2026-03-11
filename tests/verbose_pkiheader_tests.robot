@@ -504,7 +504,14 @@ Build With Good Version
      ${body}=  Build Body By Name    ${body_name}   sender,senderKID   pvno=${pvno}
      ${response}=   Exchange PKIMessage    ${body}
      Validate Cmp Body Types    ${response}   ${body}   error=False
-     ${response_pvno}=    Get Asn1 Value As Number   ${response}   header.pvno
+     IF  'batch-inner' in '${body_name}'
+          ${response_inner}=    Get Inner PKIMessage    ${response}   2
+          ${response_pvno}=    Get Asn1 Value As Number   ${response_inner}   header.pvno
+     ELSE IF   batch' == '${body_name}'
+          ${response_pvno}=    Get Asn1 Value As Number   ${response}   header.pvno
+     ELSE
+          ${response_pvno}=    Get Asn1 Value As Number   ${response}   header.pvno
+     END
      Should Be Equal As Numbers    ${pvno}   ${response_pvno}
 
 Skip If Version Is Not Supported
