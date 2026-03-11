@@ -751,28 +751,574 @@ Build Message For Negative Header Validation
 
 *** Test Cases ***
 CA MUST Reject IR With PVNO Set To -1
-     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2.
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
      ...    Ref: RFC 9483, Section 3.1.
      [Tags]    negative    pvno    ir
      Build With Bad Version    ir    -1    unsupportedVersion
 
+CA MUST Reject P10CR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    p10cr
+     Build With Bad Version    p10cr    -1    unsupportedVersion
+
+CA MUST Reject CR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    cr
+     Build With Bad Version    cr    -1    unsupportedVersion
+
+CA MUST Reject KUR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    kur
+     Build With Bad Version    kur    -1    unsupportedVersion
+
+CA MUST Reject GENM With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    genm
+     Build With Bad Version    genm    -1    unsupportedVersion
+
+CA MUST Reject CCR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    ccr
+     Build With Bad Version    ccr    -1    unsupportedVersion
+
+CA MUST Reject RR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    rr
+     Build With Bad Version    rr    -1    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection
+     Build With Bad Version    added-protection    -1    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-IR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    ir
+     Build With Bad Version    added-protection-inner-ir    -1    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-CR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    cr
+     Build With Bad Version    added-protection-inner-cr    -1    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-KUR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    kur
+     Build With Bad Version    added-protection-inner-kur    -1    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-P10CR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    p10cr
+     Build With Bad Version    added-protection-inner-p10cr    -1    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-CCR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    ccr
+     Build With Bad Version    added-protection-inner-ccr    -1    unsupportedVersion
+
+CA MUST Reject BATCH With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch
+     Build With Bad Version    batch    -1    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_IR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    ir
+     Build With Bad Version    batch_inner_ir    -1    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_CR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    cr
+     Build With Bad Version    batch_inner_cr    -1    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_KUR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    kur
+     Build With Bad Version    batch_inner_kur    -1    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_P10CR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    p10cr
+     Build With Bad Version    batch_inner_p10cr    -1    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_CCR With PVNO Set To -1
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    ccr
+     Build With Bad Version    batch_inner_ccr    -1    unsupportedVersion
+
 CA MUST Reject IR With PVNO Set To 0
-    [Documentation]    A PKIMessage **MUST** have the `version` field set to 2.
-    ...    Ref: RFC 9483, Section 3.1.
-    [Tags]    negative    pvno    ir
-    Build With Bad Version    ir    0    unsupportedVersion
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    ir
+     Build With Bad Version    ir    0    unsupportedVersion
+
+CA MUST Reject P10CR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    p10cr
+     Build With Bad Version    p10cr    0    unsupportedVersion
+
+CA MUST Reject CR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    cr
+     Build With Bad Version    cr    0    unsupportedVersion
+
+CA MUST Reject KUR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    kur
+     Build With Bad Version    kur    0    unsupportedVersion
+
+CA MUST Reject GENM With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    genm
+     Build With Bad Version    genm    0    unsupportedVersion
+
+CA MUST Reject CCR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    ccr
+     Build With Bad Version    ccr    0    unsupportedVersion
+
+CA MUST Reject RR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    rr
+     Build With Bad Version    rr    0    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection
+     Build With Bad Version    added-protection    0    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-IR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    ir
+     Build With Bad Version    added-protection-inner-ir    0    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-CR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    cr
+     Build With Bad Version    added-protection-inner-cr    0    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-KUR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    kur
+     Build With Bad Version    added-protection-inner-kur    0    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-P10CR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    p10cr
+     Build With Bad Version    added-protection-inner-p10cr    0    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-CCR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    ccr
+     Build With Bad Version    added-protection-inner-ccr    0    unsupportedVersion
+
+CA MUST Reject BATCH With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch
+     Build With Bad Version    batch    0    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_IR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    ir
+     Build With Bad Version    batch_inner_ir    0    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_CR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    cr
+     Build With Bad Version    batch_inner_cr    0    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_KUR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    kur
+     Build With Bad Version    batch_inner_kur    0    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_P10CR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    p10cr
+     Build With Bad Version    batch_inner_p10cr    0    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_CCR With PVNO Set To 0
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    ccr
+     Build With Bad Version    batch_inner_ccr    0    unsupportedVersion
 
 CA MUST Reject IR With PVNO Set To Not Defined Value
-    [Documentation]    A PKIMessage **MUST** have the `version` field set to 2.
-    ...    Ref: RFC 9483, Section 3.1.
-    [Tags]    negative    pvno    ir
-    Build With Bad Version    ir    4    unsupportedVersion
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    ir
+     Build With Bad Version    ir    4    unsupportedVersion
+
+CA MUST Reject P10CR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    p10cr
+     Build With Bad Version    p10cr    4    unsupportedVersion
+
+CA MUST Reject CR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    cr
+     Build With Bad Version    cr    4    unsupportedVersion
+
+CA MUST Reject KUR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    kur
+     Build With Bad Version    kur    4    unsupportedVersion
+
+CA MUST Reject GENM With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    genm
+     Build With Bad Version    genm    4    unsupportedVersion
+
+CA MUST Reject CCR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    ccr
+     Build With Bad Version    ccr    4    unsupportedVersion
+
+CA MUST Reject RR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    rr
+     Build With Bad Version    rr    4    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection
+     Build With Bad Version    added-protection    4    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-IR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    ir
+     Build With Bad Version    added-protection-inner-ir    4    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-CR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    cr
+     Build With Bad Version    added-protection-inner-cr    4    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-KUR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    kur
+     Build With Bad Version    added-protection-inner-kur    4    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-P10CR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    p10cr
+     Build With Bad Version    added-protection-inner-p10cr    4    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-CCR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    ccr
+     Build With Bad Version    added-protection-inner-ccr    4    unsupportedVersion
+
+CA MUST Reject BATCH With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch
+     Build With Bad Version    batch    4    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_IR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    ir
+     Build With Bad Version    batch_inner_ir    4    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_CR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    cr
+     Build With Bad Version    batch_inner_cr    4    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_KUR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    kur
+     Build With Bad Version    batch_inner_kur    4    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_P10CR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    p10cr
+     Build With Bad Version    batch_inner_p10cr    4    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_CCR With PVNO Set To Not Defined Value
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    ccr
+     Build With Bad Version    batch_inner_ccr    4    unsupportedVersion
 
 CA MUST Reject IR With PVNO Set To Too Large Int
-    [Documentation]    A PKIMessage **MUST** have the `version` field set to 2.
-    ...    Ref: RFC 9483, Section 3.1.
-    [Tags]    negative    pvno    ir
-    Build With Bad Version    ir    18446744073709551616    badDataFormat
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    ir
+     Build With Bad Version    ir    18446744073709551616    badDataFormat
+
+CA MUST Reject P10CR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    p10cr
+     Build With Bad Version    p10cr    18446744073709551616    badDataFormat
+
+CA MUST Reject CR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    cr
+     Build With Bad Version    cr    18446744073709551616    badDataFormat
+
+CA MUST Reject KUR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    kur
+     Build With Bad Version    kur    18446744073709551616    badDataFormat
+
+CA MUST Reject GENM With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    genm
+     Build With Bad Version    genm    18446744073709551616    badDataFormat
+
+CA MUST Reject CCR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    ccr
+     Build With Bad Version    ccr    18446744073709551616    badDataFormat
+
+CA MUST Reject RR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    rr
+     Build With Bad Version    rr    18446744073709551616    badDataFormat
+
+CA MUST Reject ADDED-PROTECTION With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection
+     Build With Bad Version    added-protection    18446744073709551616    badDataFormat
+
+CA MUST Reject ADDED-PROTECTION-INNER-IR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    ir
+     Build With Bad Version    added-protection-inner-ir    18446744073709551616    badDataFormat
+
+CA MUST Reject ADDED-PROTECTION-INNER-CR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    cr
+     Build With Bad Version    added-protection-inner-cr    18446744073709551616    badDataFormat
+
+CA MUST Reject ADDED-PROTECTION-INNER-KUR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    kur
+     Build With Bad Version    added-protection-inner-kur    18446744073709551616    badDataFormat
+
+CA MUST Reject ADDED-PROTECTION-INNER-P10CR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    p10cr
+     Build With Bad Version    added-protection-inner-p10cr    18446744073709551616    badDataFormat
+
+CA MUST Reject ADDED-PROTECTION-INNER-CCR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    added-protection    ccr
+     Build With Bad Version    added-protection-inner-ccr    18446744073709551616    badDataFormat
+
+CA MUST Reject BATCH With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch
+     Build With Bad Version    batch    18446744073709551616    badDataFormat
+
+CA MUST Reject BATCH_INNER_IR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    ir
+     Build With Bad Version    batch_inner_ir    18446744073709551616    badDataFormat
+
+CA MUST Reject BATCH_INNER_CR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    cr
+     Build With Bad Version    batch_inner_cr    18446744073709551616    badDataFormat
+
+CA MUST Reject BATCH_INNER_KUR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    kur
+     Build With Bad Version    batch_inner_kur    18446744073709551616    badDataFormat
+
+CA MUST Reject BATCH_INNER_P10CR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    p10cr
+     Build With Bad Version    batch_inner_p10cr    18446744073709551616    badDataFormat
+
+CA MUST Reject BATCH_INNER_CCR With PVNO Set To Too Large Int
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    nested    batch    ccr
+     Build With Bad Version    batch_inner_ccr    18446744073709551616    badDataFormat
+
+CA MUST Reject IR With PVNO Set To 1
+     [Documentation]    We send a IR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    ir
+     Build With Bad Version    ir    1    unsupportedVersion
+
+CA MUST Reject P10CR With PVNO Set To 1
+     [Documentation]    We send a P10CR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    p10cr
+     Build With Bad Version    p10cr    1    unsupportedVersion
+
+CA MUST Reject CR With PVNO Set To 1
+     [Documentation]    We send a CR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    cr
+     Build With Bad Version    cr    1    unsupportedVersion
+
+CA MUST Reject KUR With PVNO Set To 1
+     [Documentation]    We send a KUR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    kur
+     Build With Bad Version    kur    1    unsupportedVersion
+
+CA MUST Reject GENM With PVNO Set To 1
+     [Documentation]    We send a GENM Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    genm
+     Build With Bad Version    genm    1    unsupportedVersion
+
+CA MUST Reject CCR With PVNO Set To 1
+     [Documentation]    We send a CCR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    ccr
+     Build With Bad Version    ccr    1    unsupportedVersion
+
+CA MUST Reject RR With PVNO Set To 1
+     [Documentation]    We send a RR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    rr
+     Build With Bad Version    rr    1    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION With PVNO Set To 1
+     [Documentation]    We send a ADDED-PROTECTION Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    nested    added-protection
+     Build With Bad Version    added-protection    1    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-IR With PVNO Set To 1
+     [Documentation]    We send a ADDED-PROTECTION-INNER-IR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    nested    added-protection    ir
+     Build With Bad Version    added-protection-inner-ir    1    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-CR With PVNO Set To 1
+     [Documentation]    We send a ADDED-PROTECTION-INNER-CR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    nested    added-protection    cr
+     Build With Bad Version    added-protection-inner-cr    1    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-KUR With PVNO Set To 1
+     [Documentation]    We send a ADDED-PROTECTION-INNER-KUR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    nested    added-protection    kur
+     Build With Bad Version    added-protection-inner-kur    1    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-P10CR With PVNO Set To 1
+     [Documentation]    We send a ADDED-PROTECTION-INNER-P10CR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    nested    added-protection    p10cr
+     Build With Bad Version    added-protection-inner-p10cr    1    unsupportedVersion
+
+CA MUST Reject ADDED-PROTECTION-INNER-CCR With PVNO Set To 1
+     [Documentation]    We send a ADDED-PROTECTION-INNER-CCR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    nested    added-protection    ccr
+     Build With Bad Version    added-protection-inner-ccr    1    unsupportedVersion
+
+CA MUST Reject BATCH With PVNO Set To 1
+     [Documentation]    We send a BATCH Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    nested    batch
+     Build With Bad Version    batch    1    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_IR With PVNO Set To 1
+     [Documentation]    We send a BATCH_INNER_IR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    nested    batch    ir
+     Build With Bad Version    batch_inner_ir    1    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_CR With PVNO Set To 1
+     [Documentation]    We send a BATCH_INNER_CR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    nested    batch    cr
+     Build With Bad Version    batch_inner_cr    1    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_KUR With PVNO Set To 1
+     [Documentation]    We send a BATCH_INNER_KUR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    nested    batch    kur
+     Build With Bad Version    batch_inner_kur    1    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_P10CR With PVNO Set To 1
+     [Documentation]    We send a BATCH_INNER_P10CR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    nested    batch    p10cr
+     Build With Bad Version    batch_inner_p10cr    1    unsupportedVersion
+
+CA MUST Reject BATCH_INNER_CCR With PVNO Set To 1
+     [Documentation]    We send a BATCH_INNER_CCR Request with the version set to 1 and expect the CA to reject the Request.A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    negative    pvno    pvno=1    lwcmp    nested    batch    ccr
+     Build With Bad Version    batch_inner_ccr    1    unsupportedVersion
 
 CA MUST Reject IR Without SenderNonce
      [Documentation]    A PKIMessage **MUST** have a `senderNonce` set which is 16-Bytes long. Ref: RFC 9483, Section 3.1.
@@ -3157,6 +3703,222 @@ CA MUST Return For NEG BATCH_INNER_CCR A Valid PKIHeader
      ...    Ref: RFC 9483, Section 3.1.
      [Tags]    negative    PKIHeader    nested    batch    ccr
      Build Message For Negative Header Validation    batch_inner_ccr
+
+CA MUST Accept IR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    ir
+     Build With Good Version    ir    2
+
+CA MUST Accept P10CR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    p10cr
+     Build With Good Version    p10cr    2
+
+CA MUST Accept CR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    cr
+     Build With Good Version    cr    2
+
+CA MUST Accept KUR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    kur
+     Build With Good Version    kur    2
+
+CA MUST Accept GENM With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    genm
+     Build With Good Version    genm    2
+
+CA MUST Accept CCR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    ccr
+     Build With Good Version    ccr    2
+
+CA MUST Accept RR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    rr
+     Build With Good Version    rr    2
+
+CA MUST Accept ADDED-PROTECTION-INNER-IR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    nested    added-protection    ir
+     Build With Good Version    added-protection-inner-ir    2
+
+CA MUST Accept ADDED-PROTECTION-INNER-CR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    nested    added-protection    cr
+     Build With Good Version    added-protection-inner-cr    2
+
+CA MUST Accept ADDED-PROTECTION-INNER-KUR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    nested    added-protection    kur
+     Build With Good Version    added-protection-inner-kur    2
+
+CA MUST Accept ADDED-PROTECTION-INNER-P10CR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    nested    added-protection    p10cr
+     Build With Good Version    added-protection-inner-p10cr    2
+
+CA MUST Accept ADDED-PROTECTION-INNER-CCR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    nested    added-protection    ccr
+     Build With Good Version    added-protection-inner-ccr    2
+
+CA MUST Accept BATCH With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    nested    batch
+     Build With Good Version    batch    2
+
+CA MUST Accept BATCH_INNER_IR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    nested    batch    ir
+     Build With Good Version    batch_inner_ir    2
+
+CA MUST Accept BATCH_INNER_CR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    nested    batch    cr
+     Build With Good Version    batch_inner_cr    2
+
+CA MUST Accept BATCH_INNER_KUR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    nested    batch    kur
+     Build With Good Version    batch_inner_kur    2
+
+CA MUST Accept BATCH_INNER_P10CR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    nested    batch    p10cr
+     Build With Good Version    batch_inner_p10cr    2
+
+CA MUST Accept BATCH_INNER_CCR With PVNO Set To 2
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=2    lwcmp    nested    batch    ccr
+     Build With Good Version    batch_inner_ccr    2
+
+CA MUST Accept IR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    ir
+     Build With Good Version    ir    3
+
+CA MUST Accept P10CR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    p10cr
+     Build With Good Version    p10cr    3
+
+CA MUST Accept CR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    cr
+     Build With Good Version    cr    3
+
+CA MUST Accept KUR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    kur
+     Build With Good Version    kur    3
+
+CA MUST Accept GENM With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    genm
+     Build With Good Version    genm    3
+
+CA MUST Accept CCR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    ccr
+     Build With Good Version    ccr    3
+
+CA MUST Accept RR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    rr
+     Build With Good Version    rr    3
+
+CA MUST Accept ADDED-PROTECTION-INNER-IR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    nested    added-protection    ir
+     Build With Good Version    added-protection-inner-ir    3
+
+CA MUST Accept ADDED-PROTECTION-INNER-CR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    nested    added-protection    cr
+     Build With Good Version    added-protection-inner-cr    3
+
+CA MUST Accept ADDED-PROTECTION-INNER-KUR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    nested    added-protection    kur
+     Build With Good Version    added-protection-inner-kur    3
+
+CA MUST Accept ADDED-PROTECTION-INNER-P10CR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    nested    added-protection    p10cr
+     Build With Good Version    added-protection-inner-p10cr    3
+
+CA MUST Accept ADDED-PROTECTION-INNER-CCR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    nested    added-protection    ccr
+     Build With Good Version    added-protection-inner-ccr    3
+
+CA MUST Accept BATCH With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    nested    batch
+     Build With Good Version    batch    3
+
+CA MUST Accept BATCH_INNER_IR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    nested    batch    ir
+     Build With Good Version    batch_inner_ir    3
+
+CA MUST Accept BATCH_INNER_CR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    nested    batch    cr
+     Build With Good Version    batch_inner_cr    3
+
+CA MUST Accept BATCH_INNER_KUR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    nested    batch    kur
+     Build With Good Version    batch_inner_kur    3
+
+CA MUST Accept BATCH_INNER_P10CR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    nested    batch    p10cr
+     Build With Good Version    batch_inner_p10cr    3
+
+CA MUST Accept BATCH_INNER_CCR With PVNO Set To 3
+     [Documentation]    A PKIMessage **MUST** have the `version` field set to 2 or 3.
+     ...    Ref: RFC 9483, Section 3.1.
+     [Tags]    positive    pvno    pvno=3    lwcmp    nested    batch    ccr
+     Build With Good Version    batch_inner_ccr    3
 
 CA MUST Return For POS IR A Valid PKIHeader
      [Documentation]    A PKIMessage **MUST** have a valid `PKIHeader`.
