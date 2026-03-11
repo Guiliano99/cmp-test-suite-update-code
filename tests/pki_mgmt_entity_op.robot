@@ -194,6 +194,28 @@ CA MUST Respond with MAC To Added Protection For MAC Inner Request
         Fail    The response to the wrapped protected message was not MAC-based protected.
     END
 
+CA MUST Respond with A Correct PVNO For Inner Added Protection
+    [Documentation]    According to RFC 9483 Section 3.1 and RFC 9480 Section 7 the `pvno` field in the header of a
+    ...    PKIMessage MUST be set to the request message's `pvno` value when the response is returned. We send a
+    ...    added protection nested PKIMessage with pvno set to 2 and a inner PKIMessage with pvno set to 3. The CA
+     ...   MUST respond with a message that has the `pvno` value set to 3.
+    [Tags]    adding-protection    nested    positive   added-protection   pvno
+    Skip If Cert Or Key Not Set
+    ${protected_ir}=    Default Build Inner IR Message    pvno=3
+    ${nested}=    Build Nested PKIMessage
+    ...    exclude_fields=${None}
+    ...    sender=${SENDER}
+    ...    recipient=${RECIPIENT}
+    ...    other_messages=${protected_ir}
+    ...    for_added_protection=True
+    ...    pvno=3
+    ${prot_nested}=    Default Protect With Trusted Cert    ${nested}
+    ${response}=    Exchange PKIMessage    ${prot_nested}
+    PKIMessage Body Type Must Be    ${response}    ip
+    PKIStatus Must Be    ${response}    status=accepted
+    ${response_pvno}=    Get Asn1 Value As Number     ${response}    header.pvno
+    Should Be Equal As Integers    ${response_pvno}    3
+
 ## Section 5.2.2.2. Batching Messages
 
 CA MUST Accept Valid Nested Batch Message
