@@ -497,21 +497,24 @@ Build Without senderNonce
     ${response}=   Exchange PKIMessage    ${body}
     Validate Negative Response   ${response}   ${body_name}   badSenderNonce   True
 
+Get Response PKIMessage
+    [Documentation]    Return the relevant PKIMessage response to check for the verbose test cases.
+    [Arguments]    ${response}   ${body_name}
+    IF  'batch_inner' in '${body_name}'
+        ${response}=    Get Inner PKIMessage    ${response}   2
+    END
+    RETURN    ${response}
+
 Build With Good Version
      [Documentation]    Build requests with good version
      [Arguments]    ${body_name}   ${pvno}
      Skip If Version Is Not Supported    ${pvno}
+     Set Resource Minimizing To False   ${body_name}
      ${body}=  Build Body By Name    ${body_name}   sender,senderKID   pvno=${pvno}
      ${response}=   Exchange PKIMessage    ${body}
      Validate Cmp Body Types    ${response}   ${body}   error=False
-     IF  'batch-inner' in '${body_name}'
-          ${response_inner}=    Get Inner PKIMessage    ${response}   2
-          ${response_pvno}=    Get Asn1 Value As Number   ${response_inner}   header.pvno
-     ELSE IF   'batch' == '${body_name}'
-          ${response_pvno}=    Get Asn1 Value As Number   ${response}   header.pvno
-     ELSE
-          ${response_pvno}=    Get Asn1 Value As Number   ${response}   header.pvno
-     END
+     ${response}=   Get Response PKIMessage    ${response}    ${body_name}
+     ${response_pvno}=   Get Asn1 Value As Number    ${response}    header.pvno
      Should Be Equal As Numbers    ${pvno}   ${response_pvno}
 
 Skip If Version Is Not Supported
