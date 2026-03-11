@@ -11,6 +11,7 @@ SPDX-License-Identifier: Apache-2.0
 - [Test Coverage Server](#test-coverage-server)
   - [RFC 9483 LwCMP](#rfc-9483-lwcmp)
     - [PKIHeader Section 3.1](#pkiheader-section-31)
+      - [Verbose PVNO Test Cases (Section 3.1)](#verbose-pvno-test-cases-section-31)
     - [SIG PKIProtection Section 3.2](#sig-pkiprotection-section-32)
     - [3.3 Section Handling `extraCerts`](#33-section-handling-extracerts)
     - [3.5 Section Generic `PKIMessage` Validation](#35-section-generic-pkimessage-validation)
@@ -65,6 +66,18 @@ SPDX-License-Identifier: Apache-2.0
 | **confirmWaitTime**         | UTCTime used, clashes with `implicitConfirm`                                             | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch` | —                                       | verbose_gen_msg_checks.robot, lwcmp.robot |     |
 | **Full PKIHeader**          | valid header for negative and positive cases                                             | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch` | —                                       | verbose_gen_msg_checks.robot, lwcmp.robot |     |
 | senderNonce, recipNonce     | matching senderNonce / recipNonce                                                        | `certConf`,`pkiconf`                                                         | added_prot_cert_conf, batched_cert_conf | cert_conf_test.robot                      |     |
+
+#### Verbose PVNO Test Cases (Section 3.1)
+
+> **Note**: These test cases are located in `tests/verbose_gen_msg_checks.robot` and cover detailed equivalence classes for PVNO validation.
+
+| Equivalence Class         | PVNO Value                              | Expected FailInfo        | Body Types Covered | File                                   |
+| ------------------------ | --------------------------------------- | ------------------------ | ------------------ | -------------------------------------- |
+| Negative integer         | -1                                      | `unsupportedVersion`     | `ir`               | `tests/verbose_gen_msg_checks.robot`   |
+| Zero                     | 0                                       | `unsupportedVersion`     | `ir`               | `tests/verbose_gen_msg_checks.robot`   |
+| Undefined version        | 4 (not 2 or 3)                          | `unsupportedVersion`     | `ir`               | `tests/verbose_gen_msg_checks.robot`   |
+| Integer overflow         | 18446744073709551616 (too large)        | `badDataFormat`          | `ir`               | `tests/verbose_gen_msg_checks.robot`   |
+| Legacy version           | 1                                       | `unsupportedVersion`     | `ir`               | `tests/verbose_gen_msg_checks.robot`   |
 
 ### SIG PKIProtection Section 3.2
 
