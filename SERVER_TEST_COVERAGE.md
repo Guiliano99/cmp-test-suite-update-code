@@ -53,19 +53,19 @@ SPDX-License-Identifier: Apache-2.0
 
 ### PKIHeader Section 3.1
 
-| Header field                | Validation checks covered                                                                | Body types **covered**                                                       | Body types **missing**                  | Files                                     |     |
-| --------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------- | ----------------------------------------- | --- |
-| **pvno**                    | invalid value (!= 2 or 3)                                                                | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, added_protection, `batch`   | —                                       | verbose_gen_msg_checks.robot, lwcmp.robot |     |
-| **sender**                  | invalid type (not`directoryName` MAC) , set to issuer (SIG), invalid subject (SIG)       | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch` | —                                       | verbose_gen_msg_checks.robot, lwcmp.robot |     |
-| **senderKID**               | missing (MAC & SIG), invalid (MAC & SIG)                                                 | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch` | —                                       | verbose_gen_msg_checks.robot, lwcmp.robot |     |
-| **messageTime**             | missing, outside allowed window, too old                                                 | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch` | —                                       | verbose_gen_msg_checks.robot, lwcmp.robot |     |
-| **protectionAlg** (MAC/SIG) | MAC-alg mismatch, SIG-alg mismatch, inkonsistent (MAC & SIG)                             | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch` | —                                       | verbose_gen_msg_checks.robot, lwcmp.robot |     |
-| **senderNonce**             | missing, too short (< 16 B), too long (> 16 B)                                           | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch` | —                                       | verbose_gen_msg_checks.robot, lwcmp.robot |     |
-| **recipNonce**              | present, matching to senderNonce                                                         | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch` | —                                       | verbose_gen_msg_checks.robot, lwcmp.robot |     |
-| **implicitConfirm**         | `present and used`, `invalid value`, clashes with `confirmWaitTime`, present not allowed | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch` | —                                       | verbose_gen_msg_checks.robot, lwcmp.robot |     |
-| **confirmWaitTime**         | UTCTime used, clashes with `implicitConfirm`                                             | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch` | —                                       | verbose_gen_msg_checks.robot, lwcmp.robot |     |
-| **Full PKIHeader**          | valid header for negative and positive cases                                             | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch` | —                                       | verbose_gen_msg_checks.robot, lwcmp.robot |     |
-| senderNonce, recipNonce     | matching senderNonce / recipNonce                                                        | `certConf`,`pkiconf`                                                         | added_prot_cert_conf, batched_cert_conf | cert_conf_test.robot                      |     |
+| Header field                | Validation checks covered                                                                                        | Body types **covered**                                                                                | Body types **missing**                  | Files                                      |     |
+|-----------------------------|------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|-----------------------------------------|--------------------------------------------|-----|
+| **pvno**                    | invalid value (!= 2 or 3), see [Verbose PVNO Test Cases](#verbose-pvno-test-cases-section-31)                    | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added-protection-inner-*`, `batch`, `batch-inner-*` | —                                       | verbose_pkiheader_tests.robot, lwcmp.robot |     |
+| **sender**                  | invalid type (not`directoryName` MAC) , set to issuer (SIG), invalid subject (SIG)                               | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch`                          | —                                       | verbose_pkiheader_tests.robot, lwcmp.robot |     |
+| **senderKID**               | missing (MAC & SIG), invalid (MAC & SIG)                                                                         | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch`                          | —                                       | verbose_pkiheader_tests.robot, lwcmp.robot |     |
+| **messageTime**             | missing, outside allowed window, too old                                                                         | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch`                          | —                                       | verbose_pkiheader_tests.robot, lwcmp.robot |     |
+| **protectionAlg** (MAC/SIG) | MAC-alg mismatch, SIG-alg mismatch, inkonsistent (MAC & SIG)                                                     | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch`                          | —                                       | verbose_pkiheader_tests.robot, lwcmp.robot |     |
+| **senderNonce**             | missing, too short (< 16 B), too long (> 16 B)                                                                   | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch`                          | —                                       | verbose_pkiheader_tests.robot, lwcmp.robot |     |
+| **recipNonce**              | present, matching to senderNonce                                                                                 | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch`                          | —                                       | verbose_pkiheader_tests.robot, lwcmp.robot |     |
+| **implicitConfirm**         | `present and used`, `invalid value`, clashes with `confirmWaitTime`, present not allowed                         | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch`                          | —                                       | verbose_pkiheader_tests.robot, lwcmp.robot |     |
+| **confirmWaitTime**         | UTCTime used, clashes with `implicitConfirm`                                                                     | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch`                          | —                                       | verbose_pkiheader_tests.robot, lwcmp.robot |     |
+| **Full PKIHeader**          | valid header for negative and positive cases                                                                     | `ir`, `cr`, `kur`, `p10cr`, `ccr`, `rr`, `genm`, `added_protection`, `batch`                          | —                                       | verbose_pkiheader_tests.robot, lwcmp.robot |     |
+| senderNonce, recipNonce     | missing senderNonce, reused senderNonce, missing recipNonce, mismatched recipNonce, fresh senderNonce in pkiconf | `certConf`, `pkiconf`                                                                                 | added_prot_cert_conf, batched_cert_conf | cert_conf_tests.robot                      |     |
 
 #### Verbose PVNO Test Cases (Section 3.1)
 
@@ -506,8 +506,8 @@ The tests that cover forwarding and modification of PKI messages described in Se
 
 | Section                          | Validation checks covered                                                                                                                                                                                        | Body type         | File                       |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | -------------------------- |
-| **5.2.2.1 — Adding Protection**  | • Missing `senderNonce` or `transactionID` in nested messages<br>• Rejection of added MAC protection<br>• Correct response protection for MAC‑protected inner requests<br>• Acceptance of valid added protection | Nested `ir`       | `pki_mgmt_entity_op.robot` |
-| **5.2.2.2 — Batching Messages**  | • Valid nested batch processing<br>• Rejection of duplicate `transactionID` or `senderNonce`<br>• Validation of the protection of all inner messages                                                             | Nested batch `ir` | `pki_mgmt_entity_op.robot` |
+| **5.2.2.1 — Adding Protection**  | • Missing `senderNonce` or `transactionID` in nested messages<br>• Rejection of added MAC protection<br>• Correct response protection for MAC‑protected inner requests<br>• Acceptance of valid added protection<br>• Correct `pvno` in response mirrors inner request `pvno` | Nested `ir`       | `pki_mgmt_entity_op.robot` |
+| **5.2.2.2 — Batching Messages**  | • Valid nested batch processing<br>• Rejection of duplicate `transactionID` or `senderNonce`<br>• Validation of the protection of all inner messages<br>• Correct `pvno` in outer and inner responses mirrors respective request `pvno`                                         | Nested batch `ir` | `pki_mgmt_entity_op.robot` |
 | **5.2.3.2 — Using `raVerified`** | • Acceptance of `ir` with `raVerified`<br>• Rejection of added protection or invalid protection<br>• Verification of `GeneralInfo` original message<br>• Rejection of `kur` with `raVerified`                    | `ir`, `kur`       | `pki_mgmt_entity_op.robot` |
 
 ### 5.2.2.1 Adding Protection
@@ -519,15 +519,17 @@ The tests that cover forwarding and modification of PKI messages described in Se
 | CA MUST reject nested MAC‑protected `PKIMessage`                               | `pki_mgmt_entity_op.robot` |
 | CA MUST accept valid added protection for a `PKIMessage`                       | `pki_mgmt_entity_op.robot` |
 | CA MUST respond with MAC to added protection for a MAC‑protected inner request | `pki_mgmt_entity_op.robot` |
+| CA MUST respond with a correct `pvno` for the inner added‑protection message   | `pki_mgmt_entity_op.robot` |
 
 ### 5.2.2.2 Batching Messages
 
 | Test case                                                             | File                       |
 | --------------------------------------------------------------------- | -------------------------- |
-| CA MUST accept a valid nested batch message                           | `pki_mgmt_entity_op.robot` |
-| CA MUST ensure each nested batch message has a unique `transactionID` | `pki_mgmt_entity_op.robot` |
-| CA MUST ensure each nested batch message has a unique `senderNonce`   | `pki_mgmt_entity_op.robot` |
-| CA MUST validate the protection of all inner messages                 | `pki_mgmt_entity_op.robot` |
+| CA MUST accept a valid nested batch message                                                         | `pki_mgmt_entity_op.robot` |
+| CA MUST ensure each nested batch message has a unique `transactionID`                               | `pki_mgmt_entity_op.robot` |
+| CA MUST ensure each nested batch message has a unique `senderNonce`                                 | `pki_mgmt_entity_op.robot` |
+| CA MUST validate the protection of all inner messages                                               | `pki_mgmt_entity_op.robot` |
+| CA MUST respond with correct `pvno` for outer (`pvno` 3) and inner (`pvno` 2) batch messages        | `pki_mgmt_entity_op.robot` |
 
 ### 5.2.3.2 Using `raVerified`
 
