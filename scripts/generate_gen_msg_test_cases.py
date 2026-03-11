@@ -8,6 +8,8 @@ from typing import List
 
 from scripts.gen_test_case_utils import TestCase, get_body_name_tags
 
+LATEST_CMP_VERSION = 3
+
 ALL_BODY_NAMES = [
     "ir",
     "p10cr",
@@ -42,13 +44,54 @@ MAC_BODY_NAMES = [
     "batch_inner_p10cr",
 ]
 
+PVNO_VERSIONS_TO_CHECK = [2, 3]
 
-def _generate_bad_pvno_test_cases(allowed_versions: List[int]) -> List[TestCase]:
+
+def _check_version_support(version: int, allowed_versions: List[int]) -> bool:
+    """Check if a version is supported based on the configuration."""
+    return version in allowed_versions
+
+def _generate_unsupported_version_test_cases() -> List[TestCase]:
+    """Generate test cases for unsupported version 1 validation."""
+    test_cases = []
+    for version in [1]:
+        for body_name in ALL_BODY_NAMES:
+            tags = get_body_name_tags(body_name)
+            test_case = TestCase(
+                name=f"CA MUST Reject {body_name.upper()} With PVNO Set To {version}",
+                args=[[body_name, str(version), "unsupportedVersion"]],
+                description=f"We send a {body_name.upper()} Request with the version set to 1 and expect the CA to reject the Request."
+                            f"A PKIMessage **MUST** have the `version` field set to 2 or 3.\nRef: RFC 9483, Section 3.1.",
+                tags=["negative", "pvno", f"pvno={version}", "lwcmp"] + tags,
+                functions=["Build With Bad Version"],
+            )
+            test_cases.append(test_case)
+    return test_cases
+
+
+def _generate_supported_version_test_cases() -> List[TestCase]:
+    """Generate test cases for supported version 1-3 validation."""
+    test_cases = []
+    for version in PVNO_VERSIONS_TO_CHECK:
+        if _check_version_support(version, PVNO_VERSIONS_TO_CHECK):
+            for body_name in ALL_BODY_NAMES:
+                tags = get_body_name_tags(body_name)
+                test_case = TestCase(
+                    name=f"CA MUST Accept {body_name.upper()} With PVNO Set To {version}",
+                    args=[[body_name, str(version)]],
+                    description="A PKIMessage **MUST** have the `version` field set to 2 or 3.\nRef: RFC 9483, Section 3.1.",
+                    tags=["positive", "pvno", f"pvno={version}", "lwcmp"] + tags,
+                    functions=["Build With Good Version"],
+                )
+                test_cases.append(test_case)
+    return test_cases
+
+
+def _generate_bad_pvno_test_cases() -> List[TestCase]:
     """Generate test cases for bad version validation."""
     body_names = ALL_BODY_NAMES
-    allowed_versions = allowed_versions
     test_cases = []
-    description = "A PKIMessage **MUST** have the `version` field set to 2.\nRef: RFC 9483, Section 3.1."
+    description = "A PKIMessage **MUST** have the `version` field set to 2 or 3.\nRef: RFC 9483, Section 3.1."
     for case, func, arg, failinfo in [
         (
             "CA MUST Reject {} With PVNO Set To -1",
@@ -65,7 +108,7 @@ def _generate_bad_pvno_test_cases(allowed_versions: List[int]) -> List[TestCase]
         (
             "CA MUST Reject {} With PVNO Set To Not Defined Value",
             "Build With Bad Version",
-            str(max(allowed_versions) + 1),
+            str(LATEST_CMP_VERSION + 1),
             "unsupportedVersion",
         ),
         (
@@ -466,7 +509,9 @@ def _generate_mac_wrong_integrity_test_cases() -> List[TestCase]:
 
 def generate_test_case() -> List[str]:
     """Generate all test cases for the CMP `PKIHeader` validation."""
-    out = _generate_bad_pvno_test_cases([1, 2, 3])
+    out = _generate_bad_pvno_test_cases()
+    out += _generate_unsupported_version_test_cases()
+    out += _generate_supported_version_test_cases()
     out += _generate_sender_nonce_test_cases()
     out += _generate_recip_nonce_test_cases()
     out += _generate_transaction_id_test_cases()
@@ -486,6 +531,11 @@ def generate_test_case() -> List[str]:
 if __name__ == "__main__":
     # Generate test cases and write them to a file
     test_cases = generate_test_case()
+    _length = len(test_cases)
     with open("./pki_header_verbose_tests.txt", "w") as f:
-        for test_case in test_cases:
-            f.write(test_case + "\n")
+        for i, test_case in enumerate(test_cases, 1):
+            if i != _length:
+                f.write(test_case + "\n")
+            else:
+                f.write(test_case)
+    print(f"Generated {_length} test cases for CMP PKIHeader validation.")
