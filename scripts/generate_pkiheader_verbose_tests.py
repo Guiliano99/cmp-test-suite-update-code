@@ -516,7 +516,6 @@ def generate_test_case() -> List[str]:
     """Generate all test cases for the CMP `PKIHeader` validation."""
     out = _generate_bad_pvno_test_cases()
     out += _generate_unsupported_version_test_cases()
-    out += _generate_supported_version_test_cases()
     out += _generate_sender_nonce_test_cases()
     out += _generate_recip_nonce_test_cases()
     out += _generate_transaction_id_test_cases()
@@ -529,6 +528,9 @@ def generate_test_case() -> List[str]:
     out += _generate_mac_sender_test_cases()
     out += _generate_mac_wrong_integrity_test_cases()
     out += _generate_neg_validate_header_test_cases()
+    # Run the positive test cases later for easier caching,
+    # to save some resources.
+    out += _generate_supported_version_test_cases()
     out += _generate_pos_validate_header_test_cases()
     return [case.create_test_case() for case in out]
 
