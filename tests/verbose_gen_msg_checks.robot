@@ -497,6 +497,26 @@ Build Without senderNonce
     ${response}=   Exchange PKIMessage    ${body}
     Validate Negative Response   ${response}   ${body_name}   badSenderNonce   True
 
+Build With Good Version
+     [Documentation]    Build requests with good version
+     [Arguments]    ${body_name}   ${pvno}
+     Skip If Version Is Not Supported    ${pvno}
+     ${body}=  Build Body By Name    ${body_name}   sender,senderKID   pvno=${pvno}
+     ${response}=   Exchange PKIMessage    ${body}
+     Validate Cmp Body Types    ${response}   ${body}   error=False
+     ${response_pvno}=    Get Asn1 Value As Number   ${response}   header.pvno
+     Should Be Equal As Numbers    ${pvno}   ${response_pvno}
+
+Skip If Version Is Not Supported
+     [Documentation]    Skip the test if the given version is not in the supported versions list.
+     [Arguments]    ${pvno}
+     ${supported_versions_str}=    Set Variable    ${SUPPORTED_VERSIONS}
+     ${supported_versions_str}=    Replace String    ${supported_versions_str}    ${SPACE}    ${EMPTY}
+     @{supported_versions}=    Split String    ${supported_versions_str}    separator=,
+     ${pvno_str}=    Convert To String    ${pvno}
+     ${result}=    Run Keyword And Return Status    List Should Contain Value    ${supported_versions}    ${pvno_str}
+     Skip If  not ${result}    Version ${pvno} is not supported by the implementation.
+
 Build With Too Short senderNonce
     [Documentation]    Build requests with bad sender nonce
     [Arguments]    ${body_name}
