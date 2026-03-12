@@ -504,11 +504,11 @@ ______________________________________________________________________
 The tests that cover forwarding and modification of PKI messages described in Section 5.2 are located in
 `pki_mgmt_entity_op.robot`.
 
-| Section                          | Validation checks covered                                                                                                                                                                                        | Body type         | File                       |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | -------------------------- |
+| Section                          | Validation checks covered                                                                                                                                                                                                                                                     | Body type         | File                       |
+|----------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|----------------------------|
 | **5.2.2.1 — Adding Protection**  | • Missing `senderNonce` or `transactionID` in nested messages<br>• Rejection of added MAC protection<br>• Correct response protection for MAC‑protected inner requests<br>• Acceptance of valid added protection<br>• Correct `pvno` in response mirrors inner request `pvno` | Nested `ir`       | `pki_mgmt_entity_op.robot` |
-| **5.2.2.2 — Batching Messages**  | • Valid nested batch processing<br>• Rejection of duplicate `transactionID` or `senderNonce`<br>• Validation of the protection of all inner messages<br>• Correct `pvno` in outer and inner responses mirrors respective request `pvno`                                         | Nested batch `ir` | `pki_mgmt_entity_op.robot` |
-| **5.2.3.2 — Using `raVerified`** | • Acceptance of `ir` with `raVerified`<br>• Rejection of added protection or invalid protection<br>• Verification of `GeneralInfo` original message<br>• Rejection of `kur` with `raVerified`                    | `ir`, `kur`       | `pki_mgmt_entity_op.robot` |
+| **5.2.2.2 — Batching Messages**  | • Valid nested batch processing<br>• Rejection of duplicate `transactionID` or `senderNonce`<br>• Validation of the protection of all inner messages<br>• Correct `pvno` in outer and inner responses mirrors respective request `pvno`<br>                                   | Nested batch `ir` | `pki_mgmt_entity_op.robot` |
+| **5.2.3.2 — Using `raVerified`** | • Acceptance of `ir` with `raVerified`<br>• Rejection of added protection or invalid protection<br>• Verification of `GeneralInfo` original message<br>• Rejection of `kur` with `raVerified`                                                                                 | `ir`, `kur`       | `pki_mgmt_entity_op.robot` |
 
 ### 5.2.2.1 Adding Protection
 
@@ -525,11 +525,13 @@ The tests that cover forwarding and modification of PKI messages described in Se
 
 | Test case                                                             | File                       |
 | --------------------------------------------------------------------- | -------------------------- |
-| CA MUST accept a valid nested batch message                                                         | `pki_mgmt_entity_op.robot` |
-| CA MUST ensure each nested batch message has a unique `transactionID`                               | `pki_mgmt_entity_op.robot` |
-| CA MUST ensure each nested batch message has a unique `senderNonce`                                 | `pki_mgmt_entity_op.robot` |
-| CA MUST validate the protection of all inner messages                                               | `pki_mgmt_entity_op.robot` |
-| CA MUST respond with correct `pvno` for outer (`pvno` 3) and inner (`pvno` 2) batch messages        | `pki_mgmt_entity_op.robot` |
+| CA MUST accept a valid nested batch message                                                                      | `pki_mgmt_entity_op.robot` |
+| CA MUST ensure each nested batch message has a unique `transactionID`                                            | `pki_mgmt_entity_op.robot` |
+| CA MUST ensure each nested batch message has a unique `senderNonce`                                              | `pki_mgmt_entity_op.robot` |
+| CA MUST validate the protection of all inner messages                                                            | `pki_mgmt_entity_op.robot` |
+| CA MUST respond with correct `pvno` for outer (`pvno` 3) and inner (`pvno` 2) batch messages                    | `pki_mgmt_entity_op.robot` |
+| CA MUST respond with correct `pvno` for outer (`pvno` 2) and inner (`pvno` 3) batch messages (reversed)         | `pki_mgmt_entity_op.robot` |
+| CA MUST respond with correct `pvno` for outer (`pvno` 3) and mixed inner (`pvno` 2, 3, 2) batch messages        | `pki_mgmt_entity_op.robot` |
 
 ### 5.2.3.2 Using `raVerified`
 
