@@ -31,10 +31,10 @@ ${NOT_AUTHORIZED_SENDER_KEY}    ${None}
 *** Test Cases ***
 CA Must Reject Malformed Request
     [Documentation]    When we send an invalid PKIMessage to the CA, it must respond with a 400 status code to indicate
-    ...    a client-side error in the supplied input data. Ref: RFC 6712 "3.3. General Form", "All applicable
+    ...    a client-side error in the supplied input data. Ref: RFC 9811 "3.1. General Form", "All applicable
     ...    "Client Error 4xx" or "Server Error 5xx" status codes MAY be used to inform the client
     ...    about errors."
-    [Tags]    negative    rfc6712    robot:skip-on-failure    status    minimal
+    [Tags]    negative    rfc9811    robot:skip-on-failure    status    http    minimal
     ${response}=    Exchange Data With CA    this dummy input is not a valid PKIMessage
     Should Be Equal
     ...    ${response.status_code}
