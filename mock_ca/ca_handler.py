@@ -1472,6 +1472,16 @@ def _build_response(
 
     return Response(response_data, content_type=content_type, status=status)
 
+def _validate_content_type(req_object) -> None | str:
+    """Validate the content type of the request.
+
+    :param req_object: The request object to validate.
+    :raises BadRequest: If the content type is not valid.
+    """
+    content_type = req_object.mimetype
+    if content_type != "application/pkixcmp":
+        return f"Content type is not valid. Expected: `application/pkixcmp`. Got: `{content_type}`"
+    return None
 
 @app.route("/ocsp", methods=["POST"])
 def handle_ocsp_request():
@@ -1533,6 +1543,10 @@ def handle_issuing() -> Response:
 
     :return: The DER-encoded response.
     """
+
+    error_msg = _validate_content_type(request)
+    if error_msg is not None:
+        return Response(f"Error: {error_msg}", status=400, content_type="text/plain")
     try:
         data = request.get_data()
         pki_message = parse_pkimessage(data)
