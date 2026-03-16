@@ -41,6 +41,23 @@ CA Must Reject Malformed Request
     ...    ${400}
     ...    We expected status code 400, but got ${response.status_code}
 
+CA Must Reject Request With Wrong HTTP Content-Type
+    [Documentation]    According to RFC 9811 Section 3.2, the Content-Type for CMP over HTTP MUST be
+    ...    "application/pkixcmp". We send a valid-looking payload with an incorrect Content-Type of
+    ...    "application/json". The CA MUST reject the request with an HTTP 400 Bad Request status code.
+    [Tags]    negative    rfc9811    robot:skip-on-failure    status    http    minimal
+    VAR    &{wrong_headers}    Content-Type=application/json    Accept-Type=application/pkixcmp
+    ${response}=    POST
+    ...    url=${CA_CMP_URL}
+    ...    data=this is not a valid pkimessage
+    ...    headers=&{wrong_headers}
+    ...    verify=${False}
+    ...    expected_status=any
+    Should Be Equal
+    ...    ${response.status_code}
+    ...    ${400}
+    ...    We expected status code 400 for wrong Content-Type, but got ${response.status_code}
+
 CA MUST Reject Requests That Feature Unknown Signature Algorithms
     [Documentation]    According to RFC 9483 Section 3, a PKIMessage protected by an unrecognized or unsupported
     ...    signature algorithm MUST be rejected by the CA. We send a valid p10cr PKIMessage with an unknown
