@@ -53,7 +53,7 @@ when working with the Mock CA.
 
 ### Transport CMP
 
-- [RFC 6712 — CMP over HTTP](https://datatracker.ietf.org/doc/rfc6712/)
+- [RFC 9811 — CMP over HTTP](https://www.rfc-editor.org/rfc/rfc9811)
 - [RFC 9482 — CMP over CoAP](https://datatracker.ietf.org/doc/rfc9482/)
 
 ### Algorithm Profiles

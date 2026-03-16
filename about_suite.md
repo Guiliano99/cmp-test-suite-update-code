@@ -120,9 +120,11 @@ SPDX-License-Identifier: Apache-2.0
 
 | Tag               | Description                                                                                         |
 |--------------------|-----------------------------------------------------------------------------------------------------|
-| rfc6712           | Reference to RFC 6712, which defines rules for CMP over HTTP.                                      |
+| rfc9811           | Reference to RFC 9811, which defines rules for CMP over HTTP.                                      |
+| http              | Tests that validate HTTP transport-layer behaviour such as content-type or status codes.           |
 | rfc9483-header    | Header information specific to the RFC 9483 protocol.                                              |
 | rfc9483-validation| Validation processes and checks as defined by RFC 9483.                                           |
+| minimal           | Test cases that can be executed without any configuration changes, using default settings.         |
 
 ---
 
@@ -139,7 +141,7 @@ SPDX-License-Identifier: Apache-2.0
 | Limitation        | Description                                                                                        |
 |--------------------|----------------------------------------------------------------------------------------------------|
 | CoAP Not Supported| CoAP is not supported (RFC 9482 CMP over CoAP).                                                   |
-| RFC 6712 Lax      | Only basic tests are available due to RFC 6712 being lax.                                         |
+| RFC 9811 Lax      | Only basic tests are available due to RFC 9811 being lax.                                         |
 
 ---
 
