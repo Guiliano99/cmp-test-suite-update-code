@@ -161,7 +161,7 @@ def _get_name_and_tags(name: str) -> ReturnValue:
     elif name in HYBRID_SIG_NAME_2_OID:
         raise NotImplementedError("The hybrid signature algorithm is not implemented yet.")
     else:
-        raise NotImplementedError(f"The requested algorithm is not implemented.: {name}")
+        raise NotImplementedError(f"The requested algorithm is not implemented: {name}")
 
 
 def generate_ecdsa_sig_tests(allowed_curves: List[str]) -> List[Entry]:

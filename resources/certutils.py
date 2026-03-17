@@ -1268,7 +1268,7 @@ def verify_openssl_crl(crl_chain: List, timeout: int = 60):
 
     :param crl_chain: The chain of CRL to verify. Starts with the CRL and ends with the
     CA certificate.
-    :param timeout: The timeout in seconds for the verification.Defaults to 60 seconds.
+    :param timeout: The timeout in seconds for the verification. Defaults to 60 seconds.
     :return: True if the CRL is verified, False otherwise.
     :raises ValueError: If the CRL is invalid or verification fails.
     """

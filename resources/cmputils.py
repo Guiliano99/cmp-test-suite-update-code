@@ -305,7 +305,7 @@ def build_cmp_error_message(  # noqa D417 undocumented-param
         "accepted".
         - `texts`: A list of or a single text message to provide more context about the error.
         - `error_code`: The error code to include inside the `errorCode` field.
-        - `error_texts`: A list of or a single text message to provided additional information.
+        - `error_texts`: A list of or a single text message to provide additional information.
         - **params to set `PKIHeader` fields.
 
 
@@ -3282,7 +3282,7 @@ def extract_fields_for_exchange(
 
     :param other_msg: The `PKIMessage` to extract fields from.
     :param exclude_fields: The fields to exclude.
-    :param for_py_functions: Whether to use the extracted fields for python functions.Defaults to `True`.
+    :param for_py_functions: Whether to use the extracted fields for python functions. Defaults to `True`.
     :param use_fresh_nonce: Whether to use a fresh nonce. Defaults to `False`.
     :return: The extracted fields in a dictionary with the field name as key and the value as value.
     """
@@ -5745,7 +5745,7 @@ def add_certs_to_pkimessage(  # noqa D417 Missing argument description in the do
         if body_name in ["ip", "cp", "kup", "ccp"]:
             pki_message["body"][body_name]["caPubs"].extend(certs)
         else:
-            raise ValueError(f"The `PKIMessage` body type does not support adding CA certificates.Got: {body_name}.")
+            raise ValueError(f"The `PKIMessage` body type does not support adding CA certificates. Got: {body_name}.")
 
     return pki_message
 

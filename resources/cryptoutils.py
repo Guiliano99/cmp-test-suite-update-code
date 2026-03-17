@@ -1069,7 +1069,7 @@ def perform_one_pass_mqv(
 
     if not isinstance(peer_cert, ec.EllipticCurvePublicKey):
         raise TypeError(
-            f"Invalid public key type for MQV key exchange.Got: {type(peer_cert)} Expected an EllipticCurvePublicKey."
+            f"Invalid public key type for MQV key exchange. Got: {type(peer_cert)} Expected an EllipticCurvePublicKey."
         )
 
     z = compute_recipient_ecdh_mqv_one_pass_exchange(

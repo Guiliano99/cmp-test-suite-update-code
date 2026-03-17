@@ -946,17 +946,17 @@ class ProtectionHandler:
             self.check_correct_prot_type(pki_message, must_be_protected=must_be_protected)
         except BadMessageCheck as e:
             raise BadMessageCheck(
-                f"The inner batch PKIMessage protection is not set.But MUST be present: {body_name}"
+                f"The inner batch PKIMessage protection is not set. But MUST be present: {body_name}"
             ) from e
 
         except WrongIntegrity as e:
             if index:
                 msg = (
-                    f"The inner batch PKIMessage, at {index} is MAC protected, which is not allowed."
+                    f"The inner batch PKIMessage, at {index} is MAC protected, which is not allowed. "
                     f"Got body type: {body_name}."
                 )
             else:
-                msg = f"The inner batch PKIMessage is MAC protected, which is not allowed.Got body type: {body_name}."
+                msg = f"The inner batch PKIMessage is MAC protected, which is not allowed. Got body type: {body_name}."
 
             raise WrongIntegrity(
                 message=msg,

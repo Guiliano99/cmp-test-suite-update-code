@@ -406,7 +406,7 @@ def _extract_pwri_content_enc_key(
         # MUST not be the same.
         alg_id = pki_message["header"]["protectionAlg"]  # type: ignore
         if not alg_id.isValue:
-            raise ValueError("The `protectionAlg` field must contain the a value.")
+            raise ValueError("The `protectionAlg` field must contain a value.")
 
         cmp_protection_salt = protectionutils.get_cmp_protection_salt(protection_alg=alg_id)
 

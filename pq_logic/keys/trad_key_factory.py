@@ -573,7 +573,7 @@ def prepare_invalid_trad_private_key(
 
     if isinstance(private_key, (X25519PrivateKey, X448PrivateKey, Ed25519PrivateKey, Ed448PrivateKey)):
         if invalid_key:
-            raise ValueError(f"Invalid key is not supported for this type of key.Got: {type(private_key)}")
+            raise ValueError(f"Invalid key is not supported for this type of key. Got: {type(private_key)}")
 
         return private_key.private_bytes_raw() + os.urandom(10)
 

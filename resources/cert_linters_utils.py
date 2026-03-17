@@ -99,7 +99,7 @@ def _validate_ocsp_resp_nonce(der_data: bytes) -> None:
         _ = decoder.decode(val, asn1Spec=rfc8954.Nonce())
     except pyasn1.type.error.ValueConstraintError:  # type: ignore
         raise ValueError(  # pylint: disable=raise-missing-from
-            "The OCSP response nonce is not in the allowed range of 1-32 bytes.According to RFC rfc8954."
+            "The OCSP response nonce is not in the allowed range of 1-32 bytes. According to RFC rfc8954."
         )
 
 

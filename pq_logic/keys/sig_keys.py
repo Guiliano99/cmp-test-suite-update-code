@@ -253,7 +253,7 @@ class MLDSAPrivateKey(PQSignaturePrivateKey):
             pass
         else:
             raise ValueError(
-                "Invalid key initialization for ML-DSA.Either provide a private key or a seed to generate a new key."
+                "Invalid key initialization for ML-DSA. Either provide a private key or a seed to generate a new key."
             )
 
         if oqs is not None:
@@ -326,7 +326,7 @@ class MLDSAPrivateKey(PQSignaturePrivateKey):
         """Check if the name is valid."""
         name = name.lower()
         if name not in ML_DSA_NAMES:
-            raise ValueError(f"Invalid signature algorithm name provided.: {name}")
+            raise ValueError(f"Invalid signature algorithm name provided: {name}")
 
         return name, name.upper()
 
@@ -364,7 +364,7 @@ class MLDSAPrivateKey(PQSignaturePrivateKey):
         :return: The computed signature.
         """
         if len(ctx) > 255:
-            raise ValueError(f"The context length is longer then 255 bytes.Got: {len(ctx)}")
+            raise ValueError(f"The context length is longer than 255 bytes. Got: {len(ctx)}")
 
         hash_alg = self.check_hash_alg(hash_alg)
 
@@ -823,7 +823,7 @@ class FalconPublicKey(PQSignaturePublicKey):
         """Check if the parsed name is valid."""
         if name not in FALCON_NAMES:
             names = ", ".join(f"`{name}`" for name in FALCON_NAMES)
-            raise ValueError(f"Invalid `Falcon` signature algorithm name provided.: {name} Supported names: {names}")
+            raise ValueError(f"Invalid `Falcon` signature algorithm name provided: {name}. Supported names: {names}")
 
         return name, name.capitalize()
 
@@ -860,5 +860,5 @@ class FalconPrivateKey(PQSignaturePrivateKey):
         """
         names = ", ".join(f"`{name}`" for name in FALCON_NAMES)
         if name not in FALCON_NAMES:
-            raise ValueError(f"Invalid `Falcon` signature algorithm name provided.: {name} Supported names: {names}")
+            raise ValueError(f"Invalid `Falcon` signature algorithm name provided: {name}. Supported names: {names}")
         return name, name.capitalize()

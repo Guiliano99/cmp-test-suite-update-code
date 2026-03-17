@@ -150,7 +150,7 @@ class ChempatPublicKey(AbstractHybridRawPublicKey):
             pq_name = pq_name.replace("-shake", "")
 
         else:
-            raise InvalidKeyCombination(f"Unsupported post-quantum key type for Chempat.: {pq_key.name}")
+            raise InvalidKeyCombination(f"Unsupported post-quantum key type for Chempat: {pq_key.name}")
 
         curve_name = trad_key.curve_name
         if curve_name in ["x448", "x25519"]:

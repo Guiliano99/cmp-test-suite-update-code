@@ -652,7 +652,7 @@ def process_simple_challenge(
     ca_pub_key: Optional[ECDHPublicKey] = None,
     kemct: Optional[bytes] = None,
 ) -> rfc9480.Rand:
-    """Process the challenge value by decrypting or decapuslation it with the end-entity private key.
+    """Process the challenge value by decrypting or decapsulating it with the end-entity private key.
 
     :param challenge: The `Challenge` to process.
     :param iv: The initialization vector to use for the AES decryption.
@@ -686,7 +686,7 @@ def process_simple_challenge(
         ss = ee_key.decaps(kemct)  # type: ignore
     else:
         raise ValueError(
-            f"The private key type is not supported, for processing the challenge.: {type(ee_key).__name__}"
+            f"The private key type is not supported, for processing the challenge: {type(ee_key).__name__}"
         )
 
     rand_data = compute_aes_cbc(key=ss, data=challenge_val, iv=str_to_bytes(iv), decrypt=True)

@@ -669,10 +669,10 @@ def _validate_keys(
     :raises ValueError: If the keys are not compatible.
     """
     if not isinstance(first_key, VerifyKey):
-        raise BadCertTemplate(f"Base Certificate public key is not a verifying key.Got {type(first_key)} instead.")
+        raise BadCertTemplate(f"Base Certificate public key is not a verifying key. Got {type(first_key)} instead.")
 
     if not isinstance(delta_key, VerifyKey):
-        raise BadCertTemplate(f"Delta Certificate public key is not a verifying key.Got {type(delta_key)} instead.")
+        raise BadCertTemplate(f"Delta Certificate public key is not a verifying key. Got {type(delta_key)} instead.")
 
     if delta_key == first_key:
         raise BadCertTemplate("Delta Certificate public key must not match the Base Certificate public key.")

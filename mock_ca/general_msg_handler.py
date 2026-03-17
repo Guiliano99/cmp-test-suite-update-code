@@ -599,12 +599,12 @@ class GeneralMessageHandler:
             else:
                 # This means that the structure was updated.
                 raise NotImplementedError(
-                    f"The processing of the DPN structure is not implemented.: Got: {dnp.getName()}"
+                    f"The processing of the DPN structure is not implemented. Got: {dnp.getName()}"
                 )
 
         else:
             # This means that the structure was updated.
-            raise NotImplementedError(f"The processing of the CRL source is not implemented.Got: {source.getName()}")
+            raise NotImplementedError(f"The processing of the CRL source is not implemented. Got: {source.getName()}")
 
         if text is not None:
             return None, text
@@ -731,15 +731,15 @@ class GeneralMessageHandler:
             public_key,
         )
         ss: bytes
-        self.add_shared_secert(ss, pki_message)
+        self.add_shared_secret(ss, pki_message)
         return info_val
 
-    def add_shared_secert(self, ss: bytes, pki_message: PKIMessageTMP) -> None:
+    def add_shared_secret(self, ss: bytes, pki_message: PKIMessageTMP) -> None:
         """Add the shared secret, for the transaction ID."""
         tx_id = pki_message["header"]["transactionID"].asOctets()
         self.state.shared_secrets[tx_id] = ss
 
-    def remove_shared_secert(self, pki_message: PKIMessageTMP) -> bool:
+    def remove_shared_secret(self, pki_message: PKIMessageTMP) -> bool:
         """Remove the shared secret, for the transaction ID."""
         tx_id = pki_message["header"]["transactionID"].asOctets()
         if tx_id in self.state.shared_secrets:

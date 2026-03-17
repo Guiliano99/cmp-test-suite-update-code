@@ -775,7 +775,7 @@ def prepare_extension_structure(
     elif isinstance(value, base.Asn1Item):
         extension_value = encoder.encode(value)
     else:
-        raise TypeError(f"`value` must be either bytes or a pyasn1 base.Asn1Item.Got: {type(value)}")
+        raise TypeError(f"`value` must be either bytes or a pyasn1 base.Asn1Item. Got: {type(value)}")
 
     ext = rfc5280.Extension()
     ext["extnID"] = extension_oid
@@ -807,7 +807,7 @@ def prepare_extensions(  # noqa D417 undocumented-param
     ---------
         - `key_usage`: A string specifying the key usage extension, which
           describes the intended purpose of the key (e.g., "digitalSignature", "keyEncipherment").
-        - `eku`: Comma-seperated CMP related extended key usages. One or all of the following values are allowed: \
+        - `eku`: Comma-separated CMP related extended key usages. One or all of the following values are allowed: \
         "cmcCA", "cmcRA" or "cmKGA".
         - `key`: Optional public or private key to generate the subjectKeyIdentifier extension.
         - `is_ca`: A boolean indicating, if a certificate is issued for a CA. Defaults to `None`. (not included).
@@ -2588,7 +2588,7 @@ def verify_ca_basic_constraints(  # noqa D417 undocumented-param
                 if is_ca:
                     _name = may_return_oid_to_name(oid)
                     raise BadCertTemplate(
-                        f"A CA certificate can not have a PQ PreHash signature algorithm.OID: {_name}"
+                        f"A CA certificate can not have a PQ PreHash signature algorithm. OID: {_name}"
                     )
 
     extn = certextractutils.get_extension(
@@ -3481,12 +3481,12 @@ def validate_private_key_usage_period(
     if not_after.isValue and not_before.isValue:
         if not_before > not_after:
             raise BadAsn1Data(
-                "The PrivateKeyUsagePeriod extension is invalid.The notBefore date is after the notAfter date.",
+                "The PrivateKeyUsagePeriod extension is invalid. The notBefore date is after the notAfter date.",
                 overwrite=True,
             )
         if not_before == not_after:
             raise BadAsn1Data(
-                "The PrivateKeyUsagePeriod extension is invalid.The `notBefore` date is equal to the `notAfter` date.",
+                "The PrivateKeyUsagePeriod extension is invalid. The `notBefore` date is equal to the `notAfter` date.",
                 overwrite=True,
             )
 

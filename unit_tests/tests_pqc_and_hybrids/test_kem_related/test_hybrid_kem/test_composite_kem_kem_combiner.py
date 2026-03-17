@@ -10,10 +10,10 @@ from resources.keyutils import generate_key
 
 
 class CompositeKEMKEMCombinerTest(unittest.TestCase):
-    """Test the Composite KEM KEM combiner."""
+    """Test the Composite KEM KEM-combiner."""
 
     def test_kem_combiner_example1(self):
-        """Example of id-MLKEM768-ECDH-P256-HMAC-SHA256 Combiner function output."""
+        """Example of id-MLKEM768-ECDH-P256-HMAC-SHA256 KEM-combiner function output."""
         # Inputs
         mlkemSS = "13f3e2c8d43aaa1045f0e3ba5c53a495a03553965d78fb8c62f1de14a83f0d4e"
 
@@ -50,7 +50,7 @@ class CompositeKEMKEMCombinerTest(unittest.TestCase):
         self.assertEqual(
             ss_expected,
             ss.hex(),
-            "id-MLKEM768-ECDH-P256-HMAC-SHA256 Combiner function output does not match expected value.",
+            "id-MLKEM768-ECDH-P256-HMAC-SHA256 KEM-combiner function output does not match expected value.",
         )
 
         ss2 = comp_private_key.kem_combiner(
@@ -63,13 +63,13 @@ class CompositeKEMKEMCombinerTest(unittest.TestCase):
         self.assertEqual(
             ss_expected,
             ss2.hex(),
-            "id-MLKEM768-ECDH-P256-HMAC-SHA256 Combiner "
+            "id-MLKEM768-ECDH-P256-HMAC-SHA256 KEM-combiner "
             "function output does not match expected value from private key.",
         )
 
     def test_kem_combiner_example2(self):
-        """Example of id-MLKEM768-X25519-SHA3-256 Combiner function output."""
-        # Example of id-MLKEM768-X25519-SHA3-256 Combiner function output.
+        """Example of id-MLKEM768-X25519-SHA3-256 KEM-combiner function output."""
+        # Example of id-MLKEM768-X25519-SHA3-256 KEM-combiner function output.
         # Inputs
         mlkemSS = "542aba637e129ef540743b8420edb78b26e492af2a496f31d33138a5402239c3"
         tradSS = "8af825f1d07ad0b3bff6856a6f7aaa706eb1db11b6a7d2c44dfb06d041e7e261"
@@ -100,7 +100,9 @@ class CompositeKEMKEMCombinerTest(unittest.TestCase):
             use_in_cms=False,
         )
         self.assertEqual(
-            ss_expected, ss.hex(), "id-MLKEM768-X25519-SHA3-256 Combiner function output does not match expected value."
+            ss_expected,
+            ss.hex(),
+            "id-MLKEM768-X25519-SHA3-256 KEM-combiner function output does not match expected value.",
         )
         ss2 = comp_private_key.kem_combiner(
             mlkem_ss=bytes.fromhex(mlkemSS),
@@ -112,11 +114,11 @@ class CompositeKEMKEMCombinerTest(unittest.TestCase):
         self.assertEqual(
             ss_expected,
             ss2.hex(),
-            "id-MLKEM768-X25519-SHA3-256 Combiner function output does not match expected value from private key.",
+            "id-MLKEM768-X25519-SHA3-256 KEM-combiner function output does not match expected value from private key.",
         )
 
     def test_kem_combiner_example3(self):
-        """Example of id-MLKEM1024-ECDH-P384-HMAC-SHA512 Combiner function output."""
+        """Example of id-MLKEM1024-ECDH-P384-HMAC-SHA512 KEM-combiner function output."""
         # Inputs
         mlkemSS = "99308f288ab1c346bc501eca3f8c1c64315e91686e98920a1b97f60368ead216"
         tradSS = "30604eb9718fc42386217d9d9a71a678fea6b2381f4232624f80a9b176b8f2323fe52cc6d477f024cffbea63c143bdb0"
@@ -154,7 +156,7 @@ class CompositeKEMKEMCombinerTest(unittest.TestCase):
         self.assertEqual(
             ss_expected,
             ss.hex(),
-            "id-MLKEM1024-ECDH-P384-HMAC-SHA512 Combiner function output does not match expected value.",
+            "id-MLKEM1024-ECDH-P384-HMAC-SHA512 KEM-combiner function output does not match expected value.",
         )
 
         ss2 = comp_private_key.kem_combiner(
@@ -167,7 +169,7 @@ class CompositeKEMKEMCombinerTest(unittest.TestCase):
         self.assertEqual(
             ss_expected,
             ss2.hex(),
-            "id-MLKEM1024-ECDH-P384-HMAC-SHA512 Combiner "
+            "id-MLKEM1024-ECDH-P384-HMAC-SHA512 KEM-combiner "
             "function output does not match expected value from private key.",
         )
 

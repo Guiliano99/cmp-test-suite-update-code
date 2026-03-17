@@ -406,7 +406,7 @@ def verify_sun_hybrid_cert(  # noqa D417 undocumented-param
     """Verify a Sun hybrid certificate.
 
     Validates the primary and alternative signatures in a certificate.
-    The main signature is verified using the issuer's tradition key inside the certificate public key.
+    The main signature is verified using the issuer's traditional key inside the certificate public key.
     And the alternative signature is verified using the issuer's alternative key.
 
     Arguments:
@@ -482,7 +482,7 @@ def _get_catalyst_info_vals(
             other_fields.append(info)
 
     if prot_alg_id is None and alt_sig is None and must_be_catalyst_signed:
-        raise ValueError("The message was not signed by the an alternative key.")
+        raise ValueError("The message was not signed by an alternative key.")
 
     if prot_alg_id is None and alt_sig is None and not must_be_catalyst_signed:
         return None, None, None, None
@@ -700,7 +700,7 @@ def verify_crl_signature(  # noqa D417 undocumented-param
             raise InvalidAltSignature(f"The alternative signature is invalid, for key: {key_name}") from e
 
     elif must_be_catalyst_signed:
-        raise ValueError("The CRL was not signed by the an alternative key.")
+        raise ValueError("The CRL was not signed by an alternative key.")
 
 
 def may_extract_alt_key_from_cert(  # noqa: D417 Missing argument descriptions in the docstring

@@ -175,7 +175,7 @@ class CompositeSigPublicKey(AbstractCompositePublicKey, HybridSigPublicKey):
             self._trad_key.verify(signature, data)
         else:
             raise InvalidKeyCombination(
-                f"Unsupported traditional key type for verification.Got: {type(self._trad_key)}"
+                f"Unsupported traditional key type for verification. Got: {type(self._trad_key)}"
             )
 
     def verify(
@@ -313,7 +313,7 @@ class CompositeSigPrivateKey(AbstractCompositePrivateKey, HybridSigPrivateKey):
             return self._trad_key.sign(data)
         if isinstance(self._trad_key, ed448.Ed448PrivateKey):
             return self._trad_key.sign(data)
-        raise InvalidKeyCombination(f"Unsupported traditional key type for signing.Got: {type(self._trad_key)}")
+        raise InvalidKeyCombination(f"Unsupported traditional key type for signing. Got: {type(self._trad_key)}")
 
     def sign(
         self,

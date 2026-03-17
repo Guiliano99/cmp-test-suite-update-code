@@ -421,7 +421,7 @@ class MockCAOPCertsAndKeys:
 
         if cert is None:
             raise ValueError(
-                f"Could not find certificate for the specified key.: {type(key)}Please update the `config.json` file."
+                f"Could not find certificate for the specified key: {type(key)}. Please update the `config.json` file."
             )
 
         return cert

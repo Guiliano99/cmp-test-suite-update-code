@@ -605,7 +605,7 @@ class KEMSharedSecretList:
             kem_object: KEMSharedSharedState
 
             if kem_object.was_used_for_issuing:
-                raise BadMessageCheck("Shared secret was already used for issuing a certificateor another request.")
+                raise BadMessageCheck("Shared secret was already used for issuing a certificate or another request.")
             verify_kem_based_mac_protection(pki_message=request, shared_secret=kem_object.shared_secret)
 
     def may_update_state(self, request: PKIMessageTMP) -> None:
@@ -733,7 +733,7 @@ class CertStateEnum(enum.Enum):
     UPDATED = 3  # The certificate was updated, which is confirmed.
     UPDATED_BUT_NOT_CONFIRMED = 4  # The certificate was updated, but not confirmed.
     REVIVED = 5  # The certificate was revoked and then revived.
-    UNKNOWN = 6  # The certificate is in an unknown state, which measn it was either not issued by us
+    UNKNOWN = 6  # The certificate is in an unknown state, which means it was either not issued by us
     # or in an earlier state (boot-up).
 
 
@@ -822,7 +822,7 @@ class UpdateCertDB:
 
         if time_diff is not None and time_diff > self.timeout and strict:
             raise BadRequest(
-                "The certificate timeout is exceeded, cannot confirm the certificate."
+                "The certificate timeout is exceeded, cannot confirm the certificate. "
                 "Please start a new request to update the certificate."
             )
 
@@ -925,7 +925,7 @@ class UpdateCertDB:
 
         if body_name in ["ir", "cr", "p10cr"] and cert_state == CertStateEnum.UPDATED_BUT_NOT_CONFIRMED:
             raise BadRequest(
-                "The certificate is updated but not confirmed, cannot request IR/CR/P10CR."
+                "The certificate is updated but not confirmed, cannot request IR/CR/P10CR. "
                 "Please confirm the other request first.",
                 failinfo="badRequest,certRevoked",
             )
@@ -1115,13 +1115,13 @@ class CertificateDB:
         elif cert_state in [CertStateEnum.UPDATED, CertStateEnum.UPDATED_BUT_NOT_CONFIRMED]:
             if not isinstance(updated_cert, rfc9480.CMPCertificate):
                 raise TypeError(
-                    f"The updated certificate must be of type `CMPCertificate`.Got: {type(updated_cert).__name__}"
+                    f"The updated certificate must be of type `CMPCertificate`. Got: {type(updated_cert).__name__}"
                 )
             entry.update_cert_digest = compute_hash(self.hash_alg, encoder.encode(updated_cert))
             entry.updated_date = datetime.now(timezone.utc).replace(microsecond=0)
         else:
             raise ValueError(
-                f"The certificate state must be either UPDATED or UPDATED_BUT_NOT_CONFIRMED.Got: {cert_state}."
+                f"The certificate state must be either UPDATED or UPDATED_BUT_NOT_CONFIRMED. Got: {cert_state}."
             )
 
         entry.cert_state = cert_state
@@ -1156,7 +1156,7 @@ class CertificateDB:
             )
 
         if not isinstance(cert, rfc9480.CMPCertificate):
-            raise TypeError(f"The certificate must be of type `rfc9480.CMPCertificate`.Got: {type(cert).__name__}")
+            raise TypeError(f"The certificate must be of type `rfc9480.CMPCertificate`. Got: {type(cert).__name__}")
 
         cert_digest = compute_hash(self.hash_alg, encoder.encode(cert))
         logging.debug("Cert digest:", cert_digest.hex())
@@ -1193,7 +1193,7 @@ class CertificateDB:
                         )
                 else:
                     raise ValueError(
-                        f"The certificate state must be either REVIVED, REVOKED, UPDATED or UPDATED_BUT_NOT_CONFIRMED."
+                        f"The certificate state must be either REVIVED, REVOKED, UPDATED or UPDATED_BUT_NOT_CONFIRMED. "
                         f"Got: {new_state}. {error_suffix}"
                     )
 

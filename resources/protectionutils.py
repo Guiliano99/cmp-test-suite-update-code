@@ -959,7 +959,7 @@ def patch_sender_and_sender_kid(
     :param do_patch: Whether to patch the `sender` and `senderKID` fields.
     :param pki_message: The PKIMessage structure to patch.
     :param cert: The certificate to use for patching.
-    :return: The patched or unpached PKIMessage.
+    :return: The patched or unpatched PKIMessage.
     """
     # To fix the incorrect parsing from the RF.
     if not do_patch or do_patch == "False":

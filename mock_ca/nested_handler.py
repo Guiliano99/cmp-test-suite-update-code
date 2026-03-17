@@ -222,7 +222,7 @@ class NestedHandler:
         if "certConf" in names:
             if set(names) != {"certConf"}:
                 raise BadRequest(
-                    "THe `nested` body must only contain `certConf` messages, "
+                    "The `nested` body must only contain `certConf` messages, "
                     "or only requests of type `ir`, `cr`, `kur`, `p10cr`, `rr`."
                     f" Got: {names}."
                 )

@@ -760,7 +760,7 @@ class CombinedKeyFactory:
 
         if not hasattr(private_key, "private_numbers"):
             raise NotImplementedError(
-                "The private key does not have private numbers.Can not determine the key export type of the key."
+                "The private key does not have private numbers. Can not determine the key export type of the key."
             )
 
         if not callable(getattr(private_key, "private_numbers")):

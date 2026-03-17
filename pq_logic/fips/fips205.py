@@ -84,7 +84,7 @@ class ADRS:
 
     def set_type_and_clear(self, t):
         """The member function ADRS.setTypeAndClear(Y) for addresses sets
-        the type of the ADRS to Y and sets the fnal 12 bytes of the ADRS
+        the type of the ADRS to Y and sets the final 12 bytes of the ADRS
         to zero.
         """
         self.a[16:20] = t.to_bytes(4, byteorder="big")
@@ -173,7 +173,7 @@ class SLH_DSA:
     def shake256(self, x: bytes, length: int) -> bytes:
         """SHAKE256(x, l): Internal hook."""
         return _compute_shake("shake256", x, length)
-        #return SHAKE256.new(x).read(length)
+        # return SHAKE256.new(x).read(length)
 
     def shake_h_msg(self, r, pk_seed, pk_root, m):
         return self.shake256(r + pk_seed + pk_root + m, self.m)
@@ -207,7 +207,7 @@ class SLH_DSA:
         :return: The truncated hash.
         """
         return _compute_hash("sha512", x)[0:n]
-        #return SHA512.new(x).digest()[0:n]
+        # return SHA512.new(x).digest()[0:n]
 
     def mgf(self, hash_f, hash_l: int, mgf_seed: bytes, mask_len: int) -> bytes:
         """NIST SP 800-56B REV. 2 / The Mask Generation Function (MGF).

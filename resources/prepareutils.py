@@ -249,7 +249,7 @@ def parse_to_general_name(
             extract_subject=True,
         )
 
-    raise TypeError(f"Sender must be a string, Name or a GeneralName object.Got: {type(sender)}")
+    raise TypeError(f"Sender must be a string, Name or a GeneralName object. Got: {type(sender)}")
 
 
 @not_keyword

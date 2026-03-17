@@ -305,7 +305,7 @@ def _prepare_get_certificate_request_template(fill_info_val: bool = False) -> rf
     """Prepare the Get Certificate Request Template structure for the `General Message`.
 
     :param fill_info_val: If set to `True` adds some random bytes to the `infoValue` field,
-    because it MUST be absent.Defaults to `False`.
+    because it MUST be absent. Defaults to `False`.
     :return: The filled `InfoTypeAndValue` structure
     """
     return cmputils.prepare_info_type_and_value(oid=rfc9480.id_it_certReqTemplate, fill_random=fill_info_val)
@@ -1198,7 +1198,7 @@ def _check_ec_alg_id(alg_id: rfc9480.AlgorithmIdentifier) -> str:
     name = CURVE_OID_2_NAME.get(decoded_params["namedCurve"])
     if name is None:
         raise ValueError(
-            f"The `id_ecPublicKey` algorithm did not contain a supported curve.Got: {decoded_params['namedCurve']}"
+            f"The `id_ecPublicKey` algorithm did not contain a supported curve. Got: {decoded_params['namedCurve']}"
         )
     return name
 
@@ -1261,7 +1261,7 @@ def validate_encr_and_key_agreement_types(  # noqa D417 undocumented-param
             name = ENC_KEY_AGREEMENT_TYPES_OID_2_NAME.get(alg_id["algorithm"])
             if name is None:
                 raise ValueError(
-                    f"The general response did not contain any supported algorithms.Got: {alg_id['algorithm']}"
+                    f"The general response did not contain any supported algorithms. Got: {alg_id['algorithm']}"
                 )
             supported_algorithms.append(name)
 
@@ -1601,7 +1601,7 @@ def _prepare_kem_ct_info(  # noqa D417 undocumented-param
             ss, ct = public_key.encaps()
             if ca_key is not None:
                 logging.debug(
-                    "Encapsulating with CA key not possible for this key type.Ignoring the provided CA key. Got: %s",
+                    "Encapsulating with CA key not possible for this key type. Ignoring the provided CA key. Got: %s",
                     public_key.name,
                 )
 

@@ -2273,11 +2273,11 @@ def validate_cross_certification_response(  # noqa D417 undocumented-param
     """
     entries = len(ccp["body"]["ccp"]["response"])
     if entries != 1:
-        raise ValueError(f"The `ccr` body should contain exactly One certificate.Got: {entries}")
+        raise ValueError(f"The `ccr` body should contain exactly one certificate. Got: {entries}")
 
     _is_kem_based = ccp["header"]["protectionAlg"]["algorithm"] == id_KemBasedMac
     if protectionutils.get_protection_type_from_pkimessage(ccp) == "mac" or _is_kem_based:
-        raise ValueError("The Cross Certification Response should be signed.Not MAC protected.")
+        raise ValueError("The Cross Certification Response should be signed. Not MAC protected.")
 
     if not ccp["extraCerts"].isValue:
         raise BadMessageCheck("The Cross Certification Response should contain `extraCerts`.")

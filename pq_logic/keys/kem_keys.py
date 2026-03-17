@@ -193,7 +193,7 @@ class MLKEMPrivateKey(PQKEMPrivateKey):
         """
         if kem_alg not in ML_KEM_NAMES:
             _name = ", ".join(ML_KEM_NAMES)
-            raise ValueError(f"Invalid ML-KEM algorithm name: {kem_alg}.Supported options: {_name}")
+            raise ValueError(f"Invalid ML-KEM algorithm name: {kem_alg}. Supported options: {_name}")
         return MLKEMPrivateKey(alg_name=kem_alg)
 
     @classmethod

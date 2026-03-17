@@ -442,7 +442,7 @@ def _verify_related_cert_pop(
             public_key=verify_key,
         )
     except InvalidSignature as e:
-        raise BadPOP(f"The signature with the related certificate is invalid.Used hash alg: {hash_alg}") from e
+        raise BadPOP(f"The signature with the related certificate is invalid. Used hash alg: {hash_alg}") from e
 
 
 @keyword(name="Validate Related Cert PoP")

@@ -358,7 +358,7 @@ class CAHandler:
         if self.xwing_key is not None:
             if not isinstance(self.xwing_key, HybridKEMPrivateKey):
                 raise BadConfig(
-                    f"The hybrid kem private key is not a `HybridKEMPrivateKey`.Got: {type(self.xwing_key)}"
+                    f"The hybrid kem private key is not a `HybridKEMPrivateKey`. Got: {type(self.xwing_key)}"
                 )
 
         self.rev_handler = RevocationHandler(self.state.certificate_db)
@@ -444,7 +444,7 @@ class CAHandler:
         prot_enc_key = load_private_key_from_file("data/keys/private-key-rsa.pem", password=None)
 
         if not isinstance(prot_enc_key, EnvDataPrivateKey):
-            raise BadConfig(f"The protection encryption key is not a `EnvDataPrivateKey`.Got: {type(prot_enc_key)}")
+            raise BadConfig(f"The protection encryption key is not a `EnvDataPrivateKey`. Got: {type(prot_enc_key)}")
 
         self.genm_handler = GeneralMessageHandler(
             root_ca_cert=self.ca_cert,
@@ -467,7 +467,7 @@ class CAHandler:
         )
 
         if not isinstance(self.sun_hybrid_key, CompositeSigPrivateKey):
-            raise BadConfig(f"The Sun Hybrid key is not a `CompositeSig03PrivateKey`.Got: {type(self.sun_hybrid_key)}")
+            raise BadConfig(f"The Sun Hybrid key is not a `CompositeSig03PrivateKey`. Got: {type(self.sun_hybrid_key)}")
 
         self.sun_hybrid_handler = SunHybridHandler(
             ca_cert=self.sun_hybrid_cert,
@@ -1095,10 +1095,10 @@ class CAHandler:
 
         if sum([issued_cert is None, to_be_confirmed is None]) in [0, 2]:
             raise Exception(
-                "The newly issued certificate can either be implicit confirmed ormust be confirmed, but not both."
+                "The newly issued certificate can either be implicit confirmed or must be confirmed, but not both."
             )
 
-        logging.debug("Issued certs is confined:", issued_cert is not None)
+        logging.debug("Issued certs are confirmed: %s", issued_cert is not None)
 
         self._after_request(
             request_msg=pki_message,
