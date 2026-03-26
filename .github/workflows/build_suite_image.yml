@@ -18,10 +18,8 @@ on:
       - 'data/dockerfiles/Dockerfile.*'
       - 'requirements*.txt'
   workflow_run:
-    workflows:
-      - Build and push base docker images
-    types:
-      - completed
+    workflows: [ "Build and push base docker images" ]
+    types: [ completed ]
   workflow_dispatch:
 
 jobs:
