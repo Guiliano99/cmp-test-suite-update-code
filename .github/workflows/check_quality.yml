@@ -91,8 +91,13 @@ jobs:
       - name: Check for outdated dependencies
         run: |
           echo "Checking for outdated packages..."
-          uv tree --outdated --depth 1
-
+          if uv tree --outdated --depth 1 | grep -q 'latest:'; then
+            echo "Updates available"
+            exit 1
+          else
+            echo "No updates"
+            exit 0
+          fi
   version_check:
     runs-on: ubuntu-24.04
     steps:
