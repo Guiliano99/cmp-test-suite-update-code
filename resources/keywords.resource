@@ -41,58 +41,23 @@ ${TEST_INDEX}            ${0}
 
 *** Keywords ***
 Set Up Test Suite
-    [Documentation]    This keyword is used to set up the test suite. It is called at the beginning of the test suite.
-    ...                Or a test file to ensure that all prerequisites are met. As an example a first certificate is
-    ...                issued, and the key is generated to be used for the tests. This ensure that a trusted
-    ...                certificate is present, which will be used to issue further certificates. This method was
-    ...                chosen to allow to set a certificate, which is not firstly configured, but generated with
-    ...                the test suite. If `MAC` protection is allowed, the shared secret will be used to issue the
-    ...                first certificate `ISSUED_KEY` and `ISSUED_CERT`. This ensure that the test suite can be run
-    ...                without the modification of the database. If the `MAC` protection is not allowed, the
-    ...                `ISSUED_KEY` and `ISSUED_CERT` are issued with the **MUST** be set default certificate and key.
-    ...                If this behaviour is not wanted, the `ISSUED_KEY` and `ISSUED_CERT` can be set in the
-    ...                configuration file, and will then be loaded from there.
+    [Documentation]    Sets up the test suite by issuing an initial bootstrap certificate if not yet present.
+    ...                The protection mode is driven by `ALLOW_MAC_PROTECTION`, `ALLOW_SELF_SIGNED_BOOTSTRAP`,
+    ...                and `ALLOW_UNPROTECTED`. Set `ISSUED_KEY` / `ISSUED_CERT` in the config to skip issuance.
     [Tags]    setup
-    IF  '${ISSUED_KEY}' == '${None}'
+    ${ALLOW_SELF_SIGNED_BOOTSTRAP}=    Get Variable Value    ${ALLOW_SELF_SIGNED_BOOTSTRAP}    ${False}
+    ${ALLOW_UNPROTECTED}=    Get Variable Value    ${ALLOW_UNPROTECTED}    ${False}
+    IF    '${ISSUED_KEY}' == '${None}'
         Initialize PQ Cert And Key Variables
         ${issued_key}=    Generate Default Key
-        IF    ${ALLOW_MAC_PROTECTION}
-            ${extensions}=    Prepare Extensions    digitalSignature,keyEncipherment
-            ${ir}=  Build Ir From Key    ${issued_key}    sender=${SENDER}    recipient=${RECIPIENT}
-            ...     for_mac=True   implicit_confirm=${ALLOW_IMPLICIT_CONFIRM}   extensions=${extensions}
-            ${protected_ir}=    Protect PKIMessage    ${ir}    password=${PRESHARED_SECRET}
-            ...                 protection=${DEFAULT_MAC_ALGORITHM}
-        ELSE
-            ${tmp_cert}    ${tmp_key}=    May Load Cert And Key
-            ...    cert_path=${INITIAL_CERT_PATH}
-            ...    key_path=${INITIAL_KEY_PATH}
-            ...    key_password=${INITIAL_KEY_PASSWORD}
-            ${result}=    Is Certificate And Key Set    ${tmp_cert}    ${tmp_key}
-            IF  not ${result}
-                Fatal Error    The initial certificate and key are not provided.
-            END
-            ${ir}=  Build Ir From Key    ${issued_key}   exclude_fields=sender,senderKID
-            ...                          recipient=${RECIPIENT}    implicit_confirm=${ALLOW_IMPLICIT_CONFIRM}
-            ${protected_ir}=    Protect Hybrid PKIMessage     ${ir}    private_key=${tmp_key}    cert=${tmp_cert}
-        END
-        ${response}=   Exchange Migration PKIMessage    ${protected_ir}    ${CA_BASE_URL}    ${INIT_SUFFIX}
-        PKIStatus Must Be    ${response}   accepted
-        ${issued_cert}=    Confirm Certificate If Needed    ${response}
-        VAR    ${ISSUED_KEY}    ${issued_key}    scope=Global     # robocop: off=VAR04
-        VAR    ${ISSUED_CERT}    ${issued_cert}    scope=Global   # robocop: off=VAR04
-        LOG    Initial certificate issued, with `MAC` protection.
-        ${cert_chain}=   Build CMP Chain From PKIMessage  ${response}   ee_cert=${ISSUED_CERT}
-        Write Certs To Dir    ${cert_chain}
-        ${root_cert}=   Get From List   ${cert_chain}  -1
-        Write Cmp Certificate To Pem    ${root_cert}  data/trustanchors/issued_cert_root.pem
-        VAR    &{CERT_CONF_DEF_VALS}    sender=${SENDER}    recipient=${RECIPIENT}
-        ...    private_key=${ISSUED_KEY}    cert=${ISSUED_CERT}    password=${PRESHARED_SECRET}
-        ...    protection=signature   scope=Global   # robocop: off=VAR04
-        VAR    &{DEFAULT_PROTECTION_VALS}    protection=signature   private_key=${ISSUED_KEY}
-        ...    cert=${ISSUED_CERT}   password=${PRESHARED_SECRET}  scope=Global  # robocop: off=VAR04
+        ${ir_to_send}    ${fallback_cert}=    Build Bootstrap IR
+        ...    ${issued_key}    ${ALLOW_MAC_PROTECTION}    ${ALLOW_SELF_SIGNED_BOOTSTRAP}    ${ALLOW_UNPROTECTED}
+        ${response}=    Exchange Migration PKIMessage    ${ir_to_send}    ${CA_BASE_URL}    ${INIT_SUFFIX}
+        ${issued_cert}=    Process Bootstrap Response    ${response}    ${fallback_cert}    ${ALLOW_UNPROTECTED}
+        Set Bootstrap Global Variables    ${issued_key}    ${issued_cert}    ${ALLOW_UNPROTECTED}
     END
-    ${cert}  ${key}=   May Load Cert And Key    ${OTHER_TRUSTED_PKI_CERT}    ${OTHER_TRUSTED_PKI_KEY}
-    VAR    ${OTHER_TRUSTED_PKI_CERT}    ${cert}    scope=Global  # robocop: off=VAR04
+    ${cert}    ${key}=    May Load Cert And Key    ${OTHER_TRUSTED_PKI_CERT}    ${OTHER_TRUSTED_PKI_KEY}
+    VAR    ${OTHER_TRUSTED_PKI_CERT}    ${cert}    scope=Global    # robocop: off=VAR04
     VAR    ${OTHER_TRUSTED_PKI_KEY}    ${key}    scope=Global    # robocop: off=VAR04
     TRY
         Set Up CRR Test Cases
@@ -104,6 +69,88 @@ Set Up Test Suite
     EXCEPT
         Log    Failed to setup the trusted PKI RA certificate chain.
     END
+
+Build Bootstrap IR
+    [Documentation]    Builds and protects the initial registration request for bootstrap.
+    ...                Selects the protection mode in priority order: MAC → self-signed → unprotected → cert.
+    ...                Returns the message to send and an optional fallback certificate (self-signed mode only).
+    [Tags]    setup
+    [Arguments]    ${issued_key}    ${allow_mac}    ${allow_self_signed}    ${allow_unprotected}
+    ${extensions}=    Prepare Extensions    digitalSignature,keyEncipherment
+    IF    ${allow_mac}
+        ${ir}=    Build Ir From Key    ${issued_key}    sender=${SENDER}    recipient=${RECIPIENT}
+        ...       for_mac=True    implicit_confirm=${ALLOW_IMPLICIT_CONFIRM}    extensions=${extensions}
+        ${ir_to_send}=    Protect PKIMessage    ${ir}    password=${PRESHARED_SECRET}
+        ...               protection=${DEFAULT_MAC_ALGORITHM}
+        RETURN    ${ir_to_send}    ${None}
+    ELSE IF    ${allow_self_signed}
+        ${fallback_cert}    ${_}=    Build Certificate    private_key=${issued_key}    common_name=${SENDER}
+        ${ir}=    Build Ir From Key    ${issued_key}    exclude_fields=sender,senderKID
+        ...       recipient=${RECIPIENT}    implicit_confirm=${ALLOW_IMPLICIT_CONFIRM}    extensions=${extensions}
+        ${ir_to_send}=    Protect Hybrid PKIMessage    ${ir}    private_key=${issued_key}    cert=${fallback_cert}
+        RETURN    ${ir_to_send}    ${fallback_cert}
+    ELSE IF    ${allow_unprotected}
+        ${ir}=    Build Ir From Key    ${issued_key}    sender=${SENDER}    recipient=${RECIPIENT}
+        ...       implicit_confirm=${ALLOW_IMPLICIT_CONFIRM}    extensions=${extensions}
+        RETURN    ${ir}    ${None}
+    ELSE
+        ${tmp_cert}    ${tmp_key}=    May Load Cert And Key
+        ...    cert_path=${INITIAL_CERT_PATH}    key_path=${INITIAL_KEY_PATH}    key_password=${INITIAL_KEY_PASSWORD}
+        ${result}=    Is Certificate And Key Set    ${tmp_cert}    ${tmp_key}
+        IF    not ${result}
+            Fatal Error    The initial certificate and key are not provided.
+        END
+        ${ir}=    Build Ir From Key    ${issued_key}    exclude_fields=sender,senderKID
+        ...       recipient=${RECIPIENT}    implicit_confirm=${ALLOW_IMPLICIT_CONFIRM}
+        ${ir_to_send}=    Protect Hybrid PKIMessage    ${ir}    private_key=${tmp_key}    cert=${tmp_cert}
+        RETURN    ${ir_to_send}    ${None}
+    END
+
+Process Bootstrap Response
+    [Documentation]    Processes the CA response to the bootstrap IR and returns the issued certificate.
+    ...                On success, confirms the certificate and writes the chain and trust anchor to disk.
+    ...                On failure, falls back to the provided fallback certificate, or `${None}` if unprotected.
+    [Tags]    setup
+    [Arguments]    ${response}    ${fallback_cert}    ${allow_unprotected}
+    TRY
+        PKIStatus Must Be    ${response}    accepted
+        ${issued_cert}=    Confirm Certificate If Needed    ${response}
+        ${cert_chain}=    Build CMP Chain From PKIMessage    ${response}    ee_cert=${issued_cert}
+        Write Certs To Dir    ${cert_chain}
+        ${root_cert}=    Get From List    ${cert_chain}    -1
+        Write Cmp Certificate To Pem    ${root_cert}    data/trustanchors/issued_cert_root.pem
+    EXCEPT
+        IF    ${allow_unprotected}
+            VAR    ${issued_cert}    ${None}
+        ELSE IF    '${fallback_cert}' != '${None}'
+            VAR    ${issued_cert}    ${fallback_cert}
+        ELSE
+            Fatal Error    Initial certificate issuance failed and no fallback certificate is available.
+        END
+    END
+    RETURN    ${issued_cert}
+
+Set Bootstrap Global Variables
+    [Documentation]    Stores the issued key, certificate, and default protection dictionaries as global variables.
+    ...                When `allow_unprotected` is active, protection is set to `unprotected` in both dictionaries.
+    [Tags]    setup
+    [Arguments]    ${issued_key}    ${issued_cert}    ${allow_unprotected}
+    VAR    ${ISSUED_KEY}    ${issued_key}    scope=Global    # robocop: off=VAR04
+    VAR    ${ISSUED_CERT}    ${issued_cert}    scope=Global    # robocop: off=VAR04
+    IF    ${allow_unprotected}
+        VAR    &{CERT_CONF_DEF_VALS}    sender=${SENDER}    recipient=${RECIPIENT}
+        ...    private_key=${issued_key}    cert=${issued_cert}    password=${PRESHARED_SECRET}
+        ...    protection=unprotected    scope=Global    # robocop: off=VAR04
+        VAR    &{DEFAULT_PROTECTION_VALS}    protection=unprotected
+        ...    scope=Global    # robocop: off=VAR04
+    ELSE
+        VAR    &{CERT_CONF_DEF_VALS}    sender=${SENDER}    recipient=${RECIPIENT}
+        ...    private_key=${issued_key}    cert=${issued_cert}    password=${PRESHARED_SECRET}
+        ...    protection=signature    scope=Global    # robocop: off=VAR04
+        VAR    &{DEFAULT_PROTECTION_VALS}    protection=signature    private_key=${issued_key}
+        ...    cert=${issued_cert}    password=${PRESHARED_SECRET}    scope=Global    # robocop: off=VAR04
+    END
+
 
 Initialize PQ Cert And Key Variables
     [Documentation]    Initialize the variables for the PQ certificate and key, to store freshly issued
@@ -841,6 +888,8 @@ Default Protect PKIMessage
     ELSE IF  '${protection}' == 'mac'
         ${args}=    Set To Dictionary    ${args}   protection=${DEFAULT_MAC_ALGORITHM}
         ${prot_pkimessage}=    Protect PKIMessage    ${pki_message}    &{args}
+    ELSE IF  '${protection}' == 'unprotected'
+        VAR    ${prot_pkimessage}    ${pki_message}
     ELSE
         ${prot_pkimessage}=    Protect PKIMessage    ${pki_message}    &{args}
     END

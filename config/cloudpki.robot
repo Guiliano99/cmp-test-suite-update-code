@@ -61,6 +61,8 @@ ${ENC_CERT_EE_KEY}      ${NONE}
 ${EXAMPLES_KUR_GEN}    10
 ${GATHER_NONCES_FROM_MSG_BODIES}    ip,cp,kup,rp,error
 ${ALLOW_MAC_PROTECTION}   ${True}
+${ALLOW_SELF_SIGNED_BOOTSTRAP}    ${False}
+${ALLOW_UNPROTECTED}    ${False}
 # decides whether to use rfc822Name or the directoryName with the common name set.
 # MUST be set in a strict setting.
 
