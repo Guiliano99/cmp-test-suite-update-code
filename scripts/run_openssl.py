@@ -54,6 +54,7 @@ def run_cmp_ir(
     sender_kid: str = "CN=Hans the Tester",
     secret: str = "pass:SiemensIT",
     implicit_confirm: bool = True,
+    trusted: str = "data/mock_ca/trustanchors/root_cert_ed25519.pem",
 ) -> None:
     """Run the CMP IR command to request a certificate.
 
@@ -66,6 +67,8 @@ def run_cmp_ir(
     :param sender_kid: The sender key identifier. Defaults to `CN=Hans the Tester`.
     :param secret: The pre-shared-secret for the CMP server. Defaults to `pass:SiemensIT`.
     :param implicit_confirm: Whether to use implicit confirmation. Defaults to `True`.
+    :param trusted: Path to the trust anchor PEM file for verifying server responses.
+        Defaults to `data/mock_ca/trustanchors/root_cert_ed25519.pem`.
     """
     base_cmd = [
         "openssl",
@@ -95,7 +98,8 @@ def run_cmp_ir(
         keyfile,
         "-reqout",
         reqout,
-        "-unprotected_errors",
+        "-trusted",
+        trusted,
         "-verbosity",
         "8",
     ]
@@ -122,6 +126,6 @@ def run_cmp_ir(
 
 # Example usage
 if __name__ == "__main__":
-    generate_rsa_private_key(overwrite=False)
-    generate_csr(overwrite=False)
+    generate_rsa_private_key(overwrite=True)
+    generate_csr(overwrite=True)
     run_cmp_ir(implicit_confirm=False)
