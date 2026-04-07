@@ -93,6 +93,7 @@ jobs:
           echo "Checking for outdated packages..."
           if uv tree --outdated --depth 1 | grep -q 'latest:'; then
             echo "Updates available"
+            uv tree --outdated --depth 1
             exit 1
           else
             echo "No updates"
