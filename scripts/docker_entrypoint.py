@@ -126,25 +126,39 @@ def prepare_parser():
 
 2. Passing a minimal URL:
    docker run --rm -it ghcr.io/siemens/cmp-test --minimal http://example.com
-   Executes: robot --pythonpath=./ --outputdir=/report --include minimal --variable SERVER_URL:http://example.com tests/
-   Runs only tests tagged `minimal`, which only require the server's address and nothing else.
+   Runs only tests tagged `minimal` against the given endpoint using the built-in default credentials.
 
-3. Using a custom configuration:
+3. Minimal run with custom credentials and MAC protection (recommended for any non-cloudpki CA):
+   docker run --rm -it ghcr.io/siemens/cmp-test \\
+     --minimal http://example.com \\
+     --password MySharedSecret \\
+     --sender "CN=MyTestUser" \\
+     --recipient "CN=MyCA"
+   Overrides PRESHARED_SECRET, SENDER, and RECIPIENT; defaults to MAC/password protection.
+
+4. Minimal run with certificate-based protection after MAC bootstrap:
+   docker run --rm -it ghcr.io/siemens/cmp-test \\
+     --minimal http://example.com \\
+     --password MySharedSecret \\
+     --protection cert
+   Bootstraps an initial certificate via MAC, then uses signature protection for subsequent requests.
+
+5. Using a custom configuration:
    docker run --rm -it ghcr.io/siemens/cmp-test -v ./reports:/report -v ./config:/config image --customconfig
    Runs all tests with the custom configuration given in a directory mounted to config/, will save reports to /reports.
 
-4. Running Mock CA from a locally built container:
+6. Running Mock CA from a locally built container:
    docker build -t cmp-test -f data/dockerfiles/Dockerfile.tests .
    docker run --rm -it -p 5000:5000 cmp-test --mockca 5000
    Runs: python mock_ca/ca_handler.py --host 0.0.0.0 --port 5000
 
-5. Running Mock CA from the remote container image:
+7. Running Mock CA from the remote container image:
    docker run --rm -it -p 5000:5000 ghcr.io/siemens/cmp-test --mockca 5000
    Runs: python mock_ca/ca_handler.py --host 0.0.0.0 --port 5000
 
-6. Passing arbitrary arguments to robot (note the `--`):
+8. Passing arbitrary arguments to robot (note the `--`):
    docker run --rm -it ghcr.io/siemens/cmp-test --minimal http://example.com -- --dryrun
-   Runs: robot --pythonpath=./ --outputdir=/report --include minimal --variable SERVER_URL:http://example.com tests/ \
+   Runs: robot --pythonpath=./ --outputdir=/report --include minimal --variable CA_CMP_URL:http://example.com tests/ \\
     --dryrun
 """,
     )
@@ -166,6 +180,43 @@ def prepare_parser():
         type=int,
         metavar="PORT",
         help="Start the Mock CA server on the given port",
+    )
+    parser.add_argument(
+        "--password",
+        help=(
+            "Pre-shared password for MAC-based protection. When provided, MAC protection is used by default "
+            "in --minimal mode. Overrides the PRESHARED_SECRET variable."
+        ),
+        type=str,
+        default=None,
+        metavar="SECRET",
+    )
+    parser.add_argument(
+        "--sender",
+        help="Sender distinguished name for --minimal mode (e.g. 'CN=MyTestUser'). Overrides the SENDER variable.",
+        type=str,
+        default=None,
+        metavar="DN",
+    )
+    parser.add_argument(
+        "--recipient",
+        help="Recipient distinguished name for --minimal mode (e.g. 'CN=MyCA'). Overrides the RECIPIENT variable.",
+        type=str,
+        default=None,
+        metavar="DN",
+    )
+    parser.add_argument(
+        "--protection",
+        help=(
+            "Protection type for CMP messages in --minimal mode. "
+            "'password' uses MAC protection (requires --password), "
+            "'cert' uses signature protection with the certificate enrolled during suite setup, "
+            "'self-signed' skips the MAC bootstrap and uses a freshly generated self-signed certificate instead, "
+            "'no-protection' sends unprotected messages. "
+            "Defaults to 'password' when --password is provided, otherwise the config default applies."
+        ),
+        choices=["no-protection", "password", "cert", "self-signed"],
+        default=None,
     )
     parser.add_argument("--tags", help="Run only tests with the given tags", type=str, nargs="+", default=[])
     parser.add_argument(
@@ -247,7 +298,32 @@ def main():
     elif args.minimal:
         # A minimal batch of tests that only need to know the server's address and nothing else, it is the easiest
         # way to get a taste of what the test suite can do while still doing some actual work with a real server.
-        command = f"robot --pythonpath=./ --outputdir=/report --include minimal --variable CA_CMP_URL:{args.minimal}"
+        # CA_BASE_URL is overridden alongside CA_CMP_URL so that the suite-setup bootstrap enrollment also hits
+        # the user-supplied endpoint instead of the default cloudpki server.
+        command = (
+            f"robot --pythonpath=./ --outputdir=/report --include minimal"
+            f" --variable CA_CMP_URL:{args.minimal}"
+            f" --variable CA_BASE_URL:{args.minimal}"
+        )
+        if args.password:
+            command += f" --variable PRESHARED_SECRET:{args.password}"
+        if args.sender:
+            command += f" --variable SENDER:{args.sender}"
+        if args.recipient:
+            command += f" --variable RECIPIENT:{args.recipient}"
+
+        protection = args.protection
+        if protection is None and args.password:
+            protection = "password"
+
+        if protection == "password":
+            command += " --variable ALLOW_MAC_PROTECTION:True"
+        elif protection == "cert":
+            command += " --variable ALLOW_MAC_PROTECTION:False"
+        elif protection == "self-signed":
+            command += " --variable ALLOW_MAC_PROTECTION:False --variable ALLOW_SELF_SIGNED_BOOTSTRAP:True"
+        elif protection == "no-protection":
+            command += " --variable ALLOW_MAC_PROTECTION:False --variable ALLOW_UNPROTECTED:True"
 
     elif args.customconfig_explicit:
         # The script was started with --customconfig, there are several possibilities:
