@@ -215,92 +215,24 @@ COMPOSITE_SIG_PREHASH_OID_2_HASH = {
 # Composite KEM
 ######################
 
-id_new_compKEM = univ.ObjectIdentifier("2.16.840.1.114027.80.5.2")
-# Composite KEM OIDs
-id_comp_kem_mlkem768_rsa2048 = univ.ObjectIdentifier(f"{id_new_compKEM}.50")
-id_comp_kem_mlkem768_rsa3072 = univ.ObjectIdentifier(f"{id_new_compKEM}.51")
-id_comp_kem_mlkem768_rsa4096 = univ.ObjectIdentifier(f"{id_new_compKEM}.52")
-id_comp_kem_mlkem768_x25519 = univ.ObjectIdentifier(f"{id_new_compKEM}.53")
-id_comp_kem_mlkem768_ecdh_p256 = univ.ObjectIdentifier(f"{id_new_compKEM}.54")
-id_comp_kem_mlkem768_ecdh_p384 = univ.ObjectIdentifier(f"{id_new_compKEM}.55")
-id_comp_kem_mlkem768_ecdh_brainpool_p256r1 = univ.ObjectIdentifier(f"{id_new_compKEM}.56")
-id_comp_kem_mlkem1024_ecdh_p384 = univ.ObjectIdentifier(f"{id_new_compKEM}.57")
-id_comp_kem_mlkem1024_ecdh_brainpool_p384r1 = univ.ObjectIdentifier(f"{id_new_compKEM}.58")
-id_comp_kem_mlkem1024_x448 = univ.ObjectIdentifier(f"{id_new_compKEM}.59")
-id_comp_kem_mlkem1024_ecdh_p521 = univ.ObjectIdentifier(f"{id_new_compKEM}.60")
-id_comp_kem_mlkem1024_rsa3072 = univ.ObjectIdentifier(f"{id_new_compKEM}.61")
+# Composite KEM OIDs (draft-ietf-lamps-pq-composite-kem-14, arc: 1.3.6.1.5.5.7.6.55-66)
+_COMPOSITE_KEM_MLKEM_NAMES = [
+    "composite-kem-ml-kem-768-rsa2048",
+    "composite-kem-ml-kem-768-rsa3072",
+    "composite-kem-ml-kem-768-rsa4096",
+    "composite-kem-ml-kem-768-x25519",
+    "composite-kem-ml-kem-768-ecdh-secp256r1",
+    "composite-kem-ml-kem-768-ecdh-secp384r1",
+    "composite-kem-ml-kem-768-ecdh-brainpoolP256r1",
+    "composite-kem-ml-kem-1024-rsa3072",
+    "composite-kem-ml-kem-1024-ecdh-secp384r1",
+    "composite-kem-ml-kem-1024-ecdh-brainpoolP384r1",
+    "composite-kem-ml-kem-1024-x448",
+    "composite-kem-ml-kem-1024-ecdh-secp521r1",
+]
 
 COMPOSITE_KEM_MLKEM_NAME_2_OID = {
-    "composite-kem-ml-kem-768-rsa2048": id_comp_kem_mlkem768_rsa2048,
-    "composite-kem-ml-kem-768-rsa3072": id_comp_kem_mlkem768_rsa3072,
-    "composite-kem-ml-kem-768-rsa4096": id_comp_kem_mlkem768_rsa4096,
-    "composite-kem-ml-kem-768-x25519": id_comp_kem_mlkem768_x25519,
-    "composite-kem-ml-kem-768-ecdh-secp256r1": id_comp_kem_mlkem768_ecdh_p256,
-    "composite-kem-ml-kem-768-ecdh-secp384r1": id_comp_kem_mlkem768_ecdh_p384,
-    "composite-kem-ml-kem-768-ecdh-brainpoolP256r1":  # line too long
-    id_comp_kem_mlkem768_ecdh_brainpool_p256r1,
-    "composite-kem-ml-kem-1024-rsa3072": id_comp_kem_mlkem1024_rsa3072,
-    "composite-kem-ml-kem-1024-ecdh-secp384r1": id_comp_kem_mlkem1024_ecdh_p384,
-    "composite-kem-ml-kem-1024-ecdh-brainpoolP384r1":  # line too long
-    id_comp_kem_mlkem1024_ecdh_brainpool_p384r1,
-    "composite-kem-ml-kem-1024-x448": id_comp_kem_mlkem1024_x448,
-    "composite-kem-ml-kem-1024-ecdh-secp521r1": id_comp_kem_mlkem1024_ecdh_p521,
-}
-
-
-id_composite_frodokem = f"{id_composite_kem_test_suite}.1"
-
-
-# FrodoKEM-976-AES, FrodoKEM-976-SHAKE are Claimed NIST Level 3
-# So define eq to ML-KEM-768
-id_frodokem_976_aes_rsa2048 = univ.ObjectIdentifier(f"{id_composite_frodokem}.1")
-id_frodokem_976_aes_rsa3072 = univ.ObjectIdentifier(f"{id_composite_frodokem}.2")
-id_frodokem_976_aes_rsa4096 = univ.ObjectIdentifier(f"{id_composite_frodokem}.3")
-id_frodokem_976_aes_x25519 = univ.ObjectIdentifier(f"{id_composite_frodokem}.4")
-id_frodokem_976_aes_ecdh_p384 = univ.ObjectIdentifier(f"{id_composite_frodokem}.5")
-id_frodokem_976_aes_brainpoolP256r1 = univ.ObjectIdentifier(f"{id_composite_frodokem}.6")
-
-id_frodokem_976_shake_rsa2048 = univ.ObjectIdentifier(f"{id_composite_frodokem}.7")
-id_frodokem_976_shake_rsa3072 = univ.ObjectIdentifier(f"{id_composite_frodokem}.8")
-id_frodokem_976_shake_rsa4096 = univ.ObjectIdentifier(f"{id_composite_frodokem}.9")
-id_frodokem_976_shake_x25519 = univ.ObjectIdentifier(f"{id_composite_frodokem}.10")
-id_frodokem_976_shake_ecdh_p384 = univ.ObjectIdentifier(f"{id_composite_frodokem}.11")
-id_frodokem_976_shake_brainpoolP256r1 = univ.ObjectIdentifier(f"{id_composite_frodokem}.12")
-
-# FrodoKEM-1344-AES and FrodoKEM-1344-SHAKE are Claimed NIST Level 5.
-# So define eq to ML-KEM-1024
-id_frodokem_1344_aes_ecdh_p384 = univ.ObjectIdentifier(f"{id_composite_frodokem}.13")
-id_frodokem_1344_aes_ecdh_brainpoolP384r1 = univ.ObjectIdentifier(f"{id_composite_frodokem}.14")
-id_frodokem_1344_aes_x448 = univ.ObjectIdentifier(f"{id_composite_frodokem}.15")
-id_frodokem_1344_shake_ecdh_p384 = univ.ObjectIdentifier(f"{id_composite_frodokem}.16")
-id_frodokem_1344_shake_ecdh_brainpoolP384r1 = univ.ObjectIdentifier(f"{id_composite_frodokem}.17")
-id_frodokem_1344_shake_x448 = univ.ObjectIdentifier(f"{id_composite_frodokem}.18")
-
-# Always added to the last version of the draft.
-COMPOSITE_FRODOKEM_NAME_2_OID = {
-    "composite-kem-frodokem-976-aes-rsa2048": id_frodokem_976_aes_rsa2048,
-    "composite-kem-frodokem-976-aes-rsa3072": id_frodokem_976_aes_rsa3072,
-    "composite-kem-frodokem-976-aes-rsa4096": id_frodokem_976_aes_rsa4096,
-    "composite-kem-frodokem-976-aes-x25519": id_frodokem_976_aes_x25519,
-    "composite-kem-frodokem-976-aes-ecdh-secp384r1": id_frodokem_976_aes_ecdh_p384,
-    "composite-kem-frodokem-976-aes-ecdh-brainpoolP256r1": id_frodokem_976_aes_brainpoolP256r1,
-    "composite-kem-frodokem-976-shake-rsa2048": id_frodokem_976_shake_rsa2048,
-    "composite-kem-frodokem-976-shake-rsa3072": id_frodokem_976_shake_rsa3072,
-    "composite-kem-frodokem-976-shake-rsa4096": id_frodokem_976_shake_rsa4096,
-    "composite-kem-frodokem-976-shake-x25519": id_frodokem_976_shake_x25519,
-    "composite-kem-frodokem-976-shake-ecdh-secp384r1":  # line too long.
-    id_frodokem_976_shake_ecdh_p384,
-    "composite-kem-frodokem-976-shake-ecdh-brainpoolP256r1":  # line too long.
-    id_frodokem_976_shake_brainpoolP256r1,
-    "composite-kem-frodokem-1344-aes-ecdh-secp384r1": id_frodokem_1344_aes_ecdh_p384,
-    "composite-kem-frodokem-1344-aes-ecdh-brainpoolP384r1":  # line too long.
-    id_frodokem_1344_aes_ecdh_brainpoolP384r1,
-    "composite-kem-frodokem-1344-aes-x448":  # line too long.
-    id_frodokem_1344_aes_x448,
-    "composite-kem-frodokem-1344-shake-ecdh-secp384r1": id_frodokem_1344_shake_ecdh_p384,
-    "composite-kem-frodokem-1344-shake-ecdh-brainpoolP384r1":  # line too long.
-    id_frodokem_1344_shake_ecdh_brainpoolP384r1,
-    "composite-kem-frodokem-1344-shake-x448": id_frodokem_1344_shake_x448,
+    name: id_compSig_base + (i,) for i, name in enumerate(_COMPOSITE_KEM_MLKEM_NAMES, start=55)
 }
 
 id_ce_deltaCertificateDescriptor = univ.ObjectIdentifier("2.16.840.1.114027.80.6.1")
@@ -403,7 +335,6 @@ id_altSignatureExt = univ.ObjectIdentifier(f"{id_hybrid_sun}.7")
 # Composite KEM OIDs
 COMPOSITE_KEM_NAME_2_OID = {}
 COMPOSITE_KEM_NAME_2_OID.update(COMPOSITE_KEM_MLKEM_NAME_2_OID)
-COMPOSITE_KEM_NAME_2_OID.update(COMPOSITE_FRODOKEM_NAME_2_OID)
 
 COMPOSITE_KEM_OID_2_NAME = {oid: name for name, oid in COMPOSITE_KEM_NAME_2_OID.items()}
 
