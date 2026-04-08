@@ -45,7 +45,7 @@ CA MUST Reject Protected Genm With Get CA Certs
     ...    a general message with the `id-it-caCerts` InfoType, where the `infoValue` field must not be set.
     ...    We send a protected general message containing a valid `InfoTypeAndValue` for get ca
     ...    certificates. The CA MUST respond to the message and may include the CA certificates in the response.
-    [Tags]    ca-certs    positive
+    [Tags]    ca-certs    positive    minimal
     ${genm}=    Build CMP General Message    add_messages=get_ca_certs    recipient=${RECIPIENT}    sender=${SENDER}
     ${protected_genm}=    Default Protect General Message    ${genm}
     ${genp}=    Exchange PKIMessage    ${protected_genm}
@@ -56,7 +56,7 @@ CA MUST Respond To Protected Genm With Get CA Certs With Invalid InfoValue
     ...    a protected general message with the `id-it-caCerts` InfoType, where the `infoValue` field
     ...    must not be set. We send a protected general message with an invalid `infoValue` field.
     ...    The CA MUST reject the request and may respond with the optional failInfo `badRequest`.
-    [Tags]    ca-certs    negative
+    [Tags]    ca-certs    negative    minimal
     ${genm}=    Build CMP General Message
     ...    add_messages=get_ca_certs
     ...    negative=True
@@ -76,7 +76,7 @@ CA MUST Respond To Protected Genm With Get Root CA Certificate Update
     ...    protected general message containing a valid `InfoTypeAndValue` for root CA certificate
     ...    updates. The CA MUST respond to the message and MAY include the updated root CA certificate
     ...    information in the response.
-    [Tags]    get_root_ca_cert_update    positive
+    [Tags]    get_root_ca_cert_update    positive    minimal
     Skip If    '${OLD_ROOT_CERT}' == None    Skipped because the OLD_ROOT_CERT filepath is not set.
     ${genm}=    Build CMP General Message
     ...    add_messages=get_root_ca_cert_update
@@ -93,7 +93,7 @@ CA MUST Reject Protected Genm With Get Root CA Cert Update Without OldRootCert
     ...    We send a protected general message for a root CA certificate update without including
     ...    the old root certificate. The CA MUST reject the request and may respond with the failInfo
     ...    `badRequest`.
-    [Tags]    get_root_ca_cert_update    negative
+    [Tags]    get_root_ca_cert_update    negative    minimal
     ${genm}=    Build CMP General Message
     ...    add_messages=get_root_ca_cert_update
     ...    ca_cert=${None}
@@ -111,7 +111,7 @@ CA MUST Respond Protected Genm With Get Certificate Request Template
     ...    to understand which values it can set. We send a protected general message containing a
     ...    valid `InfoTypeAndValue` structure, where the `infoValue` field is absent. The CA SHOULD accept
     ...    the request and, if supported, respond with the OID, but the value must not be set.
-    [Tags]    get_cert_template    positive
+    [Tags]    get_cert_template    positive    minimal
     ${genm}=    Build CMP General Message    add_messages=get_cert_template
     ...         recipient=${RECIPIENT}    sender=${SENDER}
     ${protected_genm}=    Default Protect General Message    ${genm}
@@ -138,7 +138,7 @@ CA MUST Reject Protected Genm With Get Cert Template With Invalid InfoValue
     ...    using the `id-it-certReqTemplate` InfoType, where the `infoValue` field must be absent. We send
     ...    a protected general message with the `infoValue` field incorrectly set. The CA MUST reject
     ...    the request and may return an error message depending on the policy.
-    [Tags]    negative    robot:skip-on-failure
+    [Tags]    negative    robot:skip-on-failure    minimal
     ${genm}=    Build CMP General Message
     ...    add_messages=get_cert_template
     ...    negative=True
@@ -157,7 +157,7 @@ CA MUST Respond To Valid Protected CurrentCRL Request
     ...    Certificate Revocation List (CRL) using the `id-it-currentCRL` InfoType. We send a valid
     ...    protected general message requesting the latest CRL. The CA MUST respond with the latest
     ...    CRL available if it supports CRL provisioning.
-    [Tags]    positive
+    [Tags]    positive    minimal
     ${genm}=    Build CMP General Message    add_messages=current_crl    recipient=${RECIPIENT}    sender=${SENDER}
     ${protected_genm}=    Default Protect General Message    ${genm}
     ${genp}=    Exchange PKIMessage    ${protected_genm}
@@ -169,7 +169,7 @@ CA MUST Reject Invalid Value For CurrentCRL Request
     ...    field must be absent. We send a protected general message for the CurrentCRL with an
     ...    invalid value in the `infoValue` field. The CA MUST reject the request and MAY return an error
     ...    message based on policy.
-    [Tags]   negative    robot:skip-on-failure
+    [Tags]   negative    robot:skip-on-failure    minimal
     ${genm}=    Build CMP General Message
     ...    add_messages=current_crl
     ...    negative=True
@@ -221,7 +221,7 @@ CA MUST Accept CA Protocol Encryption Certificate Request
     ...    certificate which can be used to encrypt sensitive information. We send a general message with the
     ...    `id-it-protocolEncrCert` InfoType. The CA MUST respond with a CA certificate that can be used to
     ...    encrypt sensitive information.
-    [Tags]    positive
+    [Tags]    positive    minimal
     ${info_val}=   Prepare Simple InfoTypeAndValue  ca_prot_enc_cert
     ${genm}=    Build CMP General Message    info_values=${info_val}    recipient=${RECIPIENT}
     ...         exclude_fields=sender,senderKID
@@ -233,7 +233,7 @@ CA MUST Reject CA Protocol Encryption Certificate Request with Set InfoValue
     [Documentation]    According to RFC 4210bis-18 5.3.19.1, the value must be absent in the general message with the
     ...    `id-it-protocolEncrCert` InfoType. We send a general message with the `id-it-protocolEncrCert` InfoType
     ...    with random bytes in the value field. The CA MUST reject the request and may return an error message.
-    [Tags]    negative  strict
+    [Tags]    negative  strict    minimal
     ${info_val}=   Prepare Simple InfoTypeAndValue   ca_prot_enc_cert   True
     ${genm}=    Build CMP General Message   info_values=${info_val}    recipient=${RECIPIENT}
     ...         exclude_fields=sender,senderKID
@@ -247,7 +247,7 @@ CA MUST Accept Signing Key Pair Types Request
     [Documentation]    According to RFC 4210bis-18 5.3.19.2, the EE may request the CA to return a list of supported
     ...    signature algorithms for which the CA can issue certificates. We send a general message with the
     ...    `id-it-signingKeyPairTypes` InfoType. The CA MUST respond with a list of supported signature algorithms.
-    [Tags]    positive
+    [Tags]    positive    minimal
     ${info_val}=  Prepare Simple InfoTypeAndValue    sign_key_pair_types
     ${genm}=    Build CMP General Message    info_values=${info_val}    recipient=${RECIPIENT}
     ...         exclude_fields=sender,senderKID
@@ -259,7 +259,7 @@ CA MUST Reject Signing Key Pair Types Request with Set InfoValue
     [Documentation]    According to RFC 4210bis-18 5.3.19.2, the value must be absent in the general message with the
     ...    `id-it-signingKeyPairTypes` InfoType. We send a general message with the `id-it-signingKeyPairTypes` InfoType
     ...    with random bytes in the value field. The CA MUST reject the request and may return an error message.
-    [Tags]    negative  strict
+    [Tags]    negative  strict    minimal
     ${info_val}=  Prepare Simple InfoTypeAndValue    sign_key_pair_types   True
     ${genm}=    Build CMP General Message    info_values=${info_val}    recipient=${RECIPIENT}
     ...         exclude_fields=sender,senderKID
@@ -273,7 +273,7 @@ CA MUST Accept Encryption KeyAgreement Key Pair Types Request
     [Documentation]    According to RFC 4210bis-18 5.3.19.3, the EE may request the CA to return a list of supported
     ...    key agreement algorithms for which the CA can issue certificates. We send a general message with the
     ...    `id-it-encKeyPairTypes` InfoType. The CA MUST respond with a list of supported key agreement algorithms.
-    [Tags]    positive
+    [Tags]    positive    minimal
     ${info_val}=  Prepare Simple InfoTypeAndValue    enc_key_pair_types
     ${genm}=    Build CMP General Message    info_values=${info_val}    recipient=${RECIPIENT}
     ...         exclude_fields=sender,senderKID
@@ -285,7 +285,7 @@ CA MUST Reject Encryption KeyAgreement Key Pair Types Request with Set InfoValue
     [Documentation]    According to RFC 4210bis-18 5.3.19.3, the value must be absent in the general message with the
     ...    `id-it-encKeyPairTypes` InfoType. We send a general message with the `id-it-encKeyPairTypes`
     ...     InfoType with random bytes in the value field. The CA MUST reject the request.
-    [Tags]    negative  strict
+    [Tags]    negative  strict    minimal
     ${info_val}=  Prepare Simple InfoTypeAndValue    enc_key_pair_types   True
     ${genm}=    Build CMP General Message    info_values=${info_val}    recipient=${RECIPIENT}
     ...         exclude_fields=sender,senderKID
@@ -300,7 +300,7 @@ CA MUST Accept Preferred Symmetric Algorithm Request
     ...    encryption algorithm, which the CA can use inside the deprecated `EncryptedValue` structure, or the
     ...    `EnvelopedData` structure. We send a general message with the `id-it-preferredSymmAlg` InfoType.
     ...    The CA MUST respond with the preferred symmetric encryption algorithm.
-    [Tags]    positive
+    [Tags]    positive    minimal
     ${info_val}=  Prepare Simple InfoTypeAndValue    pref_sym_alg
     ${genm}=    Build CMP General Message    info_values=${info_val}    recipient=${RECIPIENT}
     ...         exclude_fields=sender,senderKID
@@ -312,7 +312,7 @@ CA MUST Reject Preferred Symmetric Algorithm Request with Set InfoValue
     [Documentation]    According to RFC 4210bis-18 5.3.19.4, the value must be absent in the general message with the
     ...    `id-it-preferredSymmAlg` InfoType. We send a general message with the `id-it-preferredSymmetricAlgorithm`
     ...    InfoType with random bytes in the value field. The CA MUST reject the request.
-    [Tags]    negative  strict
+    [Tags]    negative  strict    minimal
     ${info_val}=  Prepare Simple InfoTypeAndValue    pref_sym_alg   True
     ${genm}=    Build CMP General Message    info_values=${info_val}    recipient=${RECIPIENT}
     ...         exclude_fields=sender,senderKID
@@ -338,7 +338,7 @@ CA MUST Respond to Supported Language Tags Message
     [Documentation]    According to RFC 4210bis-18  5.3.19.13, The EE may request the CA to return a list of supported
     ...    language tags using a general message with the `id-it-supportedLangTags` InfoType. The CA MUST respond
     ...    with a list of supported language tags, which contains a single entry.
-    [Tags]      positive
+    [Tags]      positive    minimal
     ${info_val}=   Prepare SupportedLanguageTags    en,de,fr
     ${genm}=    Build CMP General Message    exclude_fields=sender,senderKID   info_values=${info_val}
     ...          recipient=${RECIPIENT}    sender=${SENDER}
@@ -350,7 +350,7 @@ CA MUST Reject Supported Language Tags without a value
     [Documentation]    According to RFC 4210bis-18 5.3.19.13, The value must be present in the general message with the
     ...    `id-it-supportedLangTags` InfoType. We send a general message with the `id-it-supportedLangTags` InfoType
     ...    without a value. The CA MUST reject the request and may return an error message based on policy.
-    [Tags]    negative
+    [Tags]    negative    minimal
     ${info_val}=   Prepare SupportedLanguageTags    ${None}
     ${genm}=    Build CMP General Message    recipient=${RECIPIENT}    exclude_fields=sender,senderKID
     ...         info_values=${info_val}
@@ -364,7 +364,7 @@ CA MUST Reject Supported Language Tags with only invalid Tags
     [Documentation]    According to RFC 4210bis-18 5.3.19.13, when only unsupported language tags are present in the
     ...    the general message with the `id-it-supportedLangTags` InfoType, the CA MUST reject the request and may
     ...    return an error message.
-    [Tags]    negative   robot:skip-on-failure
+    [Tags]    negative   robot:skip-on-failure    minimal
     ${info_val}=   Prepare SupportedLanguageTags    unknown
     ${genm}=    Build CMP General Message    recipient=${RECIPIENT}    exclude_fields=sender,senderKID
     ...         info_values=${info_val}
