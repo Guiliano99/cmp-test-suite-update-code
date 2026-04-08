@@ -517,6 +517,7 @@ def _prepare_root_ca_extensions(
     return _prepare_ca_ra_extensions(
         issuer_key=ca_key,
         key=ca_key,
+        key_usage="keyCertSign,cRLSign, digitalSignature",
     )
 
 
