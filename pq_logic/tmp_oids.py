@@ -345,8 +345,12 @@ COMPOSITE_KEM_OID_2_NAME = {oid: name for name, oid in COMPOSITE_KEM_NAME_2_OID.
 
 # InfoType OIDs for CMP General Messages (from draft-ietf-lamps-attestation-freshness-05)
 # Note: These use placeholder values (TBD1, TBD2) pending IANA assignment
-id_it_nonceRequest = rfc9480.id_it + (9997,)  # TBD1 - Nonce request for remote attestation
-id_it_nonceResponse = univ.ObjectIdentifier("1.2.840.113549.1.9.16.2.8889")  # TBD2 - Nonce response for remote attestation
+id_it_nonceRequest = univ.ObjectIdentifier(
+    "1.2.840.113549.1.9.16.2.8888"
+)  # TBD1 - Nonce request for remote attestation
+id_it_nonceResponse = univ.ObjectIdentifier(
+    "1.2.840.113549.1.9.16.2.8889"
+)  # TBD2 - Nonce response for remote attestation
 
 # Attribute OIDs for CSR (from draft-ietf-lamps-csr-attestation-22)
 # id-aa-attestation = { id-aa 59 } where id-aa = 1.2.840.113549.1.9.16.2
