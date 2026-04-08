@@ -13,12 +13,14 @@ The RemoteAttestationHandler manages nonce generation, validation of nonce reque
 and processing of attestation evidence in certification requests.
 """
 
+import base64
 import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional, Tuple
 
+import requests
 from pyasn1.codec.der import encoder
 from pyasn1.type import univ
 from pyasn1_alt_modules import rfc6402, rfc9480
@@ -75,45 +77,89 @@ class RemoteAttestationHandler:
         self.nonce_config = self.config.attestation_nonce_config
         self._saved_nonces: List[NonceVerifierEntry] = []
 
+    @staticmethod
+    def _fetch_nonce_from_verifier(verifier_url: str, nonce_size: int = 32, timeout: int = 10) -> Optional[bytes]:
+        """Fetch a nonce from a Veraison verifier's challenge-response API.
+
+        Calls ``POST /challenge-response/v1/newSession?nonceSize=<size>`` and
+        extracts the base64-encoded nonce from the JSON response.
+
+        :param verifier_url: Base URL of the verifier (e.g. ``https://192.168.110.11:8443``).
+        :param nonce_size: Requested nonce size in bytes.  Defaults to 32.
+        :param timeout: HTTP request timeout in seconds.
+        :return: The raw nonce bytes, or ``None`` on failure.
+        """
+        url = f"{verifier_url}/challenge-response/v1/newSession?nonceSize={nonce_size}"
+        logging.info("Requesting nonce from verifier: POST %s", url)
+        try:
+            resp = requests.post(url, timeout=timeout, verify=False)
+            resp.raise_for_status()
+            nonce_b64 = resp.json().get("nonce", "")
+            if nonce_b64:
+                nonce = base64.b64decode(nonce_b64)
+                logging.info("Received nonce from verifier (%d bytes)", len(nonce))
+                return nonce
+            logging.warning("Verifier returned empty nonce field")
+        except Exception as exc:
+            logging.error("Failed to fetch nonce from verifier at %s: %s", url, exc)
+        return None
+
     def _get_nonce(self, nonce_request: NonceRequestASN1) -> bytes:
         """Get the nonce from the verifier or generate a new one.
 
-        If the nonce request contains a verifier hint, attempts to retrieve the nonce from
-        the configured verifier endpoint. If the hint is missing and self-generated nonces
-        are allowed, generates a cryptographically random nonce.
+        When the nonce request contains a *hint* that looks like a URL
+        (starts with ``http``), the hint is treated as the base URL of a
+        Veraison verifier and a nonce is fetched via its challenge-response
+        API.  Otherwise the hint is looked up in the configured verifier list.
 
-        Per draft-ietf-lamps-attestation-freshness section 3.1, if the CA/RA cannot provide
-        a requested nonce (e.g., unknown verifier or generation not allowed), it must return
-        an empty OCTET STRING.
+        If neither approach yields a nonce and self-generated nonces are
+        allowed, a cryptographically random nonce is returned.
+
+        Per draft-ietf-lamps-attestation-freshness section 3.1, if the CA/RA
+        cannot provide a requested nonce, it MUST return an empty OCTET STRING.
 
         :param nonce_request: The nonce request containing the optional verifier hint.
         :return: The nonce value as bytes, or empty bytes (b"") if unable to provide.
-        :raises RemoteAttestationError: If nonce retrieval from verifier fails unexpectedly.
         """
-        if not nonce_request["hint"].isValue:
-            if not self.nonce_config.allow_self_generated_nonce:
-                # If an RA/CA is not able to provide a requested nonce, it MUST provide an empty
-                # OCTET STRING in the respective NonceResponse structure.
-                return b""
+        nonce_size = self.nonce_config.min_nonce_length or 32
 
-            return os.urandom(self.nonce_config.min_nonce_length or 32)
+        if nonce_request["hint"].isValue:
+            hint = str(nonce_request["hint"])
+            logging.info("Got remote attestation verifier hint: %s", hint)
 
-        verifier_name = str(nonce_request["hint"])
-        logging.info("Got remote attestation verifier name: %s", verifier_name)
+            # If the hint is a URL, call the verifier's challenge-response API directly.
+            if hint.startswith("http"):
+                nonce = self._fetch_nonce_from_verifier(
+                    hint, nonce_size=nonce_size, timeout=self.nonce_config.fetch_timeout
+                )
+                if nonce is not None:
+                    return nonce
+            else:
+                # Look up by name in the configured verifier list.
+                verifier_entry = self.config.get_verifier(hint)
+                if verifier_entry is not None:
+                    logging.info("Using configured verifier entry: %s", repr(verifier_entry))
+                    nonce = self._fetch_nonce_from_verifier(
+                        verifier_entry.location, nonce_size=nonce_size, timeout=self.nonce_config.fetch_timeout
+                    )
+                    if nonce is not None:
+                        return nonce
 
-        verifier_entry = self.config.get_verifier(verifier_name)
+        # Fallback: check VERIFIER_NONCE_URL environment variable.
+        env_url = os.environ.get("VERIFIER_NONCE_URL", "")
+        if env_url:
+            nonce = self._fetch_nonce_from_verifier(
+                env_url, nonce_size=nonce_size, timeout=self.nonce_config.fetch_timeout
+            )
+            if nonce is not None:
+                return nonce
 
-        if verifier_entry is None:
-            # If an RA/CA is not able to provide a requested nonce, it MUST provide an empty
-            # OCTET STRING in the respective NonceResponse structure.
+        # Last resort: self-generated nonce or empty.
+        if not self.nonce_config.allow_self_generated_nonce:
             return b""
 
-        logging.info("Using remote attestation verifier entry: %s", repr(verifier_entry))
-
-        data = fetch_value_from_location(
-            location=verifier_entry.location,
-        )
-        return data or b""
+        logging.info("Generating self-signed nonce (%d bytes)", nonce_size)
+        return os.urandom(nonce_size)
 
     def _save_nonce_verifier_entry(self, tx_id: bytes, nonce: bytes, evidence_type: univ.ObjectIdentifier) -> None:
         """Save the nonce verifier entry for later validation.
