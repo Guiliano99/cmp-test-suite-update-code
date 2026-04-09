@@ -109,16 +109,15 @@ class RatsHandler:
                 oid = str(ext["extnID"])
                 logging.warning("RatsHandler: found extension OID: %s", oid)
                 if oid == RATS_TOKEN_OID:
-                    # extnValue bytes are the DER of LOCAL_ATT_BUNDLE:
-                    #   30 LL              <- SEQUENCE OF (outer)
-                    #     30 LL            <- SEQUENCE (LOCAL_ATT_STMT)
-                    #       06 LL OID      <- type OID
-                    #       04 LL BYTES    <- stmt OCTET STRING (the JWT token)
                     extn_value = bytes(ext["extnValue"])
+                    logging.warning(
+                        "RatsHandler: extnValue first 8 bytes: %s", extn_value[:8].hex()
+                    )
                     token_bytes = RatsHandler._parse_att_bundle_der(extn_value)
                     if token_bytes:
                         logging.warning("RatsHandler: extracted token (%d bytes)", len(token_bytes))
                         return token_bytes
+                    logging.warning("RatsHandler: _parse_att_bundle_der returned None")
         except Exception as exc:
             logging.warning("RatsHandler: could not extract RATS token: %s", exc)
         return None
