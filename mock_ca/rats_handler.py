@@ -127,10 +127,12 @@ class RatsHandler:
         """Extract the OCTET STRING token from a DER-encoded LOCAL_ATT_BUNDLE.
 
         Walks the fixed DER structure without relying on pyasn1 schema:
-          SEQUENCE {          <- outer bundle
-            SEQUENCE {        <- first AttestationStatement
-              OID             <- token type
-              OCTET STRING    <- the actual token bytes
+          SEQUENCE {                   <- AttestationBundle (outer)
+            SEQUENCE {               <- attestations SEQUENCE OF
+              SEQUENCE {             <- first AttestationStatement
+                OID                  <- token type
+                OCTET STRING         <- the actual token bytes
+              }
             }
           }
 
@@ -145,23 +147,28 @@ class RatsHandler:
 
         try:
             pos = 0
-            # Outer SEQUENCE
+            # Level 1: outer SEQUENCE (AttestationBundle)
             if der[pos] != 0x30:
                 return None
             pos += 1
             _, pos = _read_length(der, pos)
-            # Inner SEQUENCE (first LOCAL_ATT_STMT)
+            # Level 2: attestations SEQUENCE OF (wraps AttestationStatements)
             if der[pos] != 0x30:
                 return None
             pos += 1
             _, pos = _read_length(der, pos)
-            # OID — skip it
+            # Level 3: first AttestationStatement SEQUENCE { OID, OCTET STRING }
+            if der[pos] != 0x30:
+                return None
+            pos += 1
+            _, pos = _read_length(der, pos)
+            # OID (type) — skip it
             if der[pos] != 0x06:
                 return None
             pos += 1
             oid_len, pos = _read_length(der, pos)
             pos += oid_len
-            # OCTET STRING — this is the token
+            # OCTET STRING (stmt — the actual token bytes)
             if der[pos] != 0x04:
                 return None
             pos += 1
