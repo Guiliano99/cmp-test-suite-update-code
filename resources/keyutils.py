@@ -15,7 +15,7 @@ import os
 import re
 import textwrap
 import warnings
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, cast
 
 import pyasn1.error
 from cryptography.hazmat.primitives import serialization
@@ -559,6 +559,7 @@ def load_public_key_from_spki(data: Union[bytes, rfc5280.SubjectPublicKeyInfo]) 
     if isinstance(data, bytes):
         try:
             data, rest = decoder.decode(data, rfc5280.SubjectPublicKeyInfo())
+            data = cast(rfc5280.SubjectPublicKeyInfo, data)
         except pyasn1.error.PyAsn1Error as e:
             raise BadAsn1Data("The SubjectPublicKeyInfo structure was not valid.", overwrite=True) from e
         if rest != b"":
