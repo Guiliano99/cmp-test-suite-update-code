@@ -104,17 +104,17 @@ class RatsHandler:
         try:
             cert_req = pki_message["body"]["cr"][0]["certReq"]
             extensions = cert_req["certTemplate"]["extensions"]
-            logging.info("RatsHandler: certTemplate has %d extensions", len(extensions))
+            logging.warning("RatsHandler: certTemplate has %d extensions", len(extensions))
             for ext in extensions:
                 oid = str(ext["extnID"])
-                logging.info("RatsHandler: found extension OID: %s", oid)
+                logging.warning("RatsHandler: found extension OID: %s", oid)
                 if oid == RATS_TOKEN_OID:
                     # extnValue is a DER OCTET STRING wrapping the actual value
                     extn_value = bytes(ext["extnValue"])
                     inner, _ = asn1_decoder.decode(extn_value, asn1Spec=univ.OctetString())
                     return bytes(inner)
         except Exception as exc:
-            logging.info("RatsHandler: could not extract RATS token: %s", exc)
+            logging.warning("RatsHandler: could not extract RATS token: %s", exc)
         return None
 
     @staticmethod
