@@ -123,7 +123,10 @@ class VeraisonVerifier(AttestationVerifier):
             nonce = base64.b64decode(nonce_b64)
 
             location = resp.headers.get("Location", "")
-            session_url = self._absolute_url(location) if location else ""
+            # Resolve relative Location against the newSession request URL so
+            # that e.g. "session/{id}" becomes the correct absolute URL.
+            from urllib.parse import urljoin
+            session_url = urljoin(url, location) if location else ""
             logging.info(
                 "Got nonce from Veraison (%d bytes), session: %s",
                 len(nonce),
