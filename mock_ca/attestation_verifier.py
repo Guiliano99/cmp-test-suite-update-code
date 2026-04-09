@@ -67,35 +67,40 @@ class VeraisonVerifier(AttestationVerifier):
         """
         self.base_url = base_url.rstrip("/")
         self.fetch_timeout = fetch_timeout
-        # nonce_bytes → Veraison session URL
-        self._sessions: dict[bytes, str] = {}
+        # nonce_bytes → (session_url, media_type)
+        self._sessions: dict[bytes, tuple[str, str]] = {}
         logging.info("VeraisonVerifier initialised with base_url=%s", self.base_url)
 
     # ── Public API ────────────────────────────────────────────────────────────
 
     def get_nonce(self, nonce_size: int = 32) -> bytes:
         """Request a fresh nonce from Veraison and store the session URL."""
-        nonce, session_url = self._new_session(nonce_size)
+        nonce, session_url, media_type = self._new_session(nonce_size)
         if nonce and session_url:
-            self._sessions[nonce] = session_url
+            self._sessions[nonce] = (session_url, media_type)
             logging.info(
-                "Stored Veraison session for nonce (%d bytes): %s",
+                "Stored Veraison session for nonce (%d bytes): %s (accept: %s)",
                 len(nonce),
                 session_url,
+                media_type,
             )
         return nonce or b""
 
     def verify_token(self, token_bytes: bytes, media_type: str, nonce: Optional[bytes] = None) -> Optional[str]:
         """Submit *token_bytes* to the Veraison session identified by *nonce*.
 
+        The *media_type* parameter is used as fallback only; the media type
+        returned by Veraison during ``newSession`` takes precedence.
+
         :return: EAR JWT string when Veraison reports ``status == "complete"``,
                  otherwise ``None``.
         """
         session_url = None
         if nonce is not None:
-            session_url = self._sessions.get(nonce)
-            if session_url:
-                logging.info("Found Veraison session for nonce: %s", session_url)
+            entry = self._sessions.get(nonce)
+            if entry:
+                session_url, media_type = entry
+                logging.info("Found Veraison session for nonce: %s (media_type: %s)", session_url, media_type)
 
         if not session_url:
             logging.warning("No Veraison session found for nonce; cannot verify token")
@@ -106,9 +111,12 @@ class VeraisonVerifier(AttestationVerifier):
     # ── Private helpers ───────────────────────────────────────────────────────
 
     def _new_session(self, nonce_size: int):
-        """POST newSession to Veraison and return (nonce_bytes, session_url).
+        """POST newSession to Veraison and return (nonce_bytes, session_url, media_type).
 
-        Returns ``(None, None)`` on any failure.
+        ``media_type`` is the first entry from Veraison's ``accept`` list, which
+        is the content type the token must be submitted with.
+
+        Returns ``(None, None, "")`` on any failure.
         """
         url = f"{self.base_url}/challenge-response/v1/newSession?nonceSize={nonce_size}"
         logging.info("Requesting nonce from Veraison: POST %s", url)
@@ -119,7 +127,7 @@ class VeraisonVerifier(AttestationVerifier):
             nonce_b64 = data.get("nonce", "")
             if not nonce_b64:
                 logging.warning("Veraison returned empty nonce")
-                return None, None
+                return None, None, ""
             nonce = base64.b64decode(nonce_b64)
 
             location = resp.headers.get("Location", "")
@@ -127,15 +135,20 @@ class VeraisonVerifier(AttestationVerifier):
             # that e.g. "session/{id}" becomes the correct absolute URL.
             from urllib.parse import urljoin
             session_url = urljoin(url, location) if location else ""
+
+            # Use the first accepted media type from Veraison's response.
+            accept_list = data.get("accept", [])
+            media_type = accept_list[0] if accept_list else ""
             logging.info(
-                "Got nonce from Veraison (%d bytes), session: %s",
+                "Got nonce from Veraison (%d bytes), session: %s, media_type: %s",
                 len(nonce),
                 session_url,
+                media_type,
             )
-            return nonce, session_url
+            return nonce, session_url, media_type
         except Exception as exc:
             logging.error("Failed to get nonce from Veraison: %s", exc)
-            return None, None
+            return None, None, ""
 
     def _submit_token(
         self, session_url: str, token_bytes: bytes, media_type: str, nonce: Optional[bytes]

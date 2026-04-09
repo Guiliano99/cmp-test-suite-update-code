@@ -104,18 +104,15 @@ class RatsHandler:
         try:
             cert_req = pki_message["body"]["cr"][0]["certReq"]
             extensions = cert_req["certTemplate"]["extensions"]
-            logging.warning("RatsHandler: certTemplate has %d extensions", len(extensions))
+            logging.info("RatsHandler: certTemplate has %d extensions", len(extensions))
             for ext in extensions:
                 oid = str(ext["extnID"])
-                logging.warning("RatsHandler: found extension OID: %s", oid)
+                logging.info("RatsHandler: found extension OID: %s", oid)
                 if oid == RATS_TOKEN_OID:
                     extn_value = bytes(ext["extnValue"])
-                    logging.warning(
-                        "RatsHandler: extnValue first 8 bytes: %s", extn_value[:8].hex()
-                    )
                     token_bytes = RatsHandler._parse_att_bundle_der(extn_value)
                     if token_bytes:
-                        logging.warning("RatsHandler: extracted token (%d bytes)", len(token_bytes))
+                        logging.info("RatsHandler: extracted token (%d bytes)", len(token_bytes))
                         return token_bytes
                     logging.warning("RatsHandler: _parse_att_bundle_der returned None")
         except Exception as exc:
