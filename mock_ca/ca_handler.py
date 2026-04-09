@@ -754,7 +754,10 @@ class CAHandler:
                     pki_message=pki_message, cc_certs=self.get_cc_certs(), exclude_stateful_sig_check=True
                 )
                 self.stfl_validator.add_pq_stateful_pki_message(pki_message=pki_message)
-                response = self.cert_req_handler.process_cert_request(pki_message)
+                allow_recip_nonce = self.cert_req_handler.rats_handler.remote_att_handler is not None
+                response = self.cert_req_handler.process_cert_request(
+                    pki_message, allow_recipient_nonce=allow_recip_nonce
+                )
             elif pki_message["body"].getName() == "rr":
                 try:
                     self.cert_req_handler.validate_header(pki_message, must_be_protected=True)
