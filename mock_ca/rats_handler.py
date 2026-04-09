@@ -110,22 +110,67 @@ class RatsHandler:
                 logging.warning("RatsHandler: found extension OID: %s", oid)
                 if oid == RATS_TOKEN_OID:
                     # extnValue bytes are the DER of LOCAL_ATT_BUNDLE:
-                    #   SEQUENCE OF { SEQUENCE { type OID, stmt OCTET STRING } }
-                    # The stmt OCTET STRING contains the actual JWT token bytes.
-                    # Use SequenceOf(Any) so pyasn1 allows integer indexing.
-                    _any_seq = univ.SequenceOf(componentType=univ.Any())
+                    #   30 LL              <- SEQUENCE OF (outer)
+                    #     30 LL            <- SEQUENCE (LOCAL_ATT_STMT)
+                    #       06 LL OID      <- type OID
+                    #       04 LL BYTES    <- stmt OCTET STRING (the JWT token)
                     extn_value = bytes(ext["extnValue"])
-                    bundle, _ = asn1_decoder.decode(extn_value, asn1Spec=_any_seq)
-                    # bundle[0] = first AttestationStatement DER bytes (as Any)
-                    stmt_seq, _ = asn1_decoder.decode(bytes(bundle[0]), asn1Spec=_any_seq)
-                    # stmt_seq[1] = stmt field DER (OCTET STRING with the token)
-                    token_os, _ = asn1_decoder.decode(bytes(stmt_seq[1]), asn1Spec=univ.OctetString())
-                    token_bytes = bytes(token_os)
-                    logging.warning("RatsHandler: extracted token (%d bytes)", len(token_bytes))
-                    return token_bytes
+                    token_bytes = RatsHandler._parse_att_bundle_der(extn_value)
+                    if token_bytes:
+                        logging.warning("RatsHandler: extracted token (%d bytes)", len(token_bytes))
+                        return token_bytes
         except Exception as exc:
             logging.warning("RatsHandler: could not extract RATS token: %s", exc)
         return None
+
+    @staticmethod
+    def _parse_att_bundle_der(der: bytes) -> Optional[bytes]:
+        """Extract the OCTET STRING token from a DER-encoded LOCAL_ATT_BUNDLE.
+
+        Walks the fixed DER structure without relying on pyasn1 schema:
+          SEQUENCE {          <- outer bundle
+            SEQUENCE {        <- first AttestationStatement
+              OID             <- token type
+              OCTET STRING    <- the actual token bytes
+            }
+          }
+
+        :return: Raw token bytes, or None if the structure is unexpected.
+        """
+        def _read_length(data: bytes, pos: int):
+            if data[pos] & 0x80:
+                n = data[pos] & 0x7F
+                length = int.from_bytes(data[pos + 1: pos + 1 + n], "big")
+                return length, pos + 1 + n
+            return data[pos], pos + 1
+
+        try:
+            pos = 0
+            # Outer SEQUENCE
+            if der[pos] != 0x30:
+                return None
+            pos += 1
+            _, pos = _read_length(der, pos)
+            # Inner SEQUENCE (first LOCAL_ATT_STMT)
+            if der[pos] != 0x30:
+                return None
+            pos += 1
+            _, pos = _read_length(der, pos)
+            # OID — skip it
+            if der[pos] != 0x06:
+                return None
+            pos += 1
+            oid_len, pos = _read_length(der, pos)
+            pos += oid_len
+            # OCTET STRING — this is the token
+            if der[pos] != 0x04:
+                return None
+            pos += 1
+            token_len, pos = _read_length(der, pos)
+            return der[pos: pos + token_len]
+        except Exception as exc:
+            logging.warning("RatsHandler: DER parse of att bundle failed: %s", exc)
+            return None
 
     @staticmethod
     def extract_nonce_from_token(token_bytes: bytes) -> Optional[bytes]:
