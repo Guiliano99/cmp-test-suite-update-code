@@ -12,6 +12,7 @@ Result) JWT as an X.509 extension in the issued certificate.
 import base64
 import json
 import logging
+import traceback
 from typing import Optional
 
 from cryptography.hazmat.primitives import hashes, serialization
@@ -25,6 +26,8 @@ from pyasn1.type import univ
 from pyasn1_alt_modules import rfc9480
 
 from resources.asn1_structures import PKIMessageTMP
+from resources.cmputils import get_cert_response_from_pkimessage
+from resources.convertutils import copy_asn1_certificate
 from resources.typingutils import SignKey
 
 # OID for the RATS attestation token carried in the CSR extensions
@@ -215,15 +218,16 @@ class RatsHandler:
         :param ca_key: CA private key for re-signing.
         """
         try:
-            cert_der = bytes(
-                response["body"]["cp"][0]["certifiedKeyPair"]["certOrEncCert"]["certificate"]
-            )
+            # Use the cmputils helper to navigate the pyasn1 structure correctly.
+            cert_response = get_cert_response_from_pkimessage(response, response_index=0)
+            cert_asn1 = cert_response["certifiedKeyPair"]["certOrEncCert"]["certificate"]
+            # copy_asn1_certificate strips the [0] context tag from CertOrEncCert's CHOICE.
+            cert_asn1_untagged = copy_asn1_certificate(cert_asn1)
+            cert_der = asn1_encoder.encode(cert_asn1_untagged)
             cert = load_der_x509_certificate(cert_der)
 
             ear_oid = cx509.ObjectIdentifier(EAR_EXT_OID)
-            # Wrap the JWT bytes in a DER OCTET STRING so the extension value is
-            # well-formed ASN.1 (extnValue is itself an OCTET STRING whose content
-            # is the DER encoding of the extension's actual value).
+            # Wrap the JWT string in a DER OCTET STRING (extnValue content).
             ear_value = asn1_encoder.encode(univ.OctetString(ear_jwt.encode()))
 
             builder = cx509.CertificateBuilder(
@@ -257,7 +261,9 @@ class RatsHandler:
                 new_cert.public_bytes(serialization.Encoding.DER),
                 asn1Spec=rfc9480.CMPCertificate(),
             )
-            response["body"]["cp"][0]["certifiedKeyPair"]["certOrEncCert"]["certificate"] = new_cert_asn1
+            # Copy fields into the existing (already-tagged) cert_asn1 object so the
+            # [0] context tag from CertOrEncCert is preserved in the written-back value.
+            copy_asn1_certificate(new_cert_asn1, target=cert_asn1)
             logging.info("RatsHandler: embedded EAR JWT extension (OID %s)", EAR_EXT_OID)
         except Exception as exc:
-            logging.error("RatsHandler: failed to embed EAR extension: %s", exc)
+            logging.error("RatsHandler: failed to embed EAR extension: %s\n%s", exc, traceback.format_exc())
