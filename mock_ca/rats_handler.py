@@ -16,7 +16,7 @@ from typing import Optional
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.hazmat.serialization import load_der_private_key
+from cryptography.hazmat.primitives.serialization import load_der_private_key
 from cryptography.x509 import load_der_x509_certificate
 import cryptography.x509 as cx509
 from pyasn1.codec.der import decoder as asn1_decoder
