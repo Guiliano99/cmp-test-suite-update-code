@@ -112,10 +112,15 @@ class RatsHandler:
                     # extnValue bytes are the DER of LOCAL_ATT_BUNDLE:
                     #   SEQUENCE OF { SEQUENCE { type OID, stmt OCTET STRING } }
                     # The stmt OCTET STRING contains the actual JWT token bytes.
+                    # Use SequenceOf(Any) so pyasn1 allows integer indexing.
+                    _any_seq = univ.SequenceOf(componentType=univ.Any())
                     extn_value = bytes(ext["extnValue"])
-                    bundle, _ = asn1_decoder.decode(extn_value)
-                    # bundle[0] = first AttestationStatement, [1] = stmt field
-                    token_bytes = bytes(bundle[0][1])
+                    bundle, _ = asn1_decoder.decode(extn_value, asn1Spec=_any_seq)
+                    # bundle[0] = first AttestationStatement DER bytes (as Any)
+                    stmt_seq, _ = asn1_decoder.decode(bytes(bundle[0]), asn1Spec=_any_seq)
+                    # stmt_seq[1] = stmt field DER (OCTET STRING with the token)
+                    token_os, _ = asn1_decoder.decode(bytes(stmt_seq[1]), asn1Spec=univ.OctetString())
+                    token_bytes = bytes(token_os)
                     logging.warning("RatsHandler: extracted token (%d bytes)", len(token_bytes))
                     return token_bytes
         except Exception as exc:
