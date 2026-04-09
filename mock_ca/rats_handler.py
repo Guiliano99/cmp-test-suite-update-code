@@ -220,7 +220,7 @@ class RatsHandler:
             )
             cert = load_der_x509_certificate(cert_der)
 
-            ear_oid = cx509.ObjectIdentifier([int(a) for a in EAR_EXT_OID.split(".")])
+            ear_oid = cx509.ObjectIdentifier(EAR_EXT_OID)
             # Wrap the JWT bytes in a DER OCTET STRING so the extension value is
             # well-formed ASN.1 (extnValue is itself an OCTET STRING whose content
             # is the DER encoding of the extension's actual value).
