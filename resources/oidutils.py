@@ -805,6 +805,8 @@ EXTENSION_NAME_2_OID = {
     "private_key_usage_period": rfc5280.id_ce_privateKeyUsagePeriod,
     "cert_policies": rfc5280.id_ce_certificatePolicies,
     "ocsp_nonce": rfc9654.id_pkix_ocsp_nonce,
+    # RATS attestation token carried in a CR cert-template extension
+    "rats_attestation_token": univ.ObjectIdentifier((1, 2, 840, 113549, 1, 9, 16, 2, 59)),
 }
 
 EXTENSION_OID_2_SPECS = {

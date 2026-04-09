@@ -2341,28 +2341,36 @@ def _validate_cert_conf_nonces_and_tx_id(
 
 
 def validate_request_message_nonces_and_tx_id(  # noqa D417 undocumented-param
-    request: PKIMessageTMP, response: Optional[PKIMessageTMP] = None
+    request: PKIMessageTMP,
+    response: Optional[PKIMessageTMP] = None,
+    allow_recipient_nonce: bool = False,
 ) -> None:
     """Validate the nonces and the `transactionID` of a `PKIMessage` send by a Client.
 
-    The `transactionID` and `senderNonce` must be set, and the `recipNonce` must not be set.
+    The `transactionID` and `senderNonce` must be set, and the `recipNonce` must not be set
+    unless *allow_recipient_nonce* is ``True``.
     The `transactionID` and `senderNonce` must be 16 bytes long.
 
     Arguments:
     ---------
         - `pki_message`: The PKIMessage to validate.
         - `response`: Optional PKIMessage response to validate against.
+        - `allow_recipient_nonce`: If ``True``, a set ``recipNonce`` is accepted without
+          raising ``BadRecipientNonce``.  Needed when the client carries a GENP
+          ``senderNonce`` forward as the ``recipNonce`` of a subsequent CR after a
+          RATS nonce exchange.  Defaults to ``False``.
 
     Raises:
     ------
         - `BadSenderNonce`: If the `senderNonce` is not set or not 16 bytes long.
-        - `BadRecipientNonce`: If the `recipNonce` is set.
+        - `BadRecipientNonce`: If the `recipNonce` is set and `allow_recipient_nonce` is ``False``.
         - `BadDataFormat`: If the `transactionID` is not set.
         - `BadRequest`: If the `transactionID` is not 16 bytes long.
 
     Examples:
     --------
     | Validate Request Message Nonces and Tx ID | ${pki_message} |
+    | Validate Request Message Nonces and Tx ID | ${pki_message} | allow_recipient_nonce=True |
 
     """
     if request["body"].getName() == "nested":
@@ -2381,7 +2389,9 @@ def validate_request_message_nonces_and_tx_id(  # noqa D417 undocumented-param
         raise BadDataFormat("The transaction ID was not set.")
     tx_id = request["header"]["transactionID"].asOctets()
     if request["header"]["recipNonce"].isValue:
-        raise BadRecipientNonce("The recipient nonce was set.")
+        if not allow_recipient_nonce:
+            raise BadRecipientNonce("The recipient nonce was set.")
+        logging.info("recipNonce is set in initial request; accepted because allow_recipient_nonce=True")
 
     if len(tx_id) != 16:
         raise BadRequest("The transaction ID was not 16 bytes long.")

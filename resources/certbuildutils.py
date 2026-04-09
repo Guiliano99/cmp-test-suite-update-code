@@ -2807,6 +2807,8 @@ def check_extensions(  # noqa D417 undocumented params
 
     if _contains_unknown_extensions(extensions) and not allow_unknown_extns:
         raise BadCertTemplate("Unknown extensions found in the certificate template.")
+    if _contains_unknown_extensions(extensions) and allow_unknown_extns:
+        logging.info("Unknown extensions in cert template; allowed by allow_unknown_extns=True")
 
     check_logic_extensions(cert_template, for_ee=for_end_entity)
 

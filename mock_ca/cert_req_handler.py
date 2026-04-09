@@ -5,6 +5,7 @@
 """Handles certificate request messages of type 'ir', 'cr', 'p10cr', and 'kur'."""
 
 import logging
+import os
 from typing import List, Optional
 
 from pyasn1.codec.der import encoder
@@ -12,6 +13,7 @@ from pyasn1_alt_modules import rfc9480, rfc9481
 
 from mock_ca.mock_fun import MockCAState
 from mock_ca.operation_dbs import NonSigningKeyCertsAndKeys, StatefulSigState
+from mock_ca.rats_handler import RatsHandler
 from mock_ca.stfl_validator import STFLPKIMessageValidator
 from pq_logic.hybrid_sig.chameleon_logic import load_chameleon_csr_delta_key_and_sender
 from pq_logic.keys.abstract_wrapper_keys import HybridKEMPrivateKey
@@ -175,6 +177,9 @@ class CertReqHandler:
         self.cross_signed_certs: List[rfc9480.CMPCertificate] = []
         self.pq_stateful_sig_state = pq_stateful_sig_state
         self.stfl_validator = stfl_validator
+        # RatsHandler is initialised without a verifier; CAHandler wires it up
+        # after genm_handler is created so the same session map is shared.
+        self.rats_handler = RatsHandler(remote_att_handler=None)
 
     def get_cross_signed_certs(self) -> List[rfc9480.CMPCertificate]:
         """Get the list of cross-signed certificates."""
@@ -415,6 +420,9 @@ class CertReqHandler:
             verify_ra_verified=verify_ra_verified,
         )
 
+        if os.environ.get("ALLOW_RATS_VERIFICATION", "false").lower() == "true":
+            self.rats_handler.process_cr_attestation(pki_message, response, self.ca_key)
+
         return self.process_after_request(
             request=pki_message,
             response=response,
@@ -584,6 +592,7 @@ class CertReqHandler:
         pki_message: PKIMessageTMP,
         must_be_protected: Optional[bool] = None,
         for_nested: bool = False,
+        allow_recipient_nonce: bool = False,
     ) -> None:
         """Validate the header of a PKIMessage."""
         if int(pki_message["header"]["pvno"]) not in [2, 3]:
@@ -593,7 +602,7 @@ class CertReqHandler:
             must_be_protected = self.must_be_protected
 
         if not for_nested:
-            validate_request_message_nonces_and_tx_id(request=pki_message)
+            validate_request_message_nonces_and_tx_id(request=pki_message, allow_recipient_nonce=allow_recipient_nonce)
         self.validate_general_info(pki_message=pki_message)
         self.check_message_time(pki_message=pki_message)
         check_is_protection_present(pki_message, must_be_protected=must_be_protected)
@@ -660,6 +669,7 @@ class CertReqHandler:
         pki_message: PKIMessageTMP,
         verify_ra_verified: bool = True,
         must_be_protected: Optional[bool] = None,
+        allow_recipient_nonce: bool = False,
     ) -> "PKIMessageTMP":
         """Process a certificate request message.
 
@@ -669,11 +679,14 @@ class CertReqHandler:
         `nested` messages). Defaults to `None`.
         (uses the `must_be_protected` attribute of the class if `None`).
         raise the exception to the nested request handler. Defaults to `False`.
+        :param allow_recipient_nonce: If ``True``, a set ``recipNonce`` in the initial
+        request is accepted.  Pass ``True`` after a RATS GENM/GENP nonce exchange
+        where OpenSSL carries the GENP ``senderNonce`` forward as ``recipNonce``.
         :return: The processed PKI response.
         :raises NotImplementedError: If the message type is unsupported.
         """
         # raise exception for the error body.
-        self.validate_header(pki_message, must_be_protected=must_be_protected)
+        self.validate_header(pki_message, must_be_protected=must_be_protected, allow_recipient_nonce=allow_recipient_nonce)
 
         msg_type = pki_message["body"].getName()
         if msg_type not in ["ir", "cr", "p10cr", "kur", "ccr"]:

@@ -456,6 +456,9 @@ class CAHandler:
             prot_enc_key=prot_enc_key,
             crl_url=self.url_data.crl_url,
         )
+        # Wire the shared RemoteAttestationHandler into RatsHandler so the same
+        # Veraison session map (nonce → session URL) is used across GENM and CR.
+        self.cert_req_handler.rats_handler.remote_att_handler = self.genm_handler.remote_att_handler
 
         self.hybrid_handler = HybridIssuingHandler(
             ca_cert=ca_cert,
@@ -693,8 +696,13 @@ class CAHandler:
 
         :return: The PKI message containing the response.
         """
+        # A RATS GENM/GENP nonce exchange causes OpenSSL to set recipNonce in the
+        # subsequent CR, so allow it when RATS verification is active.
+        allow_recip_nonce = self.cert_req_handler.rats_handler.remote_att_handler is not None
         try:
-            response = self.cert_req_handler.process_cert_request(pki_message)
+            response = self.cert_req_handler.process_cert_request(
+                pki_message, allow_recipient_nonce=allow_recip_nonce
+            )
         except CMPTestSuiteError as e:
             logging.info("An error occurred: %s", str(e.message))
             return self.build_error_from_exception(e, pki_message)
