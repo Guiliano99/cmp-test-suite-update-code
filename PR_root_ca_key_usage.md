@@ -21,7 +21,7 @@ it at runtime to include the correct `Key Usage` extension.
 ## Motivation and Context
 
 - OpenSSL rejects CA certificates that are missing a `Key Usage` extension (or that have one without `keyCertSign`) when performing certificate chain validation, unless the strict check is explicitly disabled with a flag.
-- This error occurs, because the PKIMessage is currently singed by the RootCA cert for easyness.
+- This error occurs, because the PKIMessage is currently signed by the RootCA cert for easyness.
 
 ## How Has This Been Tested?
 
