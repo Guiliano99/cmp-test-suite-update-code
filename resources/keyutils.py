@@ -15,7 +15,7 @@ import os
 import re
 import textwrap
 import warnings
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, cast
 
 import pyasn1.error
 from cryptography.hazmat.primitives import serialization
@@ -60,7 +60,7 @@ from pq_logic.keys.stateful_sig_keys import (
 from pq_logic.keys.trad_kem_keys import RSAEncapKey
 from pq_logic.keys.xwing import XWingPrivateKey
 from pq_logic.tmp_oids import COMPOSITE_SIG_OID_TO_NAME, id_rsa_kem_spki
-from resources import asn1utils, certutils, oid_mapping, prepare_alg_ids, typingutils, utils
+from resources import asn1utils, certutils, copyasn1utils, oid_mapping, prepare_alg_ids, typingutils, utils
 from resources.convertutils import str_to_bytes, subject_public_key_info_from_pubkey
 from resources.exceptions import BadAlg, BadAsn1Data, BadCertTemplate, BadSigAlgID, InvalidKeyCombination, UnknownOID
 from resources.oid_mapping import (
@@ -559,12 +559,16 @@ def load_public_key_from_spki(data: Union[bytes, rfc5280.SubjectPublicKeyInfo]) 
     if isinstance(data, bytes):
         try:
             data, rest = decoder.decode(data, rfc5280.SubjectPublicKeyInfo())
+            data = cast(rfc5280.SubjectPublicKeyInfo, data)
         except pyasn1.error.PyAsn1Error as e:
             raise BadAsn1Data("The SubjectPublicKeyInfo structure was not valid.", overwrite=True) from e
         if rest != b"":
             raise BadAsn1Data("SubjectPublicKeyInfo")
 
-    return pq_logic.combined_factory.CombinedKeyFactory.load_public_key_from_spki(spki=data)
+    # Just to ensure we have a copy and not a reference,
+    # so that the original `SubjectPublicKeyInfo` object is not modified.
+    spki_copy = copyasn1utils.copy_subject_public_key_info(rfc5280.SubjectPublicKeyInfo(), data)
+    return pq_logic.combined_factory.CombinedKeyFactory.load_public_key_from_spki(spki=spki_copy)
 
 
 @not_keyword

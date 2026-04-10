@@ -137,8 +137,6 @@ def _prepare_pvno(pvno: Optional[Strint], for_kga: bool, default: int = 2) -> in
 
     :param pvno: The protocol version number.
     :param for_kga: Whether the message is for KGA.
-    :param update_hash: Whether the hash was automatically updated for a
-    `certConf` message.
     :param default: The default protocol version number. Defaults to `2`.
     :return: The prepared protocol version number.
     """
@@ -235,7 +233,7 @@ def prepare_pki_message(
             # the date is not correctly converted, so that it could happen for test cases,
             # that the messageTime is in the future. So a slightly older time is used
             date_time = datetime.now(timezone.utc) - timedelta(seconds=3)
-            message_time = useful.GeneralizedTime().fromDateTime(date_time)
+            message_time = useful.GeneralizedTime().fromDateTime(date_time.replace(microsecond=0))
 
         msg_time_obj = prepareutils.convert_to_generalized_time(
             message_time,
