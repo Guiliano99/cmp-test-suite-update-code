@@ -477,7 +477,9 @@ def load_private_key_from_file(  # noqa: D417 for RF docs
     password_bytes = password.encode("utf-8") if password is not None else None
 
     der_key_data = utils.decode_pem_string(key_bytes) if is_pem else key_bytes
-    is_custom_pem = is_pem and any((b"-----BEGIN " + key + b" PRIVATE KEY-----") in key_bytes for key in CUSTOM_KEY_TYPES)
+    is_custom_pem = is_pem and any(
+        (b"-----BEGIN " + key + b" PRIVATE KEY-----") in key_bytes for key in CUSTOM_KEY_TYPES
+    )
 
     if is_custom_pem and not is_encrypted_pem:
         return pq_logic.combined_factory.CombinedKeyFactory.load_private_key_from_one_asym_key(data=der_key_data)
