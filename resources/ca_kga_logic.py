@@ -112,7 +112,10 @@ def process_mqv(
         may_name = may_return_oid_to_name(mqv_ukm["ephemeralPublicKey"]["algorithm"]["algorithm"])
         raise ValueError(f"The OID must be `id_ecPublicKey`, but was: {may_name}")
 
-    public_key = keyutils.load_public_key_from_spki(mqv_ukm["ephemeralPublicKey"])
+    ephemeral_spki = rfc5280.SubjectPublicKeyInfo()
+    ephemeral_spki["algorithm"] = mqv_ukm["ephemeralPublicKey"]["algorithm"]
+    ephemeral_spki["subjectPublicKey"] = mqv_ukm["ephemeralPublicKey"]["publicKey"]
+    public_key = keyutils.load_public_key_from_spki(ephemeral_spki)
     if not isinstance(public_key, ec.EllipticCurvePublicKey):
         raise ValueError("The extracted public key is not an instance of `EllipticCurvePublicKey`.")
 
