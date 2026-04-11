@@ -23,6 +23,13 @@ from typing import Optional
 from urllib.parse import urlparse
 
 log = logging.getLogger("cmptest")
+SERVER_TEST_PROTECTION_MAP = {
+    "self-signed": "signature",
+    "pbm": "password_based_mac",
+    "password_based_mac": "password_based_mac",
+    "pbmac1": "pbmac1",
+    "unprotected": "unprotected",
+}
 
 
 def get_version():
@@ -193,6 +200,39 @@ def prepare_parser():
     parser.add_argument(
         "robot_args", nargs=argparse.REMAINDER, help="Optional arguments to pass directly to Robot Framework."
     )
+    server_test_group = parser.add_argument_group("server-test")
+    server_test_group.add_argument(
+        "--server-test",
+        action="store_true",
+        default=False,
+        help=(
+            "Enable server-test mode for --minimal runs and pass additional Robot variables "
+            "for protection/header behavior."
+        ),
+    )
+    server_test_group.add_argument(
+        "--protection",
+        choices=sorted(SERVER_TEST_PROTECTION_MAP.keys()),
+        default="self-signed",
+        help="Protection profile for server-test mode.",
+    )
+    server_test_group.add_argument("--sender", type=str, default=None, help="Sender DN override for server-test mode.")
+    server_test_group.add_argument(
+        "--recipient", type=str, default=None, help="Recipient DN override for server-test mode."
+    )
+    server_test_group.add_argument(
+        "--txid_size",
+        type=int,
+        default=16,
+        help="transactionID size (bytes) generated for test messages. Default: 16.",
+    )
+    server_test_group.add_argument(
+        "--require_msg_time",
+        type=str,
+        choices=["true", "false"],
+        action="store_true",
+        default=True,
+        help="Whether messageTime is required: true, false.",
     )
 
     # Add a flag to track explicit usage of --customconfig, to differentiate between
@@ -244,6 +284,12 @@ def main():
             sys.exit(1)
         return
 
+    if args.server_test and not args.minimal:
+        parser.error("--server-test is only supported together with --minimal URL")
+
+    if args.txid_size <= 0:
+        parser.error("--txid_size must be a positive integer")
+
     verify_report_directory(args.ephemeral, args.smoke, args.verbose)
 
     if args.robot_args:
@@ -261,6 +307,27 @@ def main():
         # A minimal batch of tests that only need to know the server's address and nothing else, it is the easiest
         # way to get a taste of what the test suite can do while still doing some actual work with a real server.
         command = f"robot --pythonpath=./ --outputdir=/report --include minimal --variable CA_CMP_URL:{args.minimal}"
+
+        if args.server_test:
+            default_protection = SERVER_TEST_PROTECTION_MAP[args.protection]
+            server_test_vars = {
+                "DEFAULT_PROTECTION": default_protection,
+                "TXID_SIZE": str(args.txid_size),
+                "REQUIRE_MSG_TIME": args.require_msg_time,
+            }
+
+            if args.sender:
+                server_test_vars["SENDER"] = args.sender
+            if args.recipient:
+                server_test_vars["RECIPIENT"] = args.recipient
+
+            if args.require_msg_time == "true":
+                server_test_vars["IRELEVANT_messageTime"] = "${FALSE}"
+            elif args.require_msg_time == "false":
+                server_test_vars["IRELEVANT_messageTime"] = "${TRUE}"
+
+            for name, value in server_test_vars.items():
+                command += f" --variable {name}:{value}"
 
     elif args.customconfig_explicit:
         # The script was started with --customconfig, there are several possibilities:
