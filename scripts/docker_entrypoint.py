@@ -131,7 +131,7 @@ def prepare_parser():
 
 2. Passing a minimal URL:
    docker run --rm -it ghcr.io/siemens/cmp-test --minimal http://example.com
-   Executes: robot --pythonpath=./ --outputdir=/report --include minimal --variable SERVER_URL:http://example.com tests/
+   Executes: robot --pythonpath=./ --outputdir=/report --include minimal --variable CA_CMP:http://example.com tests/
    Runs only tests tagged `minimal`, which only require the server's address and nothing else.
 
 3. Using a custom configuration:
@@ -149,7 +149,7 @@ def prepare_parser():
 
 6. Passing arbitrary arguments to robot (note the `--`):
    docker run --rm -it ghcr.io/siemens/cmp-test --minimal http://example.com -- --dryrun
-   Runs: robot --pythonpath=./ --outputdir=/report --include minimal --variable SERVER_URL:http://example.com tests/ \
+   Runs: robot --pythonpath=./ --outputdir=/report --include minimal --variable CA_CMP:http://example.com tests/ \
     --dryrun
 """,
     )
