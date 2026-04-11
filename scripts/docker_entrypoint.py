@@ -227,6 +227,12 @@ def prepare_parser():
         help="transactionID size (bytes) generated for test messages. Default: 16.",
     )
     server_test_group.add_argument(
+        "--sender_nonce_size",
+        type=int,
+        default=16,
+        help="senderNonce size (bytes) generated for test messages. Default: 16.",
+    )
+    server_test_group.add_argument(
         "--require_msg_time",
         type=str,
         choices=["true", "false"],
@@ -289,6 +295,8 @@ def main():
 
     if args.txid_size <= 0:
         parser.error("--txid_size must be a positive integer")
+    if args.sender_nonce_size <= 0:
+        parser.error("--sender_nonce_size must be a positive integer")
 
     verify_report_directory(args.ephemeral, args.smoke, args.verbose)
 
@@ -312,7 +320,8 @@ def main():
             default_protection = SERVER_TEST_PROTECTION_MAP[args.protection]
             server_test_vars = {
                 "DEFAULT_PROTECTION": default_protection,
-                "TXID_SIZE": str(args.txid_size),
+                "TXID_SIZE": args.txid_size,
+                "SENDER_NONCE_SIZE": args.sender_nonce_size,
                 "REQUIRE_MSG_TIME": args.require_msg_time,
             }
 
