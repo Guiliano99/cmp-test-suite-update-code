@@ -191,7 +191,8 @@ def prepare_parser():
     )
 
     parser.add_argument(
-        "robot_args", nargs=argparse.REMAINDER, help="Optional arguments to pass directlyto Robot Framework."
+        "robot_args", nargs=argparse.REMAINDER, help="Optional arguments to pass directly to Robot Framework."
+    )
     )
 
     # Add a flag to track explicit usage of --customconfig, to differentiate between
