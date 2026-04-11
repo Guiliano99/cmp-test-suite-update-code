@@ -39,7 +39,21 @@ ${TEST_INDEX}            ${0}
 ...        private_key=${ISSUED_KEY}    cert=${ISSUED_CERT}
 ...        password=${PRESHARED_SECRET}    protection=signature
 
+
 *** Keywords ***
+Initialize Default Protection Setup
+    [Documentation]    Initialize global default protection dictionaries based on `${DEFAULT_PROTECTION}`.
+    ...                This keeps setup behavior aligned when CLI overrides are used.
+    [Tags]    setup    protection
+    ${default_protection}=    Set Variable If
+    ...    '${DEFAULT_PROTECTION}' == '${None}'    signature
+    ...    ${DEFAULT_PROTECTION}
+    VAR    &{CERT_CONF_DEF_VALS}    sender=${SENDER}    recipient=${RECIPIENT}
+    ...    private_key=${ISSUED_KEY}    cert=${ISSUED_CERT}    password=${PRESHARED_SECRET}
+    ...    protection=${default_protection}   scope=Global   # robocop: off=VAR04
+    VAR    &{DEFAULT_PROTECTION_VALS}    protection=${default_protection}   private_key=${ISSUED_KEY}
+    ...    cert=${ISSUED_CERT}   password=${PRESHARED_SECRET}   scope=Global  # robocop: off=VAR04
+
 Set Up Test Suite
     [Documentation]    This keyword is used to set up the test suite. It is called at the beginning of the test suite.
     ...                Or a test file to ensure that all prerequisites are met. As an example a first certificate is
@@ -53,6 +67,7 @@ Set Up Test Suite
     ...                If this behaviour is not wanted, the `ISSUED_KEY` and `ISSUED_CERT` can be set in the
     ...                configuration file, and will then be loaded from there.
     [Tags]    setup
+    Initialize Default Protection Setup
     IF  '${ISSUED_KEY}' == '${None}'
         Initialize PQ Cert And Key Variables
         ${issued_key}=    Generate Default Key
