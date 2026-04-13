@@ -4129,12 +4129,11 @@ def _prepare_generalinfo(
         confirm_wait_time_obj = rfc9480.InfoTypeAndValue()
         confirm_wait_time_obj["infoType"] = rfc9480.id_it_confirmWaitTime
 
-        new_time = datetime.now(timezone.utc).replace(microsecond=0)
-        new_time = new_time + timedelta(seconds=int(confirm_wait_time))
+        new_time = datetime.now(timezone.utc) + timedelta(seconds=int(confirm_wait_time))
         if negative_value:
-            new_time = useful.UTCTime().fromDateTime(new_time)
+            new_time = prepareutils.prepare_utc_time(new_time)
         else:
-            new_time = useful.GeneralizedTime().fromDateTime(new_time)
+            new_time = prepareutils.prepare_generalized_time(new_time)
 
         confirm_wait_time_obj["infoValue"] = new_time
         general_info_wrapper.append(confirm_wait_time_obj)
