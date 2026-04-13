@@ -2231,7 +2231,7 @@ def set_ca_header_fields(request: PKIMessageTMP, kwargs: dict) -> dict:
         os.urandom(16) if not request["header"]["recipNonce"].isValue else request["header"]["recipNonce"].asOctets()
     )
 
-    if not kwargs.get("use_fresh_nonce", True):
+    if kwargs.get("use_fresh_nonce", True):
         alt_nonce = os.urandom(16)
 
     kwargs["sender_nonce"] = kwargs.get("sender_nonce") or alt_nonce
@@ -3277,6 +3277,7 @@ def build_pki_conf_from_cert_conf(  # noqa: D417 Missing argument descriptions i
             )
 
     if request and set_header_fields:
+        kwargs["use_fresh_nonce"] = kwargs.get("use_fresh_nonce", True)
         kwargs = set_ca_header_fields(request, kwargs)
 
     pki_message = cmputils.prepare_pki_message(exclude_fields=exclude_fields, **kwargs)
