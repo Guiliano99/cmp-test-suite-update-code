@@ -491,7 +491,7 @@ class RatsHandler:
             return None
 
         # Lazy import to avoid circular dependency at module load time
-        from mock_ca.attestation_verifier import VeraisonVerifier  # noqa: PLC0415
+        from mock_ca.remote_att_mockca.attestation_verifier import VeraisonVerifier  # noqa: PLC0415
 
         logging.info("RatsHandler: lazily creating TPM verifier from VERIFIER_NONCE_URL_TPM=%s", tpm_url)
         self.tpm_att_handler = VeraisonVerifier(base_url=tpm_url, fetch_timeout=10)

@@ -15,7 +15,7 @@ from pyasn1.type.base import Asn1Type
 from pyasn1_alt_modules import rfc3565, rfc5280, rfc9480, rfc9481
 from pyasn1_alt_modules.rfc9480 import InfoTypeAndValue
 
-from mock_ca.remote_attestation_handler import RemoteAttestationHandler
+from mock_ca.remote_att_mockca import RemoteAttestationHandler
 from mock_ca.rev_handler import RevocationHandler
 from pq_logic.tmp_oids import id_it_KemCiphertextInfo, id_it_nonceRequest
 from resources import cmputils, keyutils

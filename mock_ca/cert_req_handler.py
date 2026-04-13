@@ -412,6 +412,10 @@ class CertReqHandler:
         for_mac = self._get_for_mac(request=pki_message)
         self.check_signer_is_a_issued_cert(pki_message)
 
+        # When RATS is active the certTemplate may carry an id-aa-evidence extension
+        # (OID 1.2.840.113549.1.9.16.2.59) that is unknown to the standard validator.
+        rats_active = self.rats_handler.remote_att_handler is not None
+
         response, certs = build_cp_cmp_message(
             request=pki_message,
             ca_cert=self.ca_cert,
@@ -421,9 +425,10 @@ class CertReqHandler:
             sender=self.sender,
             for_mac=for_mac,
             verify_ra_verified=verify_ra_verified,
+            allow_unknown_extns=rats_active,
         )
 
-        if os.environ.get("ALLOW_RATS_VERIFICATION", "false").lower() == "true":
+        if rats_active:
             self.rats_handler.process_cr_attestation(pki_message, response, self.ca_key)
 
         return self.process_after_request(

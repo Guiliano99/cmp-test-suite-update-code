@@ -11,6 +11,9 @@ supporting nonce freshness mechanisms and attestation evidence processing as def
 
 The RemoteAttestationHandler manages nonce generation, validation of nonce requests,
 and processing of attestation evidence in certification requests.
+
+For the Veraison-specific implementation used in the demonstration environment see
+``mock_ca.remote_att_mockca.RemoteAttestationHandler``.
 """
 
 import logging
@@ -23,7 +26,7 @@ from pyasn1.codec.der import encoder
 from pyasn1.type import univ
 from pyasn1_alt_modules import rfc6402, rfc9480
 
-from mock_ca.attestation_verifier import VeraisonVerifier
+from mock_ca.attestation_verifier import AttestationVerifier
 from mock_ca.db_config_vars import RemoteAttestationConfig
 from pq_logic.tmp_oids import id_it_nonceResponse
 from resources.certextractutils import csr_contains_attribute
@@ -64,7 +67,14 @@ class NonceVerifierEntry:
 
 
 class RemoteAttestationHandler:
-    """Handler for remote attestation and nonce freshness in CMP protocol."""
+    """Handler for remote attestation and nonce freshness in CMP protocol.
+
+    This is the base implementation.  It delegates nonce fetching and token
+    verification to the :class:`~mock_ca.attestation_verifier.AttestationVerifier`
+    stored in ``self._verifier``.  Subclasses (e.g.
+    ``mock_ca.remote_att_mockca.RemoteAttestationHandler``) inject a concrete
+    verifier and may override :meth:`_get_nonce` for hint-based resolution.
+    """
 
     def __init__(self, config: Optional[RemoteAttestationConfig] = None):
         """Initialize the remote attestation handler.
@@ -75,87 +85,28 @@ class RemoteAttestationHandler:
         self.config = config or RemoteAttestationConfig()
         self.nonce_config = self.config.attestation_nonce_config
         self._saved_nonces: List[NonceVerifierEntry] = []
-
-        verifier_url = os.environ.get("VERIFIER_NONCE_URL", "")
-        timeout = self.nonce_config.fetch_timeout if self.nonce_config else 10
-        if verifier_url:
-            self._verifier: Optional[VeraisonVerifier] = VeraisonVerifier(
-                base_url=verifier_url, fetch_timeout=timeout
-            )
-            logging.info("Veraison verifier URL: %s", verifier_url)
-        else:
-            self._verifier = None
-            logging.warning("VERIFIER_NONCE_URL not set; nonces will be self-generated")
-
-    def verify_token(self, token_bytes: bytes, media_type: str, nonce: Optional[bytes] = None) -> Optional[str]:
-        """Verify *token_bytes* via the configured Veraison verifier.
-
-        :param token_bytes: Raw attestation token bytes.
-        :param media_type: Content-Type of the token (e.g. ``application/eat-cwt``).
-        :param nonce: Nonce bytes used when generating the token, for session lookup.
-        :return: EAR JWT string, or None if verification failed or no verifier is set.
-        """
-        if self._verifier is None:
-            logging.warning("No verifier configured; skipping token verification")
-            return None
-        return self._verifier.verify_token(token_bytes, media_type, nonce=nonce)
+        # Concrete verifier injected by subclasses or the caller.
+        self._verifier: Optional[AttestationVerifier] = None
 
     def _get_nonce(self, nonce_request: NonceRequestASN1) -> bytes:
-        """Get the nonce from the verifier or generate a new one.
+        """Get a nonce value for the attestation challenge.
 
-        When the nonce request contains a *hint* that looks like a URL
-        (starts with ``http``), the hint is used to create a temporary
-        VeraisonVerifier whose session map is merged into the primary verifier.
-        Otherwise the hint is looked up in the configured verifier list.
-
-        If neither approach yields a nonce and self-generated nonces are
-        allowed, a cryptographically random nonce is returned.
+        Uses ``self._verifier`` when set; otherwise falls back to a
+        self-generated nonce or returns empty bytes.
 
         Per draft-ietf-lamps-attestation-freshness section 3.1, if the CA/RA
-        cannot provide a requested nonce, it MUST return an empty OCTET STRING.
+        cannot provide a requested nonce it MUST return an empty OCTET STRING.
 
         :param nonce_request: The nonce request containing the optional verifier hint.
         :return: The nonce value as bytes, or empty bytes (b"") if unable to provide.
         """
         nonce_size = self.nonce_config.min_nonce_length or 32
-        timeout = self.nonce_config.fetch_timeout
 
-        if nonce_request["hint"].isValue:
-            hint = str(nonce_request["hint"])
-            logging.info("Got remote attestation verifier hint: %s", hint)
-
-            if hint.startswith("http"):
-                # Hint is a direct verifier URL — use or create a VeraisonVerifier.
-                verifier = self._verifier or VeraisonVerifier(base_url=hint, fetch_timeout=timeout)
-                nonce = verifier.get_nonce(nonce_size)
-                if nonce:
-                    # Ensure sessions from a newly created verifier are merged in.
-                    if self._verifier is None:
-                        self._verifier = verifier
-                    elif verifier is not self._verifier:
-                        self._verifier._sessions.update(verifier._sessions)
-                    return nonce
-            else:
-                # Look up by name in the configured verifier list.
-                verifier_entry = self.config.get_verifier(hint)
-                if verifier_entry is not None:
-                    logging.info("Using configured verifier entry: %s", repr(verifier_entry))
-                    tmp = VeraisonVerifier(base_url=verifier_entry.location, fetch_timeout=timeout)
-                    nonce = tmp.get_nonce(nonce_size)
-                    if nonce:
-                        if self._verifier is not None:
-                            self._verifier._sessions.update(tmp._sessions)
-                        else:
-                            self._verifier = tmp
-                        return nonce
-
-        # Fallback: use the primary verifier from env.
         if self._verifier is not None:
             nonce = self._verifier.get_nonce(nonce_size)
             if nonce:
                 return nonce
 
-        # Last resort: self-generated nonce or empty.
         if not self.nonce_config.allow_self_generated_nonce:
             return b""
 
