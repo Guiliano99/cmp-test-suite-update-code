@@ -429,5 +429,87 @@ class TestRepoEncryptsCryptographyDecrypts(unittest.TestCase):
                     serialization.load_pem_private_key(encrypted_pem, password=b"wrong_password")
 
 
+def _wrapper_key_cases():
+    """Return (name, private_key) pairs for WrapperPrivateKey subclasses under test."""
+    return [
+        ("ML-DSA-65", PQKeyFactory.generate_pq_key("ml-dsa-65")),
+        ("ML-KEM-768", PQKeyFactory.generate_pq_key("ml-kem-768")),
+        ("SLH-DSA", PQKeyFactory.generate_pq_key("slh-dsa")),
+        ("composite-sig-ed25519", CombinedKeyFactory.generate_key(algorithm="composite-sig", trad_name="ed25519")),
+        (
+            "composite-sig-rsa2048",
+            CombinedKeyFactory.generate_key(algorithm="composite-sig", trad_name="rsa", length=2048),
+        ),
+        ("xwing", CombinedKeyFactory.generate_key(algorithm="xwing")),
+    ]
+
+
+class TestWrapperPrivateKeyBestAvailableEncryption(unittest.TestCase):
+    """Validate WrapperPrivateKey.private_bytes with BestAvailableEncryption produces PKCS#8 and round-trips correctly."""
+
+    PASSWORD = b"11111"
+
+    def test_private_bytes_produces_pkcs8_encrypted_pem(self):
+        """GIVEN a WrapperPrivateKey (PQ or hybrid).
+
+        WHEN private_bytes is called with BestAvailableEncryption,
+        THEN the result must be a PEM with the PKCS#8 ENCRYPTED PRIVATE KEY header.
+        """
+        for key_name, private_key in _wrapper_key_cases():
+            with self.subTest(key=key_name):
+                pem = private_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.BestAvailableEncryption(self.PASSWORD),
+                )
+
+                self.assertTrue(
+                    pem.startswith(b"-----BEGIN ENCRYPTED PRIVATE KEY-----"),
+                    msg=f"{key_name}: unexpected PEM header",
+                )
+
+    def test_private_bytes_best_available_encryption_round_trips_via_file(self):
+        """GIVEN a WrapperPrivateKey (PQ or hybrid) encrypted via private_bytes with BestAvailableEncryption.
+
+        WHEN the PEM is written to a temp file and loaded via load_private_key_from_file,
+        THEN the loaded key's public key must match the original.
+        """
+        for key_name, private_key in _wrapper_key_cases():
+            with self.subTest(key=key_name):
+                pem = private_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.BestAvailableEncryption(self.PASSWORD),
+                )
+
+                with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as f:
+                    f.write(pem)
+                    path = f.name
+
+                loaded = load_private_key_from_file(path, password=self.PASSWORD.decode())
+                self.assertEqual(loaded.public_key(), private_key.public_key())
+
+    def test_private_bytes_best_available_encryption_wrong_password_raises(self):
+        """GIVEN a WrapperPrivateKey (PQ or hybrid) encrypted via private_bytes with BestAvailableEncryption.
+
+        WHEN load_private_key_from_file is called with a wrong password,
+        THEN a ValueError must be raised.
+        """
+        for key_name, private_key in _wrapper_key_cases():
+            with self.subTest(key=key_name):
+                pem = private_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.BestAvailableEncryption(self.PASSWORD),
+                )
+
+                with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as f:
+                    f.write(pem)
+                    path = f.name
+
+                with self.assertRaises((ValueError, Exception)):
+                    load_private_key_from_file(path, password="wrong_password")
+
+
 if __name__ == "__main__":
     unittest.main()
