@@ -10,7 +10,6 @@ import textwrap
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import padding as aes_padding
-from cryptography.hazmat.primitives.asymmetric import ed448, ed25519, x448, x25519
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from pyasn1.codec.der import decoder, encoder
