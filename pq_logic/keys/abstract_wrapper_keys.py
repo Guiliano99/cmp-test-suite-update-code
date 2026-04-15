@@ -66,7 +66,6 @@ from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import tag, univ
 from pyasn1_alt_modules import rfc5280, rfc5958
 
-from pq_logic.keys.serialize_utils import prepare_enc_key_pem
 from resources.oidutils import PQ_NAME_2_OID
 
 ECSignKey = Union[ec.EllipticCurvePrivateKey, Ed25519PrivateKey, Ed448PrivateKey]
@@ -236,8 +235,10 @@ class WrapperPrivateKey(BaseKey):
             return self._to_one_asym_key()
 
         if encoding == encoding.PEM and isinstance(encryption_algorithm, serialization.BestAvailableEncryption):
-            password = encryption_algorithm.password.decode("utf-8")
-            return prepare_enc_key_pem(password, self._to_one_asym_key(), key_name=self._get_header_name())
+            from pq_logic.keys.key_pyasn1_utils import encrypt_private_key_pkcs8_pem
+
+            password = encryption_algorithm.password
+            return encrypt_private_key_pkcs8_pem(private_key_der=self._to_one_asym_key(), password=password)
 
         if encoding == Encoding.PEM:
             data = self._to_one_asym_key()
