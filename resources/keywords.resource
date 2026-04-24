@@ -21,6 +21,7 @@ Library             ../resources/keyutils.py
 Library             ../resources/certbuildutils.py
 Library             ../resources/protectionutils.py
 Library             ../resources/extra_issuing_logic.py
+Library             ../resources/profile_config.py
 Library             ../resources/general_msg_utils.py
 Library             ../pq_logic/hybrid_issuing.py
 Library             ../pq_logic/pq_verify_logic.py
@@ -45,6 +46,8 @@ Set Up Test Suite
     ...                The protection mode is driven by `ALLOW_MAC_PROTECTION`, `ALLOW_SELF_SIGNED_BOOTSTRAP`,
     ...                and `ALLOW_UNPROTECTED`. Set `ISSUED_KEY` / `ISSUED_CERT` in the config to skip issuance.
     [Tags]    setup
+    ${CMP_PROFILE}=    Get Variable Value    ${CMP_PROFILE}    cmp
+    Set CMP Profile    ${CMP_PROFILE}
     ${ALLOW_SELF_SIGNED_BOOTSTRAP}=    Get Variable Value    ${ALLOW_SELF_SIGNED_BOOTSTRAP}    ${False}
     ${ALLOW_UNPROTECTED}=    Get Variable Value    ${ALLOW_UNPROTECTED}    ${False}
     IF    '${ISSUED_KEY}' == '${None}'

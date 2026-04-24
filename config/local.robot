@@ -32,6 +32,7 @@ ${LWCMP}   ${True}
 # Does not affect the PQ signature algorithms.
 # Only MAC and traditional signatures.
 ${ENFORCE_RFC9481}   ${True}
+${CMP_PROFILE}   cmp
 
 
 # Root certificates that we trust when verifying the identity of the server, this applies when sending CMP-over-HTTP

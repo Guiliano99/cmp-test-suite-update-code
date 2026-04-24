@@ -82,6 +82,7 @@ ${LWCMP}   ${True}
 # Does not affect the PQ signature algorithms.
 # Only MAC and traditional signatures.
 ${ENFORCE_RFC9481}   ${True}
+${CMP_PROFILE}   cmp
 
 
 # IF legacy systems are used, it might be allowed to use,

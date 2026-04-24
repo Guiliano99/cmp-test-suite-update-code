@@ -41,6 +41,8 @@ ${LWCMP}   ${True}
 # Does not affect the PQ signature algorithms.
 # Only MAC and traditional signatures.
 ${ENFORCE_RFC9481}   ${False}
+# The CMP profile to use for protocol field sizes and validation rules.
+${CMP_PROFILE}   cmp
 
 ##### About Issuing:
 

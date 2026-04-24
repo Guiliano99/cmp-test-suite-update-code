@@ -38,6 +38,7 @@ ${LWCMP}   ${True}
 # Does not affect the PQ signature algorithms.
 # Only MAC and traditional signatures.
 ${ENFORCE_RFC9481}   ${False}
+${CMP_PROFILE}   cmp
 
 ##### About Algorithms
 ${DEFAULT_KEY_LENGTH}    2048
