@@ -53,6 +53,7 @@ from resources.asn1_structures import CertProfileValueAsn1, KemCiphertextInfoAsn
 from resources.asn1utils import try_decode_pyasn1
 from resources.convertutils import copy_asn1_certificate, str_to_bytes
 from resources.exceptions import BadAsn1Data, BadCertTemplate, BadDataFormat, BadRequest
+from resources.profile_config import get_active_profile
 from resources.typingutils import (
     CertObjOrPath,
     ControlsType,
@@ -220,11 +221,15 @@ def prepare_pki_message(
     pvno = _prepare_pvno(pvno, kwargs.get("for_kga", False))
     pki_header = _prepare_pki_header(sender, recipient, pvno, to_exclude)
     if "transactionID" not in to_exclude:
-        transaction_value = convertutils.str_to_bytes(transaction_id or os.urandom(16))
+        transaction_value = convertutils.str_to_bytes(
+            transaction_id or os.urandom(get_active_profile().tx_id_size)
+        )
         pki_header["transactionID"] = _prepare_octet_string_field(transaction_value, 4)
 
     if "senderNonce" not in to_exclude:
-        pki_header["senderNonce"] = _prepare_octet_string_field(sender_nonce or os.urandom(16), 5)
+        pki_header["senderNonce"] = _prepare_octet_string_field(
+            sender_nonce or os.urandom(get_active_profile().nonce_size), 5
+        )
 
     if "recipNonce" not in to_exclude and recip_nonce:
         pki_header["recipNonce"] = _prepare_octet_string_field(recip_nonce, 6)
@@ -3122,15 +3127,17 @@ def _prepare_cert_conf(cert_status: Union[List[rfc9480.CertStatus], rfc9480.Cert
 
 
 def _gen_unique_byte_seq(  # pylint: disable=inconsistent-return-statements
-    in_use: List[bytes], size_num: int = 16
+    in_use: List[bytes], size_num: Optional[int] = None
 ) -> bytes:  # type: ignore
     """Generate a unique byte sequence.
 
     :param in_use: The list with already used byte sequences.
-    :param size_num: The size of the byte sequence to generate.
+    :param size_num: The size of the byte sequence to generate. Defaults to the active profile's nonce_size.
     :return: A unique byte sequence.
     :raises ValueError: If a unique byte sequence cannot be generated, after 10000 attempts.
     """
+    if size_num is None:
+        size_num = get_active_profile().nonce_size
     val = None
     for _ in range(10000):
         val = os.urandom(size_num)
