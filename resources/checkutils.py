@@ -48,6 +48,7 @@ from resources.exceptions import (
     BodyRelevantError,
     CMPTestSuiteError,
 )
+from resources.profile_config import get_active_profile
 from resources.oid_mapping import (
     get_hash_from_oid,
 )
@@ -1427,20 +1428,28 @@ def check_message_time_field(
         logging.info("The time difference was: %.2f seconds, which is within the allowed interval.", time_diff)
 
 
+def _apply_min_nonce_sec(nonce_sec: Strint) -> int:
+    profile_min = get_active_profile().min_nonce_sec
+    nonce_sec = convertutils.str_to_int(nonce_sec)
+    if profile_min is not None:
+        nonce_sec = max(profile_min, nonce_sec)
+    return nonce_sec
+
+
 def validate_sender_and_recipient_nonce(  # noqa D417 undocumented-param
-    response: PKIMessageTMP, request: PKIMessageTMP, nonce_sec: Strint = 128
+    response: PKIMessageTMP, request: PKIMessageTMP, nonce_sec: Strint = 16
 ) -> None:
     """Check the sender and recipient nonce in the response and request messages.
 
     Verifies that the `senderNonce` in the request message matches the `recipNonce` in the response
      message. Additionally, it checks if the `senderNonce` in the response message meets the minimum required
-     security level, which is 128 bits by default.
+     security level, which is 16 bytes by default.
 
     Arguments:
     ---------
          - `response`: The PKI response message containing the recipient nonce.
          - `request`: The PKI request message containing the sender nonce.
-         - `nonce_sec`: The minimum required security level for the nonce in bits.
+         - `nonce_sec`: The minimum required security size for the nonce in bytes.
          Defaults to `128`. The Value cannot be set lower.
 
     Raises:
@@ -1453,8 +1462,8 @@ def validate_sender_and_recipient_nonce(  # noqa D417 undocumented-param
 
     Examples:
     --------
-     | Validate Sender and Recipient Nonce | ${pki_message_response} | ${pki_message_request} | nonce_sec=128 |
-     | Validate Sender and Recipient Nonce | ${pki_message_response} | nonce_sec=128 |
+     | Validate Sender and Recipient Nonce | ${pki_message_response} | ${pki_message_request} | nonce_sec=16 |
+     | Validate Sender and Recipient Nonce | ${pki_message_response} | nonce_sec=16 |
 
     """
     if not response["header"]["recipNonce"].isValue:
@@ -1464,9 +1473,9 @@ def validate_sender_and_recipient_nonce(  # noqa D417 undocumented-param
         raise BadSenderNonce("The `senderNonce` was not set inside the request message.")
 
     recip_nonce = response["header"]["recipNonce"].asOctets()
-    nonce_sec = max(128, convertutils.str_to_int(nonce_sec))
-    if len(bytearray(recip_nonce)) < (nonce_sec // 8):
-        raise BadRecipientNonce(f"The `recipNonce` in the response is shorter than the required {nonce_sec} bits.")
+    nonce_sec = _apply_min_nonce_sec(nonce_sec)
+    if len(bytearray(recip_nonce)) < nonce_sec:
+        raise BadRecipientNonce(f"The `recipNonce` in the response is shorter than the required {nonce_sec} bytes.")
 
     sender_nonce = request["header"]["senderNonce"].asOctets()
     if sender_nonce != response["header"]["recipNonce"].asOctets():
@@ -1474,9 +1483,9 @@ def validate_sender_and_recipient_nonce(  # noqa D417 undocumented-param
 
     recip_nonce = response["header"]["senderNonce"].asOctets()
 
-    nonce_sec = max(128, convertutils.str_to_int(nonce_sec))
-    if len(bytearray(recip_nonce)) < (nonce_sec // 8):
-        raise BadSenderNonce(f"The `senderNonce` in the response is shorter than the required {nonce_sec} bits.")
+    nonce_sec = _apply_min_nonce_sec(nonce_sec)
+    if len(bytearray(recip_nonce)) < nonce_sec:
+        raise BadSenderNonce(f"The `senderNonce` in the response is shorter than the required {nonce_sec} bytes.")
 
 
 @keyword(name="Validate transactionID")
@@ -1510,7 +1519,7 @@ def validate_transaction_id(  # noqa D417 undocumented-param
 
     transaction_id = response["header"]["transactionID"].asOctets()
 
-    if len(transaction_id) != 16:
+    if len(transaction_id) != get_active_profile().tx_id_size:
         raise BadRequest("The `transactionID` must be 128 bits long.")
 
     if request is not None:
@@ -2130,16 +2139,16 @@ def validate_nested_message_unique_nonces_and_ids(  # noqa D417 undocumented-par
     if check_recip_nonce and not _is_unique(nested_recip_nonces):
         raise BadRecipientNonce("The recipNonces among nested messages are not unique.")
 
-    def _ensure_length(value_list: List[bytes], field_name: str, exc: Type[CMPTestSuiteError]):
-        """Check if the length of the values in the list is 128 bits."""
+    def _ensure_length(value_list: List[bytes], field_name: str, exc: Type[CMPTestSuiteError], expected_size: int):
+        """Check if the length of the values in the list matches the expected size."""
         for val in value_list:
-            if len(val) != 16:
-                raise exc(f"One of the {field_name} values is not 128 bits long.")
+            if len(val) != expected_size:
+                raise exc(f"One of the {field_name} values is not {expected_size * 8} bits long.")
 
     if check_length:
-        _ensure_length(ids, "transactionID", BadRequest)
-        _ensure_length(nested_sender_nonces, "senderNonce", BadSenderNonce)
-        _ensure_length(nested_recip_nonces, "recipNonce", BadRecipientNonce)
+        _ensure_length(ids, "transactionID", BadRequest, get_active_profile().tx_id_size)
+        _ensure_length(nested_sender_nonces, "senderNonce", BadSenderNonce, get_active_profile().nonce_size)
+        _ensure_length(nested_recip_nonces, "recipNonce", BadRecipientNonce, get_active_profile().nonce_size)
 
 
 def validate_add_protection_tx_id_and_nonces(  # noqa D417 undocumented-param
@@ -2229,16 +2238,16 @@ def validate_add_protection_tx_id_and_nonces(  # noqa D417 undocumented-param
         if outer_recip_set:
             raise BadRecipientNonce("The `recipNonce` is set for the outer body")
 
-    def _ensure_length(value: bytes, field_name: str, exc: Type[CMPTestSuiteError]):
-        """Check if the value is 128 bits long."""
-        if value is not None and len(value) != 16:
-            raise exc(f"The inner `{field_name}` value is not 128 bits long.")
+    def _ensure_length(value: bytes, field_name: str, exc: Type[CMPTestSuiteError], expected_size: int):
+        """Check if the value matches the expected size."""
+        if value is not None and len(value) != expected_size:
+            raise exc(f"The inner `{field_name}` value is not {expected_size * 8} bits long.")
 
     if check_length:
-        _ensure_length(inner_tx_id, "transactionID", BadRequest)
-        _ensure_length(outer_sender_nonce, "senderNonce", BadSenderNonce)
+        _ensure_length(inner_tx_id, "transactionID", BadRequest, get_active_profile().tx_id_size)
+        _ensure_length(outer_sender_nonce, "senderNonce", BadSenderNonce, get_active_profile().nonce_size)
         if recip_nonce is not None:
-            _ensure_length(recip_nonce, "recipNonce", BadRecipientNonce)
+            _ensure_length(recip_nonce, "recipNonce", BadRecipientNonce, get_active_profile().nonce_size)
 
 
 def validate_cross_certification_response(  # noqa D417 undocumented-param
@@ -2323,11 +2332,11 @@ def _validate_cert_conf_nonces_and_tx_id(
     recip_nonce = request["header"]["recipNonce"].asOctets()
 
     if check_length:
-        if len(tx_id) != 16:
+        if len(tx_id) != get_active_profile().tx_id_size:
             raise BadRequest("The transaction ID was not 16 bytes long.")
-        if len(sender_nonce) != 16:
+        if len(sender_nonce) != get_active_profile().nonce_size:
             raise BadSenderNonce("The sender nonce was not 16 bytes long.")
-        if len(recip_nonce) != 16:
+        if len(recip_nonce) != get_active_profile().nonce_size:
             raise BadRecipientNonce("The recipient nonce was not 16 bytes long.")
 
     if request["header"]["recipNonce"].asOctets() != response["header"]["senderNonce"].asOctets():
