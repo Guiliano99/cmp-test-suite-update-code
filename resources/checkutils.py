@@ -309,6 +309,7 @@ def validate_ca_msg_ca_pubs_field(  # noqa D417 undocumented-param
             raise ValueError("'caPubs' field should not be present.")
 
 
+@keyword(name="_Atomic Check Is Protection Present")
 def check_is_protection_present(  # noqa D417 undocumented-param
     pki_message: PKIMessageTMP,
     must_be_protected: bool = False,
@@ -390,7 +391,7 @@ def _verify_sender_field_for_mac(sender_name: rfc9480.GeneralName, allow_failure
     logging.info("sender for MAC-based protection is %s", cm_name)
 
 
-@keyword(name="Check Sender CMP Protection")
+@keyword(name="_Atomic Check Sender CMP Protection")
 def check_sender_cmp_protection(  # noqa D417 undocumented-param
     pki_message: PKIMessageTMP, must_be_protected=True, allow_failure=True
 ):
@@ -641,7 +642,7 @@ def _verify_senderkid_for_mac(pki_message: PKIMessageTMP, allow_mac_failure: boo
 # TODO add test cases for all algorithms (PQ, Composite, etc.)
 
 
-@keyword(name="Validate senderKID For CMP Protection")
+@keyword(name="_Atomic Validate senderKID For CMP Protection")
 def validate_senderkid_for_cmp_protection(  # noqa D417 undocumented-param
     pki_message: PKIMessageTMP,
     protection_cert: Optional[rfc9480.CMPCertificate] = None,
@@ -1106,7 +1107,7 @@ def check_protection_alg_field(  # noqa D417 undocumented-param
             )
 
 
-@keyword(name="Check implicitconfirm In generalInfo")
+@keyword(name="_Atomic Check implicitConfirm In generalInfo")
 def check_implicitconfirm_in_generalinfo(pki_message: PKIMessageTMP) -> None:  # noqa: D417 undocumented-param
     """Check whether `implicitConfirm` is correctly set in the `generalInfo` field of the `pki_message`.
 
@@ -1155,7 +1156,7 @@ def check_implicitconfirm_in_generalinfo(pki_message: PKIMessageTMP) -> None:  #
         raise BadRequest("The 'implicitConfirm' value must be NULL!")
 
 
-@keyword(name="Check confirmWaitTime In generalInfo")
+@keyword(name="_Atomic Check confirmWaitTime In generalInfo")
 def check_confirmwaittime_in_generalinfo(pki_message: PKIMessageTMP) -> None:  # noqa D417 undocumented-param
     """Check if `confirmWaitTime` is correctly set, if set, in the GeneralInfo field of the `pki_message`.
 
@@ -1298,7 +1299,7 @@ def validate_cert_profile_for_ca(  # noqa D417 undocumented-param
                 raise BadRequest(f"The `certProfile` {profile} is not known to the CA!")
 
 
-@keyword(name="Check certProfile In generalInfo")
+@keyword(name="_Atomic Check certProfile In generalInfo")
 def check_certprofile_in_generalinfo(pki_message: PKIMessageTMP) -> None:  # noqa D417 undocumented-param
     """Check if `certProfile` is correctly set in the generalInfo field of the `pki_message`.
 
@@ -1331,7 +1332,7 @@ def check_certprofile_in_generalinfo(pki_message: PKIMessageTMP) -> None:  # noq
     # other checks are not relevant, for the Client.
 
 
-@keyword(name="Check generalInfo Field")
+@keyword(name="_Atomic Check generalInfo Field")
 def check_generalinfo_field(pki_message: PKIMessageTMP) -> None:  # noqa D417 # undocumented-param
     """Check the `implicitConfirm`, `confirmWaitTime` and `certProfile` in the GeneralInfo field of the `PKIMessage`.
 
@@ -1380,7 +1381,7 @@ def _check_message_time_for_request(
     logging.info("The time difference was: %.2f seconds, which is within the allowed interval.", time_diff)
 
 
-@not_keyword
+@keyword(name="_Atomic Check messageTime Field")
 def check_message_time_field(
     pki_message: PKIMessageTMP,
     allowed_interval: Optional[int] = None,
@@ -1488,7 +1489,7 @@ def validate_sender_and_recipient_nonce(  # noqa D417 undocumented-param
         raise BadSenderNonce(f"The `senderNonce` in the response is shorter than the required {nonce_sec} bytes.")
 
 
-@keyword(name="Validate transactionID")
+@keyword(name="_Atomic Validate transactionID")
 def validate_transaction_id(  # noqa D417 undocumented-param
     response: PKIMessageTMP, request: Optional[PKIMessageTMP] = None
 ):
@@ -1530,6 +1531,7 @@ def validate_transaction_id(  # noqa D417 undocumented-param
             )
 
 
+@keyword(name="_Atomic Validate Sender And Recipient")
 def validate_sender_and_recipient(  # noqa D417 undocumented-param
     response: PKIMessageTMP,
     request: PKIMessageTMP,
@@ -1575,7 +1577,7 @@ def validate_sender_and_recipient(  # noqa D417 undocumented-param
             raise ValueError(f"Recipient mismatch, we sent from {request_sender}, we got {response_recipient}")
 
 
-@keyword(name="Validate PKIMessage Header")
+@keyword(name="_Atomic Validate PKIMessage Header")
 def validate_pkimessage_header(  # noqa D417 undocumented-param
     pki_message_response: PKIMessageTMP,
     pki_message_request: Optional[PKIMessageTMP] = None,
