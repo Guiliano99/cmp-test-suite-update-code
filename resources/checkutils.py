@@ -309,7 +309,6 @@ def validate_ca_msg_ca_pubs_field(  # noqa D417 undocumented-param
             raise ValueError("'caPubs' field should not be present.")
 
 
-@keyword(name="_Atomic Check Is Protection Present")
 def check_is_protection_present(  # noqa D417 undocumented-param
     pki_message: PKIMessageTMP,
     must_be_protected: bool = False,
@@ -391,7 +390,7 @@ def _verify_sender_field_for_mac(sender_name: rfc9480.GeneralName, allow_failure
     logging.info("sender for MAC-based protection is %s", cm_name)
 
 
-@keyword(name="_Atomic Check Sender CMP Protection")
+@keyword(name="Check Sender CMP Protection")
 def check_sender_cmp_protection(  # noqa D417 undocumented-param
     pki_message: PKIMessageTMP, must_be_protected=True, allow_failure=True
 ):
@@ -642,7 +641,7 @@ def _verify_senderkid_for_mac(pki_message: PKIMessageTMP, allow_mac_failure: boo
 # TODO add test cases for all algorithms (PQ, Composite, etc.)
 
 
-@keyword(name="_Atomic Validate senderKID For CMP Protection")
+@keyword(name="Validate senderKID For CMP Protection")
 def validate_senderkid_for_cmp_protection(  # noqa D417 undocumented-param
     pki_message: PKIMessageTMP,
     protection_cert: Optional[rfc9480.CMPCertificate] = None,
@@ -1107,7 +1106,7 @@ def check_protection_alg_field(  # noqa D417 undocumented-param
             )
 
 
-@keyword(name="_Atomic Check implicitConfirm In generalInfo")
+@not_keyword
 def check_implicitconfirm_in_generalinfo(pki_message: PKIMessageTMP) -> None:  # noqa: D417 undocumented-param
     """Check whether `implicitConfirm` is correctly set in the `generalInfo` field of the `pki_message`.
 
@@ -1156,7 +1155,7 @@ def check_implicitconfirm_in_generalinfo(pki_message: PKIMessageTMP) -> None:  #
         raise BadRequest("The 'implicitConfirm' value must be NULL!")
 
 
-@keyword(name="_Atomic Check confirmWaitTime In generalInfo")
+@not_keyword
 def check_confirmwaittime_in_generalinfo(pki_message: PKIMessageTMP) -> None:  # noqa D417 undocumented-param
     """Check if `confirmWaitTime` is correctly set, if set, in the GeneralInfo field of the `pki_message`.
 
@@ -1299,7 +1298,7 @@ def validate_cert_profile_for_ca(  # noqa D417 undocumented-param
                 raise BadRequest(f"The `certProfile` {profile} is not known to the CA!")
 
 
-@keyword(name="_Atomic Check certProfile In generalInfo")
+@not_keyword
 def check_certprofile_in_generalinfo(pki_message: PKIMessageTMP) -> None:  # noqa D417 undocumented-param
     """Check if `certProfile` is correctly set in the generalInfo field of the `pki_message`.
 
@@ -1332,7 +1331,7 @@ def check_certprofile_in_generalinfo(pki_message: PKIMessageTMP) -> None:  # noq
     # other checks are not relevant, for the Client.
 
 
-@keyword(name="_Atomic Check generalInfo Field")
+@keyword(name="Check generalInfo Field")
 def check_generalinfo_field(pki_message: PKIMessageTMP) -> None:  # noqa D417 # undocumented-param
     """Check the `implicitConfirm`, `confirmWaitTime` and `certProfile` in the GeneralInfo field of the `PKIMessage`.
 
@@ -1381,26 +1380,45 @@ def _check_message_time_for_request(
     logging.info("The time difference was: %.2f seconds, which is within the allowed interval.", time_diff)
 
 
-@keyword(name="_Atomic Check messageTime Field")
-def check_message_time_field(
+@keyword(name="Check messageTime Field")
+def check_message_time_field(  # noqa D417 undocumented-param
     pki_message: PKIMessageTMP,
-    allowed_interval: Optional[int] = None,
+    allowed_interval: Optional[Strint] = None,
     request_time: Optional[datetime.datetime] = None,
+    request: Optional[PKIMessageTMP] = None,
 ):
-    """Validate the `messageTime` field in the PKIMessage header and ensure compliance with the specified time.
+    """Validate the `messageTime` field in the PKIMessage header per RFC 9483 Section 3.1.
 
     Validates the `messageTime` field is appropriately set in the PKIMessage header, particularly when
     the `confirmWaitTime` field is present. It also optionally verifies that the `messageTime` is within an acceptable
-    time interval, either relative to a provided `request_time` or the current UTC time.
+    time interval, either relative to a provided request time or the current UTC time.
 
-    :param pki_message: The PKIMessage object to be validated.
-    :param allowed_interval: The maximum allowed time difference in seconds between the `messageTime` in the message
-                            and the `request_time` or current time. If `None`, the time difference check is skipped.
-    :param request_time: The original request time to compare against the `messageTime`. If not provided, the current
-                        UTC time is used. Defaults to `None`.
-    :raises BadTime: If the `messageTime` field is required but missing, or if the time difference exceeds
-                       the allowed interval.
+    Arguments:
+    ---------
+        - `pki_message`: The PKIMessage object to be validated.
+        - `allowed_interval`: The maximum allowed time difference in seconds between the `messageTime` in the message
+          and the request or current time. If `None`, the time difference check is skipped.
+        - `request_time`: The original request time (a datetime) to compare against the `messageTime`. Mostly used
+          from Python callers. Defaults to `None`.
+        - `request`: The original request `PKIMessage`. If provided, its `messageTime` is used as the reference
+          point (this is the convenient form for Robot Framework callers). Defaults to `None`.
+
+    Raises:
+    ------
+        - `BadTime`: If the `messageTime` field is required but missing, or if the time difference exceeds
+          the allowed interval.
+
+    Examples:
+    --------
+    | Check messageTime Field | ${response} |
+    | Check messageTime Field | ${response} | allowed_interval=200 | request=${request} |
     """
+    if allowed_interval is not None:
+        allowed_interval = convertutils.str_to_int(allowed_interval)
+
+    if request_time is None and request is not None and request["header"]["messageTime"].isValue:
+        request_time = request["header"]["messageTime"].asDateTime
+
     # PKI management entity: A non-EE PKI entity, i.e., an RA or a CA.
     if pki_message["header"]["generalInfo"].isValue:
         confirm_wait_time = cmputils.get_value_from_seq_of_info_value_field(
@@ -1489,7 +1507,7 @@ def validate_sender_and_recipient_nonce(  # noqa D417 undocumented-param
         raise BadSenderNonce(f"The `senderNonce` in the response is shorter than the required {nonce_sec} bytes.")
 
 
-@keyword(name="_Atomic Validate transactionID")
+@keyword(name="Validate transactionID")
 def validate_transaction_id(  # noqa D417 undocumented-param
     response: PKIMessageTMP, request: Optional[PKIMessageTMP] = None
 ):
@@ -1531,7 +1549,6 @@ def validate_transaction_id(  # noqa D417 undocumented-param
             )
 
 
-@keyword(name="_Atomic Validate Sender And Recipient")
 def validate_sender_and_recipient(  # noqa D417 undocumented-param
     response: PKIMessageTMP,
     request: PKIMessageTMP,
@@ -1577,7 +1594,11 @@ def validate_sender_and_recipient(  # noqa D417 undocumented-param
             raise ValueError(f"Recipient mismatch, we sent from {request_sender}, we got {response_recipient}")
 
 
-@keyword(name="_Atomic Validate PKIMessage Header")
+# NOTE: The Robot Framework keyword "Validate PKIMessage Header" now lives in
+# `resources/checks.resource` as a readable orchestrator. This Python function is
+# kept (without an RF keyword name) so existing Python callers, such as the mock
+# CA handlers, continue to work unchanged.
+@not_keyword
 def validate_pkimessage_header(  # noqa D417 undocumented-param
     pki_message_response: PKIMessageTMP,
     pki_message_request: Optional[PKIMessageTMP] = None,
