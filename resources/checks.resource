@@ -13,6 +13,7 @@ Documentation       High-level CMP validation keywords, written in plain Robot F
 ...                 can read this file to see exactly which sub-checks each one performs.
 
 Library             ../resources/checkutils.py
+Library             ../resources/asn1utils.py
 
 
 *** Keywords ***
@@ -58,7 +59,7 @@ Validate PKIMessage Header
     [Tags]    header    cmp    rfc9483
     [Arguments]    ${response}    ${request}=${None}    ${protection}=${True}
     ...    ${time_interval}=200    ${allow_failure_sender}=${True}
-    ${pvno}=    Evaluate    int($response["header"]["pvno"])
+    ${pvno}=    Get Asn1 Value As Number    ${response}    header.pvno
     IF    ${pvno} not in [2, 3]
         Fail    PKIMessage header version is ${pvno}, expected 2 or 3 (RFC 9483 Section 3.1).
     END

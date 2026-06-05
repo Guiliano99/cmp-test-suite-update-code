@@ -1417,7 +1417,7 @@ def check_message_time_field(  # noqa D417 undocumented-param
         allowed_interval = convertutils.str_to_int(allowed_interval)
 
     if request_time is None and request is not None and request["header"]["messageTime"].isValue:
-        request_time = request["header"]["messageTime"].asDateTime
+        request_time = asn1utils.get_asn1_value_as_datetime(request, query="header.messageTime")
 
     # PKI management entity: A non-EE PKI entity, i.e., an RA or a CA.
     if pki_message["header"]["generalInfo"].isValue:
@@ -1430,9 +1430,7 @@ def check_message_time_field(  # noqa D417 undocumented-param
                 raise BadTime("The `messageTime` field must be present if `confirmWaitTime` is set!")
 
     if allowed_interval is not None:
-        msg_time = asn1utils.get_asn1_value(pki_message, query="header.messageTime")  # type: ignore
-        msg_time: useful.GeneralizedTime
-        time_obj = msg_time.asDateTime
+        time_obj = asn1utils.get_asn1_value_as_datetime(pki_message, query="header.messageTime")
 
         if request_time is not None:
             time_diff = (time_obj - request_time).total_seconds()
