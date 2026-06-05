@@ -3410,7 +3410,7 @@ def _get_pvno(ca_message: PKIMessageTMP, pvno: Optional[Strint] = None) -> int:
     :return: The protocol version number as an integer. Defaults to the one in the `PKIMessage`.
     """
     if pvno is None:
-        return int(ca_message["header"]["pvno"])
+        return asn1utils.get_asn1_value_as_number(ca_message, query="header.pvno")
     return int(pvno)
 
 

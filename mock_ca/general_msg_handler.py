@@ -17,7 +17,7 @@ from pyasn1_alt_modules.rfc9480 import InfoTypeAndValue
 
 from mock_ca.rev_handler import RevocationHandler
 from pq_logic.tmp_oids import id_it_KemCiphertextInfo
-from resources import cmputils, keyutils
+from resources import asn1utils, cmputils, keyutils
 from resources.asn1_structures import (
     AlgorithmIdentifiers,
     CertProfileValueAsn1,
@@ -347,7 +347,7 @@ class GeneralMessageHandler:
         self, entry: rfc9480.InfoTypeAndValue, pki_message: PKIMessageTMP
     ) -> Tuple[rfc9480.InfoTypeAndValue, str]:
         """Process a revocation passphrase."""
-        version = int(pki_message["header"]["pvno"])
+        version = asn1utils.get_asn1_value_as_number(pki_message, query="header.pvno")
         if not entry["infoValue"].isValue:
             raise BadRequest("The info value for the revocation passphrase is not set.")
 

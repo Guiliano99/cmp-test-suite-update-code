@@ -579,10 +579,12 @@ def validate_popdecc_version(pki_message: PKIMessageTMP) -> None:
     is_enc_present = any(c["encryptedRand"].isValue for c in pki_message["body"]["popdecc"])
     is_not_enc_present = any(c["challenge"].asOctets() != b"" for c in pki_message["body"]["popdecc"])
 
-    if int(pki_message["header"]["pvno"]) != 3 and is_enc_present:
+    pvno = asn1utils.get_asn1_value_as_number(pki_message, query="header.pvno")
+
+    if pvno != 3 and is_enc_present:
         raise BadRequest("Invalid PKIMessage version for encryptedRand. Expected version 3.")
 
-    if int(pki_message["header"]["pvno"]) != 2 and not is_enc_present:
+    if pvno != 2 and not is_enc_present:
         raise BadRequest("Invalid PKIMessage version for challenge. Expected version 2.")
 
     if is_enc_present and is_not_enc_present:

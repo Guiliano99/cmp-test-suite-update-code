@@ -16,7 +16,7 @@ from mock_ca.stfl_validator import STFLPKIMessageValidator
 from pq_logic.hybrid_sig.chameleon_logic import load_chameleon_csr_delta_key_and_sender
 from pq_logic.keys.abstract_wrapper_keys import HybridKEMPrivateKey
 from pq_logic.pq_verify_logic import verify_hybrid_pkimessage_protection
-from resources import keyutils
+from resources import asn1utils, keyutils
 from resources.asn1_structures import PKIMessageTMP
 from resources.ca_ra_utils import (
     build_ccp_from_ccr,
@@ -589,7 +589,7 @@ class CertReqHandler:
         for_nested: bool = False,
     ) -> None:
         """Validate the header of a PKIMessage."""
-        if int(pki_message["header"]["pvno"]) not in [2, 3]:
+        if asn1utils.get_asn1_value_as_number(pki_message, query="header.pvno") not in [2, 3]:
             raise UnsupportedVersion("The protocol version number was not 2 or 3.")
 
         if must_be_protected is None:

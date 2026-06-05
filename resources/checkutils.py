@@ -161,7 +161,7 @@ def validate_certified_key_pair_structure(  # noqa D417 undocumented-param
     | Validate certifiedKeyPair | ${pki_message} | local_key_gen=False |
 
     """
-    version = int(pki_message["header"]["pvno"])
+    version = asn1utils.get_asn1_value_as_number(pki_message, query="header.pvno")
     cert_response = cmputils.get_cert_response_from_pkimessage(pki_message, response_index=response_index)
     cert_key_pair = cert_response["certifiedKeyPair"]
 
@@ -1648,7 +1648,7 @@ def validate_pkimessage_header(  # noqa D417 undocumented-param
     | Validate PKIMessage Header | ${pki_message_response} | protection=False |
 
     """
-    if int(pki_message_response["header"]["pvno"]) not in [2, 3]:
+    if asn1utils.get_asn1_value_as_number(pki_message_response, query="header.pvno") not in [2, 3]:
         raise ValueError(f"Header version is {pki_message_response['header']['pvno']}")
 
     check_is_protection_present(pki_message_response, must_be_protected=protection)
@@ -1664,7 +1664,7 @@ def validate_pkimessage_header(  # noqa D417 undocumented-param
         if not pki_message_request["header"]["messageTime"].isValue:
             logging.info("`pki_message_request` messageTime is not set.")
         else:
-            request_time = pki_message_request["header"]["messageTime"].asDateTime
+            request_time = asn1utils.get_asn1_value_as_datetime(pki_message_request, query="header.messageTime")
 
     # Validate message time with allowed interval
     if time_interval is not None:

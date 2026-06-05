@@ -270,7 +270,7 @@ def validate_not_local_key_gen(  # noqa D417 undocumented-param
 
     """
     body_name = pki_message["body"].getName()
-    header_version = int(pki_message["header"]["pvno"])
+    header_version = asn1utils.get_asn1_value_as_number(pki_message, query="header.pvno")
     if header_version != 3:
         raise ValueError(f"The PKIHeader says version {header_version} but MUST be 3")
 

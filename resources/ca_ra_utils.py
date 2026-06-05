@@ -55,7 +55,7 @@ from resources import (
     utils,
 )
 from resources.asn1_structures import CertResponseTMP, ChallengeASN1, PKIBodyTMP, PKIMessageTMP
-from resources.asn1utils import get_set_bitstring_names, try_decode_pyasn1
+from resources.asn1utils import get_asn1_value_as_number, get_set_bitstring_names, try_decode_pyasn1
 from resources.certextractutils import get_extension
 from resources.convertutils import (
     copy_asn1_certificate,
@@ -2237,7 +2237,7 @@ def set_ca_header_fields(request: PKIMessageTMP, kwargs: dict) -> dict:
     kwargs["sender_nonce"] = kwargs.get("sender_nonce") or alt_nonce
     kwargs["transaction_id"] = kwargs.get("transaction_id") or request["header"]["transactionID"].asOctets()
     kwargs["recipient"] = kwargs.get("recipient") or request["header"]["sender"]
-    kwargs["pvno"] = kwargs.get("pvno") or int(request["header"]["pvno"])
+    kwargs["pvno"] = kwargs.get("pvno") or get_asn1_value_as_number(request, query="header.pvno")
     return kwargs
 
 
@@ -3256,7 +3256,7 @@ def build_pki_conf_from_cert_conf(  # noqa: D417 Missing argument descriptions i
 
         digest_alg = _process_cert_hash_alg(
             entry=entry,
-            pvno=int(request["header"]["pvno"]),
+            pvno=get_asn1_value_as_number(request, query="header.pvno"),
             issued_cert=issued_cert,
             hash_alg=hash_alg,
             ca_cert=kwargs.get("ca_cert"),
@@ -4584,7 +4584,7 @@ def build_kga_cmp_response(  # noqa D417 undocumented-param
     """
     body_name = request["body"].getName()
 
-    if int(request["header"]["pvno"]) != 3:
+    if get_asn1_value_as_number(request, query="header.pvno") != 3:
         raise UnsupportedVersion("The KGA request only supports version 3 (EnvelopedData).")
 
     if len(request["body"][body_name]) != 1:
