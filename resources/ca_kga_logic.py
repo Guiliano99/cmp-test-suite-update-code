@@ -219,6 +219,10 @@ def validate_not_local_key_gen(  # noqa D417 undocumented-param
     trustanchors: str = "data/trustanchors",
     ee_key: Optional[EnvDataPrivateKey] = None,
     key_save_type: Optional[str] = None,
+    check_signature: bool = True,
+    check_kga_cert: bool = True,
+    check_public_key_match: bool = True,
+    kga_eku_strictness: Strint = 2,
 ) -> PrivateKey:
     """Validate that the provided PKIMessage is correct, according to Rfc9483 Section 4.1.6.
 
@@ -242,7 +246,16 @@ def validate_not_local_key_gen(  # noqa D417 undocumented-param
         - `ee_key`: The private key of the end-entity used for RSA decryption if KTRI is used,
           or EC/X25519/X448 used for key agreement.
         - `key_save_type`: The type of key export expected for a PQ key (e.g., "seed", "raw", "seed_and_raw").
-        Defaults to `None`.
+          Defaults to `None`.
+        - `check_signature`: If `False`, skips the digest and signature verification on the SignedData
+          carried inside the EnvelopedData. Useful for tests that only need the extracted key.
+          Defaults to `True`.
+        - `check_kga_cert`: If `False`, skips the KGA certificate trust-anchor validation and the
+          `cmKGA` ExtendedKeyUsage check on the SignedData certificate. Defaults to `True`.
+        - `check_public_key_match`: If `False`, skips the final check that the extracted private
+          key matches the public key in the newly issued certificate. Defaults to `True`.
+        - `kga_eku_strictness`: Strictness for the `cmKGA` `ExtendedKeyUsage` check (forwarded to
+          `Validate SignedData Structure`). Defaults to `2`.
 
     Returns:
     -------
@@ -306,18 +319,120 @@ def validate_not_local_key_gen(  # noqa D417 undocumented-param
         key_index=key_index,
         trustanchors=trustanchors,
         key_save_type=key_save_type,
+        check_signature=check_signature,
+        check_kga_cert=check_kga_cert,
+        kga_eku_strictness=kga_eku_strictness,
     )
 
     kga_type = env_data["recipientInfos"][key_index].getName()
     _check_correct_non_local_key_gen_use(cmp_cert=cert, kga_type=kga_type, pki_message=pki_message, password=password)
 
-    issued_cert = cmputils.get_cert_from_pkimessage(pki_message, key_index)
-    issued_cert_pub_key = certutils.load_public_key_from_cert(issued_cert)
+    if check_public_key_match:
+        issued_cert = cmputils.get_cert_from_pkimessage(pki_message, key_index)
+        issued_cert_pub_key = certutils.load_public_key_from_cert(issued_cert)
 
-    if issued_cert_pub_key != private_key.public_key():
-        raise MismatchingKey("The extracted private key does not match the public key in the newly issued certificate.")
+        if issued_cert_pub_key != private_key.public_key():
+            raise MismatchingKey(
+                "The extracted private key does not match the public key in the newly issued certificate."
+            )
 
     return private_key
+
+
+@keyword(name="Decode SignedData")
+def decode_signed_data(data: bytes) -> rfc5652.SignedData:  # noqa D417 undocumented-param
+    """Decode raw DER bytes into a `SignedData` structure (RFC 5652).
+
+    Use this after `Decrypt KGA EnvelopedData From PKIMessage` (or any other decryption step that
+    yields raw DER) so the result can be inspected and validated by `Validate SignedData Structure`.
+
+    Arguments:
+    ---------
+        - `data`: The raw DER-encoded `SignedData` bytes.
+
+    Returns:
+    -------
+        - The decoded `SignedData` structure.
+
+    Raises:
+    ------
+        - `ValueError`: If decoding leaves trailing bytes.
+
+    Examples:
+    --------
+    | ${signed_data}= | Decode SignedData | ${decrypted_bytes} |
+    """
+    signed_data, rest = decoder.decode(data, rfc5652.SignedData())
+    if rest != b"":
+        raise ValueError("The decoding of the `SignedData` structure had a remainder!")
+    return signed_data
+
+
+@keyword(name="Decrypt KGA EnvelopedData From PKIMessage")
+def decrypt_kga_enveloped_data_from_pkimessage(  # noqa D417 undocumented-param
+    pki_message: PKIMessageTMP,
+    password: Optional[str] = None,
+    expected_type: Optional[str] = None,
+    cert_index: Strint = 0,
+    expected_size: Strint = 1,
+    key_index: Strint = 0,
+    ee_key: Optional[EnvDataPrivateKey] = None,
+) -> bytes:
+    """Decrypt the `EnvelopedData` carrying a KGA-issued private key and return its raw bytes.
+
+    Convenience entry point for tests that need only the decryption step from RFC 9483
+    Section 4.1.6: it locates the `envelopedData` inside the `certifiedKeyPair.privateKey` of the
+    issued cert response, runs the recipient-info handling for the requested type (`ktri`, `kari`,
+    `pwri`, or `kemri`), decrypts the inner content, and returns the result as raw DER bytes (the
+    encoded `SignedData`). Pair with `Decode SignedData` and `Validate SignedData Structure` to
+    progressively validate the result, or call individual checks against the decrypted bytes.
+
+    Arguments:
+    ---------
+        - `pki_message`: The PKIMessage carrying the issued certificate response.
+        - `password`: The shared secret for `pwri` recipient info. Required when `expected_type=pwri`.
+        - `expected_type`: The recipient info type to use (`ktri`, `kari`, `pwri`, `kemri`). When
+          omitted, the type is inferred from the message.
+        - `cert_index`: The index of the certificate in `extraCerts` used for recipient identification
+          and key agreement. Defaults to `0`.
+        - `expected_size`: The expected number of entries in `recipientInfos`. Defaults to `1`.
+        - `key_index`: The index of the recipient info entry to decrypt. Defaults to `0`.
+        - `ee_key`: The end-entity private key used for `ktri` (RSA), `kari` (EC/X25519/X448), or
+          `kemri` decryption.
+
+    Returns:
+    -------
+        - The decrypted raw DER bytes (the inner `SignedData`).
+
+    Raises:
+    ------
+        - `ValueError`: If the structure is malformed or decryption fails.
+
+    Examples:
+    --------
+    | ${signed_data_bytes}= | Decrypt KGA EnvelopedData From PKIMessage | ${response} | expected_type=ktri | ee_key=${KTRI_KEY} |
+    | ${signed_data_bytes}= | Decrypt KGA EnvelopedData From PKIMessage | ${response} | ${PASSWORD} | pwri |
+    """
+    body_name = pki_message["body"].getName()
+    cert = pki_message["extraCerts"][int(cert_index)]
+    cert_key_pair = asn1utils.get_asn1_value(  # type: ignore
+        pki_message, query=f"body.{body_name}.response/{int(key_index)}.certifiedKeyPair"
+    )
+    cert_key_pair: rfc9480.CertifiedKeyPair
+    if cert_key_pair["privateKey"].getName() != "envelopedData":
+        raise ValueError("The private field MUST be an `envelopedData` structure")
+
+    env_data = cert_key_pair["privateKey"]["envelopedData"]
+    return validate_enveloped_data(
+        env_data=env_data,
+        cmp_protection_cert=cert,
+        expected_type=expected_type,
+        pki_message=pki_message,
+        password=password,
+        expected_size=int(expected_size),
+        recip_info_index=int(key_index),
+        ee_key=ee_key,
+    )
 
 
 @not_keyword
@@ -947,8 +1062,8 @@ def validate_pwri_enveloped_data(  # noqa D417 undocumented-param
     return decrypted_data
 
 
-@not_keyword
-def validate_enveloped_data(
+@keyword(name="Decrypt EnvelopedData")
+def validate_enveloped_data(  # noqa D417 undocumented-param
     env_data: rfc9480.EnvelopedData,
     pki_message: Optional[PKIMessageTMP] = None,
     password: Optional[Union[str, bytes]] = None,
@@ -1171,27 +1286,65 @@ def _validate_signature_and_algorithm_in_signed_data(
     )
 
 
-@not_keyword
-def validate_signed_data_structure(
+@keyword(name="Validate SignedData Structure")
+def validate_signed_data_structure(  # noqa D417 undocumented-param
     signed_data: rfc5652.SignedData,
     expected_size: Strint = 1,
     key_index: Strint = 0,
     trustanchors: str = "data/trustanchors",
     key_save_type: Optional[str] = None,
+    expected_version: Strint = 3,
+    check_signature: bool = True,
+    check_kga_cert: bool = True,
+    kga_eku_strictness: Strint = 2,
 ) -> PrivateKey:
-    """Validate the structure and content of a `SignedData` object and extract the private key.
+    """Validate a CMS `SignedData` structure (RFC 5652) carrying a KGA key package and extract the private key.
 
-    :param signed_data: The `SignedData` object to validate.
-    :param expected_size: The expected number of `DigestAlgorithmIdentifiers`.
-    :param key_index: The index of the private key to extract.
-    :param trustanchors: The path to the directory where the trust anchors are saved. Defaults to "data/trustanchors".
-    :param key_save_type: The type of key export expected for a PQ key (e.g., "seed", "raw, "seed_and_raw").
-    Defaults to `None`.
-    :return: The extracted private key from the `AsymmetricKeyPackage`.
-    :raises ValueError: If any validation step fails (e.g., incorrect version, digest mismatch, signature failure).
+    Performs, in order, every check that RFC 9483 Section 4.1.6 requires for the SignedData wrapping
+    a private key returned by a KGA: version, single digest algorithm, `eContentType` of
+    `id-ct-KP-aKeyPackage`, the inner `AsymmetricKeyPackage`, the `signerInfo`, the signature over the
+    encapsulated content, and the KGA certificate's trust anchor and `cmKGA` ExtendedKeyUsage. Most
+    checks can be turned off individually so the validation can be reused in tests that target only
+    one aspect of the structure.
+
+    Arguments:
+    ---------
+        - `signed_data`: The `SignedData` object to validate.
+        - `expected_size`: The expected number of `DigestAlgorithmIdentifiers`. Defaults to `1`.
+        - `key_index`: The index of the private key to extract. Defaults to `0`.
+        - `trustanchors`: The path to the directory where the trust anchors are saved.
+          Defaults to `"data/trustanchors"`.
+        - `key_save_type`: The type of key export expected for a PQ key (e.g., `"seed"`, `"raw"`,
+          `"seed_and_raw"`). Defaults to `None`.
+        - `expected_version`: The expected `CMSVersion`. Defaults to `3` (per RFC 9483).
+        - `check_signature`: If `False`, skips signer-info digest and signature verification. Use this
+          when the test only inspects the structure or the carried key. Defaults to `True`.
+        - `check_kga_cert`: If `False`, skips the KGA certificate trust-anchor validation and the
+          `cmKGA` ExtendedKeyUsage check. Useful when validating responses produced by a CA without a
+          KGA trust anchor pinned locally. Defaults to `True`.
+        - `kga_eku_strictness`: Strictness level for the `cmKGA` `ExtendedKeyUsage` check.
+          See `Validate CMP ExtendedKeyUsage`. Defaults to `2`.
+
+    Returns:
+    -------
+        - The extracted private key from the `AsymmetricKeyPackage`.
+
+    Raises:
+    ------
+        - `ValueError`: If any enabled check fails (incorrect version, digest mismatch, signature
+          failure, missing EKU, etc.).
+
+    Examples:
+    --------
+    | ${key}= | Validate SignedData Structure | ${signed_data} |
+    | ${key}= | Validate SignedData Structure | ${signed_data} | check_kga_cert=${False} |
+    | ${key}= | Validate SignedData Structure | ${signed_data} | check_signature=${False} | check_kga_cert=${False} |
     """
-    if int(signed_data["version"]) != 3:
-        raise ValueError("The version of the `SignedData` structure MUST be 3!")
+    expected_version = convertutils.str_to_int(expected_version)
+    if int(signed_data["version"]) != expected_version:
+        raise ValueError(
+            f"The version of the `SignedData` structure MUST be {expected_version}!"
+        )
 
     dig_alg_ids: rfc5652.DigestAlgorithmIdentifiers = signed_data["digestAlgorithms"]
     if len(dig_alg_ids) != int(expected_size):
@@ -1226,22 +1379,26 @@ def validate_signed_data_structure(
 
     encap_content_info_data = encoder.encode(signed_data["encapContentInfo"])
 
-    _validate_signature_and_algorithm_in_signed_data(
-        data=data,
-        asym_key_package_bytes=asym_key_package_bytes,
-        encap_content_info_data=encap_content_info_data,
-        kga_certificate=kga_certificate,
-    )
+    if check_signature:
+        _validate_signature_and_algorithm_in_signed_data(
+            data=data,
+            asym_key_package_bytes=asym_key_package_bytes,
+            encap_content_info_data=encap_content_info_data,
+            kga_certificate=kga_certificate,
+        )
 
-    _validate_kga_certificate(
-        certs=certs,
-        asym_key_package_bytes=encap_content_info_data,
-        signature=data["signature"],
-        hash_alg=get_hash_from_oid(data["signatureAlgorithm"]["algorithm"], only_hash=True),
-        trustanchors=trustanchors,
-    )
+    if check_kga_cert:
+        _validate_kga_certificate(
+            certs=certs,
+            asym_key_package_bytes=encap_content_info_data,
+            signature=data["signature"],
+            hash_alg=get_hash_from_oid(data["signatureAlgorithm"]["algorithm"], only_hash=True),
+            trustanchors=trustanchors,
+        )
 
-    certutils.validate_cmp_extended_key_usage(kga_certificate, strictness=2, ext_key_usages="cmKGA")
+        certutils.validate_cmp_extended_key_usage(
+            kga_certificate, strictness=int(kga_eku_strictness), ext_key_usages="cmKGA"
+        )
 
     return new_private_key
 
