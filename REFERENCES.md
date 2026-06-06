@@ -16,6 +16,7 @@ when working with the Mock CA.
   - [Standards](#standards)
     - [Transport CMP](#transport-cmp)
     - [Algorithm Profiles](#algorithm-profiles)
+    - [EST (Enrollment over Secure Transport)](#est-enrollment-over-secure-transport)
     - [Drafts](#drafts)
   - [Software](#software)
   - [Post-Quantum Key Encapsulation Mechanism (KEM)](#post-quantum-key-encapsulation-mechanism-kem)
@@ -59,6 +60,18 @@ when working with the Mock CA.
 ### Algorithm Profiles
 
 - [RFC 9481 — CMP Algorithms](https://datatracker.ietf.org/doc/rfc9481/)
+
+### EST (Enrollment over Secure Transport)
+
+EST support lives in [`tests-est/`](./tests-est/README.md) (tests),
+[`resources/est_utils.py`](./resources/est_utils.py) (protocol logic) and
+[`mock_ca/est_handler.py`](./mock_ca/est_handler.py) (server). See
+[`tests-est/REFERENCES.md`](./tests-est/REFERENCES.md) for the full list.
+
+- [RFC 7030 — Enrollment over Secure Transport (EST)](https://datatracker.ietf.org/doc/rfc7030/)
+- [RFC 8951 — Clarification of EST: Transfer Encodings and ASN.1](https://datatracker.ietf.org/doc/rfc8951/)
+- [RFC 8295 — EST (Enrollment over Secure Transport) Extensions](https://datatracker.ietf.org/doc/rfc8295/)
+- [RFC 7894 — Alternative Challenge Password Attributes for EST](https://datatracker.ietf.org/doc/rfc7894/)
 
 ### Drafts
 

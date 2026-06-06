@@ -88,4 +88,4 @@ csr_wrapped = "\n".join(csr_b64[i:i + 64] for i in range(0, len(csr_b64), 64)) +
     )
 )
 
-print("wrote:", *(p.name for p in sorted(DATA.iterdir())))
+print("wrote:", *(p.name for p in sorted(DATA.iterdir())))  # noqa: T201 - generator CLI output

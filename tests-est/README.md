@@ -6,20 +6,24 @@ SPDX-License-Identifier: Apache-2.0
 
 # `tests-est` — Enrollment over Secure Transport (EST) Tests
 
-This folder provides a self-contained, in-depth test bed for the **EST**
-protocol ([RFC 7030](https://www.rfc-editor.org/rfc/rfc7030), with
+This folder provides an in-depth test bed for the **EST** protocol
+([RFC 7030](https://www.rfc-editor.org/rfc/rfc7030), with
 [RFC 8951](https://www.rfc-editor.org/rfc/rfc8951) /
 [RFC 8295](https://www.rfc-editor.org/rfc/rfc8295) /
-[RFC 7894](https://www.rfc-editor.org/rfc/rfc7894)). It mirrors the layout of
-the other test directories in this suite (`tests/`, `tests_pq_and_hybrid/`,
-`tests_mock_ca/`): Robot Framework suites driven by minimal Python "logic"
-modules.
+[RFC 7894](https://www.rfc-editor.org/rfc/rfc7894)). EST is implemented on top
+of the suite's existing functionality and is split across three layers:
 
-The goal is to make every EST operation testable at two depths:
+| Layer | Location | Role |
+| --- | --- | --- |
+| Protocol logic | [`../resources/est_utils.py`](../resources/est_utils.py) | Shared message layer: well-known URL/path, base64 transfer encoding, content types, PKCS#10 building, `certs-only` CMS build/parse, `CsrAttrs`, and `/serverkeygen` multipart. Reuses `certbuildutils`, `certutils`, `envdatautils`, `keyutils`. |
+| Server | [`../mock_ca/est_handler.py`](../mock_ca/est_handler.py) | `EstHandler` — issues certificates from CSRs via `certbuildutils.build_cert_from_csr`. Wired into the Mock CA Flask app under `/.well-known/est/*` (see `../mock_ca/ca_handler.py`), sharing its CA key/cert, chain, extensions and issued-cert state. |
+| Client / tests | this folder | Robot Framework suite driving both message-level and live-server flows. |
+
+The implementation can be tested at two depths:
 
 1. **Message level (offline)** — build, encode, decode, and validate EST
-   messages without a server. These tests run in CI and require no network.
-2. **Server level (opt-in)** — drive a live EST server over TLS end-to-end.
+   messages without a server (CI-safe, no network).
+2. **Server level** — drive the Mock CA's EST endpoints end-to-end.
 
 ## Contents
 
@@ -27,7 +31,6 @@ The goal is to make every EST operation testable at two depths:
 | --- | --- |
 | `est.robot` | The in-depth EST test suite, organized by RFC 7030 section. |
 | `est_keywords.resource` | High-level keywords, configuration variables, and HTTP transport. |
-| `est_logic.py` | Minimal Python primitives (URL/path, transfer encoding, content types, CMS certs-only parsing, `/csrattrs`). Robot keywords exposed via `@keyword`. |
 | `REFERENCES.md` | EST RFCs and the foundational standards they build on. |
 | `data/` | Bundled RFC test vectors and the script that generates them. |
 
@@ -49,35 +52,46 @@ python tests-est/data/generate_est_vectors.py
 
 ## Coverage vs. RFC 7030
 
-| Section | Operation | Offline | Server |
-| --- | --- | :---: | :---: |
-| 3.2.2 | Well-known URI & paths | ✅ | — |
-| 3.2.4 | Media types | ✅ | ✅ |
-| 3.2 / RFC 8951 | base64 transfer encoding | ✅ | — |
-| 4.1 | `/cacerts` | ✅ | ✅ |
-| 4.2 | `/simpleenroll`, `/simplereenroll` | ✅ | _planned_ |
-| 4.4 | `/serverkeygen` | _planned_ | _planned_ |
-| 4.5 | `/csrattrs` | ✅ | _planned_ |
-
-"_planned_" entries are scaffolded in `est_logic.py` / `est_keywords.resource`
-and are intended as the next increments.
+| Section | Operation | Implemented | Offline test | Server test |
+| --- | --- | :---: | :---: | :---: |
+| 3.2.2 | Well-known URI & paths | ✅ | ✅ | — |
+| 3.2.4 | Media types | ✅ | ✅ | ✅ |
+| 3.2 / RFC 8951 | base64 transfer encoding | ✅ | ✅ | — |
+| 4.1 | `/cacerts` | ✅ | ✅ | ✅ |
+| 4.2.1 | `/simpleenroll` | ✅ | ✅ | ✅ |
+| 4.2.2 | `/simplereenroll` | ✅ | — | ✅ |
+| 4.4 | `/serverkeygen` | ✅ | — | ✅ |
+| 4.5 | `/csrattrs` | ✅ | ✅ | ✅ |
+| 4.3 | `/fullcmc` | content type only | — | — |
 
 ## Running the tests
 
-Offline message-level tests only (CI-safe, no server needed):
+### Offline message-level tests (CI-safe, no server)
 
 ```bash
-robot --pythonpath ./tests-est --exclude est-server --outputdir reports tests-est/est.robot
+robot --pythonpath ./ --exclude est-server --outputdir reports tests-est/est.robot
 ```
 
-End-to-end against a live EST server — point `EST_BASE_URL` at it (and set
-`EST_VERIFY_TLS` / `EST_LABEL` as needed):
+### Against the Mock CA
+
+Start the Mock CA (it now serves the EST endpoints) and run the full suite:
 
 ```bash
-robot --pythonpath ./tests-est \
-      --variable EST_BASE_URL:https://my-est-host:8443 \
-      --variable EST_VERIFY_TLS:False \
+python ./mock_ca/ca_handler.py --port 5000 &
+robot --pythonpath ./ \
+      --variable EST_BASE_URL:http://127.0.0.1:5000 \
       --outputdir reports tests-est/est.robot
+```
+
+### Python unit tests
+
+EST is also covered by fast, server-less unit tests:
+
+```bash
+# Direct handler tests (no PQ deps required)
+python -m unittest unit_tests.tests_experimental_and_mock_ca.tests_mock_ca.test_est_handler
+# Flask route integration (real CAHandler)
+python -m unittest unit_tests.tests_experimental_and_mock_ca.test_est_routes
 ```
 
 ### Tags
@@ -95,7 +109,8 @@ Defined in `est_keywords.resource` and overridable on the command line:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `${EST_BASE_URL}` | `https://127.0.0.1:8443` | Scheme + authority of the EST server. |
+| `${EST_BASE_URL}` | `http://127.0.0.1:5000` | Scheme + authority of the EST server. |
 | `${EST_LABEL}` | `${None}` | Optional RFC 7030 §3.2.2 path label (CA/profile selector). |
 | `${EST_VERIFY_TLS}` | `${False}` | Whether to verify the server's TLS certificate. |
+| `${EST_CLIENT_KEY_ALG}` | `ec` | Key algorithm used for generated client enrollment keys. |
 | `${EST_DATA_DIR}` | `${CURDIR}/data` | Location of the bundled test vectors. |

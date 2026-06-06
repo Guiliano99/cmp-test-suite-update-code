@@ -27,6 +27,7 @@ from mock_ca.cert_conf_handler import CertConfHandler
 from mock_ca.cert_req_handler import CertReqHandler
 from mock_ca.challenge_handler import ChallengeHandler
 from mock_ca.db_config_vars import CertConfConfigVars, VerifyState
+from mock_ca.est_handler import EstHandler
 from mock_ca.general_msg_handler import GeneralMessageHandler
 from mock_ca.hybrid_handler import HybridIssuingHandler, SunHybridHandler
 from mock_ca.mock_fun import BaseURLData, KeySecurityChecker, MockCAState
@@ -1717,6 +1718,98 @@ def handle_issuing_by_name(body_name: str) -> Response:
         return _build_response(pki_message, for_msg=True)
 
 
+# ---------------------------------------------------------------------------
+# EST (RFC 7030) endpoints
+# ---------------------------------------------------------------------------
+
+est_handler: Optional[EstHandler] = None
+
+
+def _get_est_handler() -> EstHandler:
+    """Return the EST handler, lazily building it from the active CA handler.
+
+    Shares the Mock CA's issuing key/cert, certificate chain, prepared extensions
+    and issued-certificate state, so EST-issued certs are tracked like CMP ones.
+    """
+    global est_handler  # noqa: PLW0603 - module-level singleton, mirrors `handler`
+    if est_handler is None:
+        est_handler = EstHandler(
+            ca_cert=handler.ca_cert,
+            ca_key=handler.ca_key,
+            ca_cert_chain=handler.ca_cert_chain,
+            extensions=handler.extensions,
+            state=handler.state,
+        )
+    return est_handler
+
+
+def _est_response(body: bytes, content_type: str, status: int = 200) -> Response:
+    """Build a base64 EST response carrying ``Content-Transfer-Encoding: base64``."""
+    if not body:
+        # RFC 7030: an empty body (e.g. /csrattrs with no attributes) -> HTTP 204.
+        return Response(status=204)
+    resp = Response(body, content_type=content_type, status=status)
+    resp.headers["Content-Transfer-Encoding"] = "base64"
+    return resp
+
+
+def handle_est_operation(operation: str, label: Optional[str] = None) -> Response:
+    """Dispatch an EST request (RFC 7030 Section 4) to the EST handler.
+
+    :param operation: The EST operation (e.g. ``cacerts``, ``simpleenroll``).
+    :param label: The optional RFC 7030 Section 3.2.2 path label (ignored by the
+        Mock CA, which exposes a single CA, but accepted so labelled URLs work).
+    :return: The Flask ``Response``.
+    """
+    est = _get_est_handler()
+    try:
+        if operation == "cacerts":
+            return _est_response(est.get_cacerts(), "application/pkcs7-mime")
+        if operation == "csrattrs":
+            return _est_response(est.get_csrattrs(), "application/csrattrs")
+        if operation in ("simpleenroll", "simplereenroll"):
+            body = est.handle_enroll(request.get_data(), reenroll=operation == "simplereenroll")
+            return _est_response(body, "application/pkcs7-mime")
+        if operation == "serverkeygen":
+            content_type, body = est.handle_serverkeygen(request.get_data())
+            resp = Response(body, content_type=content_type, status=200)
+            resp.headers["Content-Transfer-Encoding"] = "base64"
+            return resp
+        return Response(f"Error: unsupported EST operation '{operation}'.", status=404, content_type="text/plain")
+    except CMPTestSuiteError as e:
+        return Response(f"Error: {e}", status=getattr(e, "http_code", 400) or 400, content_type="text/plain")
+    except Exception as e:  # pylint: disable=broad-except
+        return Response(f"Error: {e}", status=500, content_type="text/plain")
+
+
+_EST_OPERATION_METHODS = {
+    "cacerts": ["GET"],
+    "csrattrs": ["GET"],
+    "simpleenroll": ["POST"],
+    "simplereenroll": ["POST"],
+    "serverkeygen": ["POST"],
+}
+
+
+def _register_est_routes(flask_app: Flask) -> None:
+    """Register the RFC 7030 ``/.well-known/est`` endpoints (with optional label)."""
+    for operation, methods in _EST_OPERATION_METHODS.items():
+        # Unlabelled: /.well-known/est/<operation>
+        flask_app.add_url_rule(
+            f"/.well-known/est/{operation}",
+            endpoint=f"est_{operation}",
+            view_func=lambda op=operation: handle_est_operation(op),
+            methods=methods,
+        )
+        # Labelled: /.well-known/est/<label>/<operation>
+        flask_app.add_url_rule(
+            f"/.well-known/est/<label>/{operation}",
+            endpoint=f"est_label_{operation}",
+            view_func=lambda label, op=operation: handle_est_operation(op, label),
+            methods=methods,
+        )
+
+
 # TODO: Add more endpoints for the general messages.
 def _register_routes(flask_app: Flask) -> None:
     """Register the CMP endpoints with the Flask app."""
@@ -1756,6 +1849,7 @@ if __name__ == "__main__":
         allow_same_key_cert_req=args.allow_same_key,
     )
     _register_routes(app)
+    _register_est_routes(app)
 
     root_cert_der = asn1utils.encode_to_der(handler.ca_cert)
     print(f"Root CA certificate (Base64 DER): {base64.b64encode(root_cert_der).decode('ascii')}") # noqa: T201
