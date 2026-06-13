@@ -111,6 +111,6 @@ Defined in `est_keywords.resource` and overridable on the command line:
 | --- | --- | --- |
 | `${EST_BASE_URL}` | `http://127.0.0.1:5000` | Scheme + authority of the EST server. |
 | `${EST_LABEL}` | `${None}` | Optional RFC 7030 §3.2.2 path label (CA/profile selector). |
-| `${EST_VERIFY_TLS}` | `${False}` | Whether to verify the server's TLS certificate. |
+| `${EST_VERIFY_TLS}` | `${False}` | Whether to verify the EST server's TLS certificate. EST mandates TLS (RFC 7030 §3.3); the Mock CA serves plain HTTP as a local-testing convenience. Point `EST_BASE_URL` at an `https://` URL and set this to a trust-anchor path to exercise (and authenticate) the real TLS transport. |
 | `${EST_CLIENT_KEY_ALG}` | `ec` | Key algorithm used for generated client enrollment keys. |
 | `${EST_DATA_DIR}` | `${CURDIR}/data` | Location of the bundled test vectors. |

@@ -21,10 +21,10 @@ import logging
 from typing import List, Optional, Tuple
 
 from cryptography.hazmat.primitives import serialization
-from pyasn1.codec.der import decoder, encoder
+from pyasn1.codec.der import decoder
 from pyasn1_alt_modules import rfc6402, rfc9480
 
-from resources import certbuildutils, est_utils, keyutils
+from resources import certbuildutils, certutils, est_utils, keyutils
 from resources.exceptions import BadAsn1Data, BadRequest
 from resources.typingutils import SignKey
 
@@ -65,6 +65,8 @@ class EstHandler:
         self.hash_alg = hash_alg
         self.serverkeygen_key_alg = serverkeygen_key_alg
         self.issued_certs: List[rfc9480.CMPCertificate] = []
+        # Cache for the /cacerts response body (the CA chain is immutable).
+        self._cacerts_body: Optional[bytes] = None
 
     # ------------------------------------------------------------------
     # Helpers
@@ -110,9 +112,14 @@ class EstHandler:
     # ------------------------------------------------------------------
 
     def get_cacerts(self) -> bytes:
-        """Return the /cacerts response body (base64 certs-only CMS of the CA chain)."""
-        cms = est_utils.build_est_certs_only_message(self.ca_cert_chain)  # type: ignore[arg-type]
-        return est_utils.encode_est_message_body(cms)
+        """Return the /cacerts response body (base64 certs-only CMS of the CA chain).
+
+        The body is built once and cached, since the CA chain does not change.
+        """
+        if self._cacerts_body is None:
+            cms = est_utils.build_est_certs_only_message(self.ca_cert_chain)  # type: ignore[arg-type]
+            self._cacerts_body = est_utils.encode_est_message_body(cms)
+        return self._cacerts_body
 
     # ------------------------------------------------------------------
     # RFC 7030 Section 4.2 - /simpleenroll, /simplereenroll
@@ -121,11 +128,19 @@ class EstHandler:
     def handle_enroll(self, body: bytes, reenroll: bool = False) -> bytes:
         """Process a /simpleenroll or /simplereenroll request.
 
+        The PKCS#10 proof-of-possession signature is verified before issuance
+        (RFC 7030 Section 4.2 / RFC 6402). Note: this Mock CA does not enforce the
+        RFC 7030 Section 4.2.2 requirement that /simplereenroll be authenticated by
+        an existing client certificate (it has no TLS client-auth context), so
+        reenroll is otherwise handled like enroll.
+
         :param body: The base64 PKCS#10 request body.
-        :param reenroll: ``True`` for /simplereenroll (handled identically here).
+        :param reenroll: ``True`` for /simplereenroll.
         :return: The base64 certs-only response body containing the issued cert.
         """
         csr = self._decode_csr(body)
+        # Verify the CSR self-signature (proof-of-possession) before issuing.
+        certutils.verify_csr_signature(csr)
         cert = self._issue_from_csr(csr)
         logging.info("EST %s issued a certificate.", "simplereenroll" if reenroll else "simpleenroll")
         return est_utils.encode_est_message_body(est_utils.build_est_certs_only_message(cert))
@@ -137,31 +152,39 @@ class EstHandler:
     def handle_serverkeygen(self, body: bytes) -> Tuple[str, bytes]:
         """Process a /serverkeygen request.
 
-        The client's CSR provides the desired subject; the server generates the
-        key pair, issues the certificate, and returns a multipart/mixed body with
-        the private key (PKCS#8) and the certificate (certs-only).
+        The server generates the key pair and replaces the public key in the
+        client's CSR with the freshly generated one, preserving the requested
+        subject and any extensions (e.g. SANs), then issues the certificate and
+        returns a multipart/mixed body with the private key (PKCS#8) and the
+        certificate (certs-only).
+
+        The CSR proof-of-possession is intentionally not verified here: in
+        server-side key generation the client does not hold the private key, so
+        its CSR cannot carry a valid PoP for the certified key.
 
         :param body: The base64 PKCS#10 request body.
         :return: ``(content_type, body)`` for the multipart/mixed response.
         """
         csr = self._decode_csr(body)
-        subject = csr["certificationRequestInfo"]["subject"]
 
         new_key = keyutils.generate_key(self.serverkeygen_key_alg)
-        new_csr = certbuildutils.build_csr(signing_key=new_key, common_name=subject)
-        cert = self._issue_from_csr(new_csr)
-
         if not hasattr(new_key, "private_bytes"):
             raise BadRequest(
                 f"Server-side key generation is not supported for key type {type(new_key)}."
             )
+
+        # Substitute the server-generated public key into the request, keeping the
+        # client's subject and extensions, then issue from it.
+        csr["certificationRequestInfo"]["subjectPublicKeyInfo"] = keyutils.prepare_subject_public_key_info(new_key)
+        cert = self._issue_from_csr(csr)
+
         key_der = new_key.private_bytes(
             serialization.Encoding.DER,
             serialization.PrivateFormat.PKCS8,
             serialization.NoEncryption(),
         )
         logging.info("EST serverkeygen issued a certificate and generated a key.")
-        return est_utils.build_est_serverkeygen_response(key_der, encoder.encode(cert))
+        return est_utils.build_est_serverkeygen_response(key_der, cert)
 
     # ------------------------------------------------------------------
     # RFC 7030 Section 4.5 - /csrattrs

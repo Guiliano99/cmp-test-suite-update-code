@@ -26,10 +26,9 @@ class TestEstRoutes(unittest.TestCase):
         cls.ca_cert, cls.ca_key = load_ca_cert_and_key()
         cls.ca_handler = CAHandler(ca_cert=cls.ca_cert, ca_key=cls.ca_key)
 
-        # Point the module-level handler used by the routes at our CA handler and
-        # (re-)register the EST routes on the shared Flask app.
+        # Point the module-level handler used by the routes at our CA handler
+        # (which owns its EstHandler) and (re-)register the EST routes.
         ca_handler.handler = cls.ca_handler
-        ca_handler.est_handler = None
         try:
             ca_handler._register_est_routes(ca_handler.app)
         except (AssertionError, ValueError):

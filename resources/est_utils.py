@@ -358,7 +358,13 @@ def build_est_certs_only_message(  # noqa: D417 for RF docs
 
 @not_keyword
 def _extract_certificates_from_cms(cms_der: bytes) -> List[bytes]:
-    """Extract DER certificates from a CMS certs-only ``SignedData`` (RFC 5652)."""
+    """Extract DER certificates from a CMS certs-only ``SignedData`` (RFC 5652).
+
+    Note: this intentionally does not reuse ``ca_kga_logic.get_certificates_from_signed_data``.
+    That helper builds/orders a certificate *chain* and returns ``CMPCertificate``
+    objects, whereas EST callers just want every contained certificate as raw DER,
+    in order, without chain logic - and we keep this module's import footprint light.
+    """
     content_info, _ = decoder.decode(cms_der, asn1Spec=rfc5652.ContentInfo())
     if content_info["contentType"] != rfc5652.id_signedData:
         raise ValueError("EST certs-only response is not a CMS SignedData structure.")
@@ -373,6 +379,13 @@ def _extract_certificates_from_cms(cms_der: bytes) -> List[bytes]:
         cert = choice.getComponent()
         out.append(encoder.encode(cert))
     return out
+
+
+@not_keyword
+def _decode_and_extract_certs(body: Union[bytes, str]) -> List[bytes]:
+    """Base64-decode a certs-only EST body and return the contained certificates as DER."""
+    der = decode_est_message_body(body)
+    return _extract_certificates_from_cms(der)
 
 
 @keyword(name="Parse EST CACerts Response")
@@ -394,15 +407,15 @@ def parse_est_cacerts_response(body: Union[bytes, str]) -> List[bytes]:  # noqa:
     | ${certs}= | Parse EST CACerts Response | ${response.content} |
 
     """
-    der = decode_est_message_body(body)
-    return _extract_certificates_from_cms(der)
+    return _decode_and_extract_certs(body)
 
 
 @keyword(name="Parse EST Enroll Response")
 def parse_est_enroll_response(body: Union[bytes, str]) -> List[bytes]:  # noqa: D417
     """Parse a /simpleenroll (or /simplereenroll) response into issued certificates.
 
-    RFC 7030 Section 4.2.3.
+    RFC 7030 Section 4.2.3. The response uses the same ``certs-only`` structure as
+    /cacerts, so this delegates to the same extraction.
 
     Arguments:
     ---------
@@ -417,8 +430,7 @@ def parse_est_enroll_response(body: Union[bytes, str]) -> List[bytes]:  # noqa: 
     | ${certs}= | Parse EST Enroll Response | ${response.content} |
 
     """
-    der = decode_est_message_body(body)
-    return _extract_certificates_from_cms(der)
+    return _decode_and_extract_certs(body)
 
 
 @keyword(name="Parse EST Certificate")
@@ -498,8 +510,12 @@ def parse_est_csrattrs_response(body: Union[bytes, str]) -> List[str]:  # noqa: 
     if not body or not body.split():
         return []
 
-    der = decode_est_message_body(body)
-    seq, _ = decoder.decode(der, asn1Spec=univ.SequenceOf(componentType=univ.Any()))
+    try:
+        der = decode_est_message_body(body)
+        seq, _ = decoder.decode(der, asn1Spec=univ.SequenceOf(componentType=univ.Any()))
+    except Exception as exc:  # noqa: BLE001 - turn base64/ASN.1 errors into a clean failure
+        raise ValueError(f"Response is not a valid base64-encoded CsrAttrs structure: {exc}") from exc
+
     oids: List[str] = []
     for item in seq:
         inner, _ = decoder.decode(item.asOctets())
@@ -524,7 +540,7 @@ _SERVERKEYGEN_BOUNDARY = "estServerKeyGenBoundary"
 @keyword(name="Build EST Server Keygen Response")
 def build_est_serverkeygen_response(  # noqa: D417
     private_key_der: bytes,
-    cert_der: bytes,
+    cert: Union[bytes, rfc9480.CMPCertificate],
     boundary: str = _SERVERKEYGEN_BOUNDARY,
 ) -> Tuple[str, bytes]:
     """Build the multipart/mixed body for a /serverkeygen response.
@@ -539,7 +555,7 @@ def build_est_serverkeygen_response(  # noqa: D417
     Arguments:
     ---------
     - `private_key_der`: The server-generated private key as PKCS#8 DER.
-    - `cert_der`: The issued certificate as DER (will be wrapped certs-only).
+    - `cert`: The issued certificate (``CMPCertificate`` or DER); wrapped certs-only.
     - `boundary`: The MIME multipart boundary.
 
     Returns:
@@ -548,11 +564,11 @@ def build_est_serverkeygen_response(  # noqa: D417
 
     Examples:
     --------
-    | ${ct} | ${body}= | Build EST Server Keygen Response | ${key_der} | ${cert_der} |
+    | ${ct} | ${body}= | Build EST Server Keygen Response | ${key_der} | ${cert} |
 
     """
     key_b64 = encode_est_message_body(private_key_der)
-    cert_cms = build_est_certs_only_message(cert_der)
+    cert_cms = build_est_certs_only_message(cert)
     cert_b64 = encode_est_message_body(cert_cms)
 
     crlf = "\r\n"

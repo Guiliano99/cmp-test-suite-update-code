@@ -91,6 +91,7 @@ from resources.exceptions import (
     BadConfig,
     BadKeyUsage,
     BadMessageCheck,
+    BadPOP,
     BadRequest,
     BodyRelevantError,
     CertRevoked,
@@ -492,6 +493,16 @@ class CAHandler:
 
         # The default algorithm for the CA, just to correctly build the error message.
         self.default_algorithms = rfc9481.ecdsa_with_SHA512
+
+        # EST (RFC 7030) handler, sharing this CA's key/cert, chain, extensions and
+        # issued-certificate state (see the /.well-known/est/* routes below).
+        self.est_handler = EstHandler(
+            ca_cert=self.ca_cert,
+            ca_key=self.ca_key,
+            ca_cert_chain=self.ca_cert_chain,
+            extensions=self.extensions,
+            state=self.state,
+        )
 
     def get_cc_certs(self) -> List[rfc9480.CMPCertificate]:
         """Return the issued cross-signed CA certificates.
@@ -1445,6 +1456,9 @@ class CAHandler:
 
 app = Flask(__name__)
 state = MockCAState()
+# The active CA handler, assigned when the server starts (``__main__``) or by tests.
+# Declared here so the route handlers reference a defined name.
+handler: Optional["CAHandler"] = None
 
 
 def _build_response(
@@ -1722,29 +1736,26 @@ def handle_issuing_by_name(body_name: str) -> Response:
 # EST (RFC 7030) endpoints
 # ---------------------------------------------------------------------------
 
-est_handler: Optional[EstHandler] = None
+# Map EST-relevant exceptions to HTTP status codes. RFC 7030 conveys errors via
+# HTTP status rather than a protocol error body, so a malformed request is 400.
+_EST_ERROR_STATUS = {
+    BadAsn1Data: 400,
+    BadRequest: 400,
+    BadPOP: 400,
+}
 
 
-def _get_est_handler() -> EstHandler:
-    """Return the EST handler, lazily building it from the active CA handler.
-
-    Shares the Mock CA's issuing key/cert, certificate chain, prepared extensions
-    and issued-certificate state, so EST-issued certs are tracked like CMP ones.
-    """
-    global est_handler  # noqa: PLW0603 - module-level singleton, mirrors `handler`
-    if est_handler is None:
-        est_handler = EstHandler(
-            ca_cert=handler.ca_cert,
-            ca_key=handler.ca_key,
-            ca_cert_chain=handler.ca_cert_chain,
-            extensions=handler.extensions,
-            state=handler.state,
-        )
-    return est_handler
+def _est_error_status(e: CMPTestSuiteError) -> int:
+    """Return the HTTP status code for an EST error (defaults to 400 Bad Request)."""
+    return _EST_ERROR_STATUS.get(type(e), 400)
 
 
 def _est_response(body: bytes, content_type: str, status: int = 200) -> Response:
-    """Build a base64 EST response carrying ``Content-Transfer-Encoding: base64``."""
+    """Build a single-part base64 EST response (``Content-Transfer-Encoding: base64``).
+
+    Not used for ``multipart/mixed`` (/serverkeygen): there the per-part bodies
+    carry their own transfer encoding and the container must not declare base64.
+    """
     if not body:
         # RFC 7030: an empty body (e.g. /csrattrs with no attributes) -> HTTP 204.
         return Response(status=204)
@@ -1761,7 +1772,7 @@ def handle_est_operation(operation: str, label: Optional[str] = None) -> Respons
         Mock CA, which exposes a single CA, but accepted so labelled URLs work).
     :return: The Flask ``Response``.
     """
-    est = _get_est_handler()
+    est = handler.est_handler
     try:
         if operation == "cacerts":
             return _est_response(est.get_cacerts(), "application/pkcs7-mime")
@@ -1771,13 +1782,13 @@ def handle_est_operation(operation: str, label: Optional[str] = None) -> Respons
             body = est.handle_enroll(request.get_data(), reenroll=operation == "simplereenroll")
             return _est_response(body, "application/pkcs7-mime")
         if operation == "serverkeygen":
+            # multipart/mixed: the parts carry their own base64 transfer encoding,
+            # so the container response must NOT set Content-Transfer-Encoding.
             content_type, body = est.handle_serverkeygen(request.get_data())
-            resp = Response(body, content_type=content_type, status=200)
-            resp.headers["Content-Transfer-Encoding"] = "base64"
-            return resp
+            return Response(body, content_type=content_type, status=200)
         return Response(f"Error: unsupported EST operation '{operation}'.", status=404, content_type="text/plain")
     except CMPTestSuiteError as e:
-        return Response(f"Error: {e}", status=getattr(e, "http_code", 400) or 400, content_type="text/plain")
+        return Response(f"Error: {e}", status=_est_error_status(e), content_type="text/plain")
     except Exception as e:  # pylint: disable=broad-except
         return Response(f"Error: {e}", status=500, content_type="text/plain")
 

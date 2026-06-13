@@ -19,13 +19,16 @@ Library             ../resources/keyutils.py
 *** Variables ***
 # --- EST server under test --------------------------------------------------
 # Scheme + authority of the EST server. EST mandates TLS (RFC 7030 Section 3.3),
-# so this is normally an https:// URL. The Mock CA serves EST over plain HTTP for
-# local testing, so the default points at it.
+# so a conformant server uses an https:// URL. The bundled Mock CA serves EST
+# over plain HTTP as a local-testing convenience, so the default points at it;
+# override EST_BASE_URL with an https:// URL to test the real TLS transport.
 ${EST_BASE_URL}             http://127.0.0.1:5000
 # Optional additional path segment (RFC 7030 Section 3.2.2) to select a CA /
 # enrollment profile, e.g. "RSA". ${None} means no label.
 ${EST_LABEL}                ${None}
-# Whether the test TLS server certificate should be verified.
+# Whether the EST server's TLS certificate is verified. Keep ${False} for the
+# local Mock CA; for a real https EST server set it to a trust-anchor bundle/path
+# so server identity is actually authenticated (do not leave it disabled).
 ${EST_VERIFY_TLS}           ${False}
 # Default key algorithm used when generating client keys for enrollment tests.
 ${EST_CLIENT_KEY_ALG}       ec
