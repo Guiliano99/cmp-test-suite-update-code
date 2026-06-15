@@ -365,14 +365,40 @@ class CertReqHandler:
         logging.debug("CertReqHandler: Processing IR message")
         logging.debug("Verify RA verified: %s", verify_ra_verified)
 
+        # Drive RATS by message content: if the ir carries id-aa-attestation in
+        # certTemplate.extensions, verify it and skip raVerified (the TPM
+        # evidence proves key possession).  allow_unknown_extns suppresses the
+        # standard validator's rejection of the unknown id-aa-attestation OID.
+        # Dev-mode guard: raise if ALLOW_RATS_VERIFICATION is set but no evidence
+        # was found — catches attester bugs early.
+        has_evidence = self.rats_handler.has_evidence(pki_message)
+        if not has_evidence and os.environ.get("ALLOW_RATS_VERIFICATION", "").lower() == "true":
+            raise BadMessageCheck(
+                "ALLOW_RATS_VERIFICATION is set but the ir carries no id-aa-attestation OID"
+            )
+        ear_jwt: Optional[str] = None
+        pop_proof_der: Optional[bytes] = None
+        if has_evidence:
+            # _verify_bundle returns both the EAR JWT and the
+            # KeyAttestPoPProof DER from the CSR/certTemplate so we can
+            # embed them as cert extensions in one re-sign step.
+            ear_jwt, pop_proof_der = self.rats_handler._verify_bundle(pki_message)
+            verify_ra_verified = False
+
         for_mac = self._get_for_mac(request=pki_message)
         response, certs = build_ip_cmp_message(
             request=pki_message,
             implicit_confirm=False,
             verify_ra_verified=verify_ra_verified,
             for_mac=for_mac,
+            allow_unknown_extns=has_evidence,
             **self.issuing_params,
         )
+
+        if ear_jwt is not None:
+            self.rats_handler.embed_extensions(
+                response, ear_jwt, self.ca_key, pop_proof_der=pop_proof_der
+            )
 
         return self.process_after_request(
             request=pki_message,
@@ -412,9 +438,20 @@ class CertReqHandler:
         for_mac = self._get_for_mac(request=pki_message)
         self.check_signer_is_a_issued_cert(pki_message)
 
-        # When RATS is active the certTemplate may carry an id-aa-evidence extension
-        # (OID 1.2.840.113549.1.9.16.2.59) that is unknown to the standard validator.
-        rats_active = self.rats_handler.remote_att_handler is not None
+        # Drive RATS by message content: if certTemplate.extensions carries
+        # id-aa-attestation, verify it before issuing.  verify_and_get_ear() raises
+        # BadMessageCheck on failure so the outer except returns a CMP rejection.
+        # allow_unknown_extns suppresses rejection of the id-aa-attestation OID.
+        # Dev-mode guard: raise if ALLOW_RATS_VERIFICATION is set but no evidence.
+        has_evidence = self.rats_handler.has_evidence(pki_message)
+        if not has_evidence and os.environ.get("ALLOW_RATS_VERIFICATION", "").lower() == "true":
+            raise BadMessageCheck(
+                "ALLOW_RATS_VERIFICATION is set but the cr carries no id-aa-attestation OID"
+            )
+        ear_jwt: Optional[str] = None
+        pop_proof_der: Optional[bytes] = None
+        if has_evidence:
+            ear_jwt, pop_proof_der = self.rats_handler._verify_bundle(pki_message)
 
         response, certs = build_cp_cmp_message(
             request=pki_message,
@@ -425,11 +462,13 @@ class CertReqHandler:
             sender=self.sender,
             for_mac=for_mac,
             verify_ra_verified=verify_ra_verified,
-            allow_unknown_extns=rats_active,
+            allow_unknown_extns=has_evidence,
         )
 
-        if rats_active:
-            self.rats_handler.process_cr_attestation(pki_message, response, self.ca_key)
+        if ear_jwt is not None:
+            self.rats_handler.embed_extensions(
+                response, ear_jwt, self.ca_key, pop_proof_der=pop_proof_der
+            )
 
         return self.process_after_request(
             request=pki_message,
@@ -450,6 +489,18 @@ class CertReqHandler:
         for_mac = self._get_for_mac(request=pki_message)
         logging.info("Processing P10CR message")
 
+        # Drive RATS by message content: p10cr carries evidence in
+        # certificationRequestInfo.attributes (not in extensions).
+        # Dev-mode guard: raise if ALLOW_RATS_VERIFICATION is set but no evidence.
+        has_evidence = self.rats_handler.has_evidence(pki_message)
+        if not has_evidence and os.environ.get("ALLOW_RATS_VERIFICATION", "").lower() == "true":
+            raise BadMessageCheck(
+                "ALLOW_RATS_VERIFICATION is set but the p10cr carries no id-aa-attestation OID"
+            )
+        ear_jwt: Optional[str] = None
+        if has_evidence:
+            ear_jwt = self.rats_handler.verify_and_get_ear(pki_message)
+
         response, cert = build_cp_from_p10cr(
             request=pki_message,
             set_header_fields=True,
@@ -463,6 +514,10 @@ class CertReqHandler:
             include_ski=True,
             verify_ra_verified=verify_ra_verified,
         )
+
+        if ear_jwt is not None:
+            self.rats_handler.embed_ear_extension(response, ear_jwt, self.ca_key)
+
         return self.process_after_request(
             request=pki_message,
             response=response,
@@ -490,6 +545,18 @@ class CertReqHandler:
 
         self.check_signer_is_a_issued_cert(pki_message)
 
+        # Drive RATS by message content: if certTemplate.extensions carries
+        # id-aa-attestation, verify it before re-issuing.
+        # Dev-mode guard: raise if ALLOW_RATS_VERIFICATION is set but no evidence.
+        has_evidence = self.rats_handler.has_evidence(pki_message)
+        if not has_evidence and os.environ.get("ALLOW_RATS_VERIFICATION", "").lower() == "true":
+            raise BadMessageCheck(
+                "ALLOW_RATS_VERIFICATION is set but the kur carries no id-aa-attestation OID"
+            )
+        ear_jwt: Optional[str] = None
+        if has_evidence:
+            ear_jwt = self.rats_handler.verify_and_get_ear(pki_message)
+
         if prot_type == ProtectedType.KEM:
             verify_pkimessage_protection(
                 pki_message=pki_message,
@@ -503,6 +570,7 @@ class CertReqHandler:
                 implicit_confirm=False,
                 verify_ra_verified=False,
                 for_mac=True,
+                allow_unknown_extns=has_evidence,
                 **self.issuing_params,
             )
 
@@ -521,8 +589,12 @@ class CertReqHandler:
                 request=pki_message,
                 implicit_confirm=False,
                 allow_same_key=self.allow_same_key_kur,
+                allow_unknown_extns=has_evidence,
                 **self.issuing_params,
             )
+
+        if ear_jwt is not None:
+            self.rats_handler.embed_ear_extension(response, ear_jwt, self.ca_key)
 
         return self.process_after_request(
             request=pki_message,
@@ -733,6 +805,19 @@ class CertReqHandler:
 
     def handle_cross_cert_req(self, pki_message: PKIMessageTMP) -> PKIMessageTMP:
         """Handle cross-certification requests."""
+        # Dev-mode guard for ALLOW_RATS_VERIFICATION.  Cross-certification (ccr)
+        # is a CA-to-CA flow and the codebase has no path for it to carry RATS
+        # evidence (RatsHandler.has_evidence does not inspect ccr bodies).
+        # Therefore, when the dev-mode env var is set we refuse ccr explicitly
+        # rather than silently letting it through unattested — the env var is a
+        # signal that every cert flow on this server should be attestation-gated.
+        if os.environ.get("ALLOW_RATS_VERIFICATION", "").lower() == "true":
+            raise BadMessageCheck(
+                "ALLOW_RATS_VERIFICATION is set, but cross-certification (ccr) "
+                "does not carry remote-attestation evidence in this implementation. "
+                "Unset ALLOW_RATS_VERIFICATION to permit ccr, or use ir/cr/p10cr/kur "
+                "with id-aa-attestation for attested enrollment."
+            )
         # Only MSG-SIG-ALg is allowed for cross-certification requests.
         response, certs = build_ccp_from_ccr(
             request=pki_message,

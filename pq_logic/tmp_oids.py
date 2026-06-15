@@ -363,3 +363,16 @@ id_aa_ar = univ.ObjectIdentifier("1.2.840.113549.1.9.16.2.9998")  # Placeholder 
 id_psa_attestation_token_evidence = univ.ObjectIdentifier("1.2.840.113549.1.9.16.2.9999")  # PSA attestation
 id_cca_platform_attestation_token_evidence = univ.ObjectIdentifier("1.2.840.113549.1.9.16.3.1")  # CCA platform
 id_dummy_attest_csr = univ.ObjectIdentifier("1.2.840.113549.1.9.16.2.9997")  # DummyAttestCSR statement type
+
+
+# ── Key-attestation TPM workflow OIDs (KeyAttestTPM_workflow.md §5) ─────────
+
+#: Critical X.509 extension OID — KeyAttestEvidence.
+#: Reuses the legacy KeyAttestPoP arc; the new payload is KeyAttestEvidence.
+id_keyAttestEvidence = univ.ObjectIdentifier("1.3.6.1.4.1.99999.2")
+
+#: ITAV infoType for KeyAttestChall (client → RA, carried in CMP genm).
+id_it_keyAttestChall = univ.ObjectIdentifier("1.3.6.1.4.1.99999.2.1")
+
+#: ITAV infoType for KeyAttestResp (RA → client, carried in CMP genp).
+id_it_keyAttestResp = univ.ObjectIdentifier("1.3.6.1.4.1.99999.2.2")

@@ -25,7 +25,6 @@ from resources.exceptions import BadAsn1Data, BadNonceRequest, BadRemoteAttestat
 from resources.oidutils import ATTESTATION_TYPE_2_STRUCTURE, ATTESTATION_TYPE_OID_2_NAME
 from resources.remote_att_utils.attest_nonce_freshness_structures import (
     NonceRequestASN1,
-    NonceRequestValueASN1,
     NonceResponseASN1,
 )
 from resources.remote_att_utils.csr_attest_structures import (
@@ -40,15 +39,12 @@ from resources.remote_att_utils.csr_attest_structures import (
 def validate_nonce_request(
     nonce_request: NonceRequestASN1,
     min_nonce_length: Optional[int] = 32,
-    known_verifier: Optional[List[str]] = None,
     strict_type_validation: bool = False,
 ) -> None:
     """Validate the nonce request.
 
     :param nonce_request: The nonce request to validate.
     :param min_nonce_length: Minimum length of the nonce in bytes. Defaults to `32` (skipped if `None`)
-    :param known_verifier: List of known verifiers to verify the `hint` field against.
-        Defaults to `None` (skipped if `None`)
     :param strict_type_validation: Whether to enforce strict type validation.
         Defaults to `False` (must be a known attestation type).
     :raises BadRequest: If the nonce request is invalid.
@@ -59,11 +55,9 @@ def validate_nonce_request(
             if len(nonce) < min_nonce_length:
                 raise BadNonceRequest(f"Nonce length {len(nonce)} is less than minimum length {min_nonce_length}.")
 
-    if known_verifier is not None:
-        if nonce_request["hint"].isValue:
-            hint = str(nonce_request["hint"])
-            if hint not in known_verifier:
-                raise RemoteAttestationError(f"Hint '{hint}' is not in known verifiers {known_verifier}.")
+    # Per the freshness draft, reqInfo MUST be omitted when type is absent.
+    if nonce_request["reqInfo"].isValue and not nonce_request["type"].isValue:
+        raise BadNonceRequest("NonceRequest.reqInfo is present but type is absent.")
 
     if nonce_request["type"].isValue:
         atte_type = nonce_request["type"]
@@ -73,14 +67,17 @@ def validate_nonce_request(
 
 @keyword(name="Prepare NonceRequest")
 def prepare_nonce_request(
-    nonce_length: Optional[int] = None, hint: Optional[str] = None, evidence_type: Optional[str] = None
+    nonce_length: Optional[int] = None,
+    evidence_type: Optional[str] = None,
+    req_info: Optional[bytes] = None,
 ) -> NonceRequestASN1:
     """Prepare a `NonceRequestASN1` structure for remote attestation nonce requests.
 
     Args:
         nonce_length: Optional requested nonce length.
-        hint: Optional verifier hint.
-        evidence_type: Optional evidence type OID string.
+        evidence_type: Optional type OID string identifying the reqInfo syntax.
+        req_info: Optional DER bytes of the type-specific request value
+            (requires `evidence_type` per the freshness draft).
 
     Returns:
         A populated `NonceRequestASN1`.
@@ -88,8 +85,8 @@ def prepare_nonce_request(
     Arguments:
     ---------
         - `nonce_length`: Optional nonce length in bytes.
-        - `hint`: Optional verifier hint for routing the nonce request.
-        - `evidence_type`: Optional evidence type OID as dotted string.
+        - `evidence_type`: Optional type OID as dotted string.
+        - `req_info`: Optional DER bytes for the `reqInfo` open type.
 
     Returns:
     -------
@@ -97,45 +94,49 @@ def prepare_nonce_request(
 
     Raises:
     ------
-        - `Exception`: If an input value cannot be assigned to the ASN.1 structure.
+        - `ValueError`: If `req_info` is given without `evidence_type`.
 
     Examples:
     --------
-    | ${nonce_req}= | Prepare NonceRequest | nonce_length=32 | hint=verifier1 |
-    | ${nonce_req}= | Prepare NonceRequest | evidence_type=1.2.840.113549.1.9.16.2.9999 |
+    | ${nonce_req}= | Prepare NonceRequest | nonce_length=32 |
+    | ${nonce_req}= | Prepare NonceRequest | evidence_type=1.3.6.1.4.1.99999.3 | req_info=${der} |
 
     """
+    if req_info is not None and evidence_type is None:
+        raise ValueError("reqInfo requires the type field (freshness draft).")
+
     nonce_req = NonceRequestASN1()
     if nonce_length is not None:
         nonce_req["len"] = nonce_length
 
-    if hint is not None:
-        nonce_req["hint"] = hint
-
     if evidence_type is not None:
         nonce_req["type"] = evidence_type
+
+    if req_info is not None:
+        nonce_req["reqInfo"] = univ.Any(req_info)
 
     return nonce_req
 
 
 @keyword(name="Prepare Nonce Request InfoTypeAndValue")
 def prepare_nonce_request_info_type_and_value(
-    nonce_requests: List[NonceRequestASN1],
+    nonce_request: NonceRequestASN1,
 ) -> rfc9480.InfoTypeAndValue:
-    """Prepare a `CMP InfoTypeAndValue` structure carrying one or more nonce requests.
+    """Prepare a `CMP InfoTypeAndValue` structure carrying a nonce request.
 
     Args:
-        nonce_requests: Non-empty list of nonce requests to encode.
+        nonce_request: The nonce request to encode.
 
     Returns:
-        An `InfoTypeAndValue` carrying a DER `NonceRequestValueASN1`.
+        An `InfoTypeAndValue` carrying a DER `NonceRequestASN1`.
 
-    The `infoType` is set to `id-it-nonceRequest` and `infoValue` contains a DER encoded
-    `NonceRequestValueASN1` (`SEQUENCE OF NonceRequestASN1`).
+    Per the attestation-freshness draft, the `infoType` is set to
+    `id-it-nonceRequest` and `infoValue` contains a single DER encoded
+    `NonceRequestASN1` (not a SEQUENCE OF).
 
     Arguments:
     ---------
-        - `nonce_requests`: List of `NonceRequestASN1` entries.
+        - `nonce_request`: A `NonceRequestASN1` entry.
 
     Returns:
     -------
@@ -143,28 +144,21 @@ def prepare_nonce_request_info_type_and_value(
 
     Raises:
     ------
-        - `ValueError`: If `nonce_requests` is empty.
+        - `ValueError`: If `nonce_request` is `None`.
         - `Exception`: If ASN.1 encoding fails.
 
     Examples:
     --------
-    | ${nonce_req}= | Prepare NonceRequest | nonce_length=32 | hint=verifier1 |
-    | ${nonce_requests}= | Create List | ${nonce_req} |
-    | ${info_val}= | Prepare Nonce Request InfoTypeAndValue | ${nonce_requests} |
+    | ${nonce_req}= | Prepare NonceRequest | nonce_length=32 |
+    | ${info_val}= | Prepare Nonce Request InfoTypeAndValue | ${nonce_req} |
 
     """
-    if not nonce_requests:
-        raise ValueError("nonce_requests cannot be empty or None")
+    if nonce_request is None:
+        raise ValueError("nonce_request cannot be None")
 
-    # Create NonceRequestValue (SEQUENCE OF NonceRequest)
-    nonce_request_value = NonceRequestValueASN1()
-    for nonce_req in nonce_requests:
-        nonce_request_value.append(nonce_req)
-
-    # Create InfoTypeAndValue
     info_type_and_value = rfc9480.InfoTypeAndValue()
     info_type_and_value["infoType"] = id_it_nonceRequest
-    info_type_and_value["infoValue"] = univ.Any(asn1utils.encode_to_der(nonce_request_value))
+    info_type_and_value["infoValue"] = univ.Any(asn1utils.encode_to_der(nonce_request))
 
     return info_type_and_value
 
@@ -238,19 +232,24 @@ def prepare_nonce_response_from_request(
     nonce_value: Optional[bytes] = None,
     min_nonce_length: Optional[int] = 32,
     expiry_time: Optional[int] = None,
-    hint: Optional[str] = None,
     bad_type: bool = False,
     bad_nonce_length: bool = False,
+    resp_info: Optional[bytes] = None,
 ) -> NonceResponseASN1:
     """Prepare a NonceResponse object from a NonceRequest.
+
+    Per the freshness draft, the response ``type`` is defined by the request
+    ``type`` and ``respInfo`` MUST be omitted when ``type`` is absent.
 
     :param nonce_request: The NonceRequest object.
     :param nonce_value: The nonce value to include in the response.
     :param min_nonce_length: Minimum length of the nonce in bytes. Defaults to `32` (skipped if `None`)
     :param expiry_time: The expiry time of the nonce in seconds. Defaults to `None`.
-    :param hint: The hint to include in the response. Defaults to `None`.
-    :param bad_type: Whether to raise an exception if the attestation type is invalid. Defaults to `False`.
-    :param bad_nonce_length: Whether to raise an exception if the nonce length is invalid. Defaults to `False`.
+    :param bad_type: Whether to set a mismatching attestation type (negative tests). Defaults to `False`.
+    :param bad_nonce_length: Whether to return a too-short nonce (negative tests). Defaults to `False`.
+    :param resp_info: Optional DER bytes of the type-specific response value
+        (e.g. ``TpmAttestationParams`` — PCR list + negotiated hash
+        algorithm — for the TPM platform profile).  ``None`` ↔ field omitted.
     :return: The populated NonceResponse object.
     """
     nonce_response = NonceResponseASN1()
@@ -258,12 +257,21 @@ def prepare_nonce_response_from_request(
 
     if bad_type:
         nonce_response["type"] = _parse_bad_type(nonce_request)
-    else:
+    elif nonce_request["type"].isValue:
         nonce_response["type"] = nonce_request["type"]
-    nonce_response["hint"] = hint or nonce_request["hint"]
 
     if expiry_time is not None:
         nonce_response["expiry"] = expiry_time
+
+    if resp_info is not None:
+        if not nonce_response["type"].isValue:
+            logging.warning(
+                "prepare_nonce_response_from_request: dropping respInfo because "
+                "the response carries no type (draft: respInfo requires type)"
+            )
+        else:
+            nonce_response["respInfo"] = univ.Any(resp_info)
+
     return nonce_response
 
 

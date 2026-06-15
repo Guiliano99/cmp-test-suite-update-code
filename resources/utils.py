@@ -345,9 +345,9 @@ def pyasn1_cert_to_pem(cert: rfc9480.CMPCertificate) -> str:
 
 @not_keyword
 def pyasn1_csr_to_pem(csr: rfc6402.CertificationRequest) -> bytes:
-    """Convert a `pyasn1` rfc9480.CMPCertificate into a PEM string.
+    """Convert a `pyasn1` rfc6402.CertificationRequest into a PEM string.
 
-    :param csr: The certificate to decode/convert.
+    :param csr: The certificate request to decode/convert.
     :return: The PEM string as bytes.
     """
     der_cert = encoder.encode(csr)
@@ -355,6 +355,20 @@ def pyasn1_csr_to_pem(csr: rfc6402.CertificationRequest) -> bytes:
     b64_encoded = "\n".join(textwrap.wrap(b64_encoded, width=64))
     pem_cert = "-----BEGIN CERTIFICATE REQUEST-----\n" + b64_encoded + "\n-----END CERTIFICATE REQUEST-----\n"
     return pem_cert.encode("utf-8")
+
+
+@not_keyword
+def pyasn1_pkimessage_to_pem(pkimessage: PKIMessageTMP) -> str:
+    """Convert a `pyasn1` PKIMessageTMP into a PEM string.
+
+    :param pkimessage: The PKIMessage to convert.
+    :return: The PEM string.
+    """
+    der_message = encoder.encode(pkimessage)
+    b64_encoded = base64.b64encode(der_message).decode("utf-8")
+    b64_encoded = "\n".join(textwrap.wrap(b64_encoded, width=64))
+    pem_message = "-----BEGIN PKI MESSAGE-----\n" + b64_encoded + "\n-----END PKI MESSAGE-----\n"
+    return pem_message
 
 
 def write_cmp_certificate_to_pem(cert: rfc9480.CMPCertificate, path: str) -> None:

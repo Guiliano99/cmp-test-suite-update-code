@@ -1740,7 +1740,10 @@ def build_cert_from_cert_template(  # noqa D417 undocumented-param
     pub_key = ca_key.public_key()
     pub_key = convertutils.ensure_is_verify_key(pub_key)
     extns = check_extensions(
-        cert_template=cert_template, ca_public_key=pub_key, other_extensions=kwargs.get("extensions")
+        cert_template=cert_template,
+        ca_public_key=pub_key,
+        other_extensions=kwargs.get("extensions"),
+        allow_unknown_extns=kwargs.get("allow_unknown_extns", False),
     )
 
     if extns.isValue:

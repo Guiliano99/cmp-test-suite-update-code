@@ -53,7 +53,7 @@ from resources.oidutils import (
 )
 from resources.prepare_alg_ids import get_all_supported_ecc_alg_ids, prepare_alg_id
 from resources.protectionutils import get_protection_type_from_pkimessage
-from resources.remote_att_utils.attest_nonce_freshness_structures import NonceRequestValueASN1
+from resources.remote_att_utils.attest_nonce_freshness_structures import NonceRequestASN1
 from resources.typingutils import EnvDataPrivateKey, SignKey
 from resources.utils import get_openssl_name_notation
 from unit_tests.utils_for_test import compare_pyasn1_objects, try_decode_pyasn1
@@ -762,19 +762,20 @@ class GeneralMessageHandler:
 
         :param entry: The entry to process.
         :param pki_message: The PKI message containing the entry.
-        :return: The info type and value with the prepared NonceResponseValue, text message.
+        :return: The info type and value with the prepared NonceResponse, text message.
         """
-        # GenMsg: {id-it TBD1}, NonceRequestValue
-        # GenRep: {id-it TBD2}, NonceResponseValue | < absent >
+        # GenMsg: {id-it TBD1}, NonceRequest
+        # GenRep: {id-it TBD2}, NonceResponse
+        # (single NonceRequest per ITAV per draft-ietf-lamps-attestation-freshness)
         logging.debug("Processing nonce request entry: %s", entry.prettyPrint())
 
         if not entry["infoValue"].isValue:
             raise BadRequest("The info value for the nonce request is not set.")
 
-        nonce_requests = _try_decode_mock_ca(entry["infoValue"], NonceRequestValueASN1())  # type: ignore
-        nonce_requests: NonceRequestValueASN1
-        logging.debug("Decoded nonce requests: %s", nonce_requests.prettyPrint())
+        nonce_request = _try_decode_mock_ca(entry["infoValue"], NonceRequestASN1())  # type: ignore
+        nonce_request: NonceRequestASN1
+        logging.debug("Decoded nonce request: %s", nonce_request.prettyPrint())
         return self.remote_att_handler.process_attr_type_and_value_entry(
-            nonce_requests,
+            nonce_request,
             pki_message["header"]["transactionID"].asOctets(),
         ), "The nonce response value is prepared."

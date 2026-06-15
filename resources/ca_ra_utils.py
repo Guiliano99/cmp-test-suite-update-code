@@ -2097,6 +2097,7 @@ def respond_to_cert_req_msg(  # noqa: D417 Missing argument descriptions in the 
             ca_key=ca_key,
             ca_cert=ca_cert,
             extensions=extensions,
+            allow_unknown_extns=kwargs.get("allow_unknown_extns", False),
         )
         return cert, None, None
 

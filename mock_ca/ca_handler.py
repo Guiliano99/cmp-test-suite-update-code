@@ -265,6 +265,7 @@ class CAHandler:
         enforce_rfc9481: bool = False,
         trusted_ras_dir: str = "./data/trusted_ras",
         allow_same_key_cert_req: bool = False,
+        allow_recipient_nonce: bool = False,
     ):
         """Initialize the CA Handler.
 
@@ -283,6 +284,11 @@ class CAHandler:
         :param trusted_ras_dir: The directory for the trusted RAs. Defaults to `./data/trusted_ras`.
         :param allow_same_key_cert_req: Whether to allow issuing a certificate with the same
             public key for the same CN (ir/cr/p10cr/ccr). Defaults to `False`.
+        :param allow_recipient_nonce: Whether to accept a set ``recipNonce`` in initial
+            certificate requests. Enable when a RATS GENM/GENP nonce exchange precedes the
+            request (OpenSSL carries the GENP ``senderNonce`` forward as ``recipNonce``).
+            Controlled at startup via ``--allow-recipient-nonce`` / ``ALLOW_RECIPIENT_NONCE``.
+            Defaults to `False`.
         :raises BadConfig: If the CA certificate and key are not provided.
         """
         if ca_cert is None and ca_key is None:
@@ -423,6 +429,7 @@ class CAHandler:
             ca_cert_chain=self.ca_cert_chain,
             allow_same_key_cert_req=allow_same_key_cert_req,
         )
+        self.allow_recipient_nonce = allow_recipient_nonce
 
         self.stfl_validator = STFLPKIMessageValidator(
             stfl_config=None,
@@ -703,7 +710,7 @@ class CAHandler:
         """
         # A RATS GENM/GENP nonce exchange causes OpenSSL to set recipNonce in the
         # subsequent CR, so allow it when RATS verification is active.
-        allow_recip_nonce = self.cert_req_handler.rats_handler.remote_att_handler is not None
+        allow_recip_nonce = self.allow_recipient_nonce
         try:
             response = self.cert_req_handler.process_cert_request(
                 pki_message, allow_recipient_nonce=allow_recip_nonce
@@ -759,7 +766,7 @@ class CAHandler:
                     pki_message=pki_message, cc_certs=self.get_cc_certs(), exclude_stateful_sig_check=True
                 )
                 self.stfl_validator.add_pq_stateful_pki_message(pki_message=pki_message)
-                allow_recip_nonce = self.cert_req_handler.rats_handler.remote_att_handler is not None
+                allow_recip_nonce = self.allow_recipient_nonce
                 response = self.cert_req_handler.process_cert_request(
                     pki_message, allow_recipient_nonce=allow_recip_nonce
                 )
@@ -1740,6 +1747,14 @@ def _register_routes(flask_app: Flask) -> None:
 
 
 if __name__ == "__main__":
+    # Surface INFO-level audit logging from the new RA-issued-nonce modules
+    # (NonceHandler, VerifierRegistry, RatsHandler).  Without basicConfig the
+    # root logger defaults to WARNING and every audit-relevant info() call
+    # is silently dropped.
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
     parser = argparse.ArgumentParser(description="Mock CA server")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="The host address, is set to 0.0.0.0 for docker.")
     parser.add_argument("--port", type=int, default=5000, help="The port to run the server on.")
@@ -1748,6 +1763,14 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Allow re-issuing a certificate with the same public key for the same CN (ir/cr/p10cr/ccr).",
+    )
+    parser.add_argument(
+        "--allow-recipient-nonce",
+        action="store_true",
+        default=os.environ.get("ALLOW_RECIPIENT_NONCE", "").lower() == "true",
+        help="Accept a set recipNonce in initial certificate requests. "
+        "Required after a RATS GENM/GENP nonce exchange. "
+        "Can also be set via the ALLOW_RECIPIENT_NONCE environment variable.",
     )
 
     args = parser.parse_args()
@@ -1758,6 +1781,7 @@ if __name__ == "__main__":
         mock_ca_state=state,
         port=args.port,
         allow_same_key_cert_req=args.allow_same_key,
+        allow_recipient_nonce=args.allow_recipient_nonce,
     )
     _register_routes(app)
 

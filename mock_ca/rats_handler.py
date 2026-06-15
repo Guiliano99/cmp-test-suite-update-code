@@ -2,34 +2,31 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Handler for RATS (Remote ATtestation procedureS) token extraction and verification.
+"""Phase-3 dispatcher for RATS evidence — RA-issued nonce model.
 
-RatsHandler extracts an attestation token from an incoming CMP CR or P10CR,
-submits it to the configured verifier, and embeds the resulting EAR (Entity
-Attestation Result) JWT as an X.509 extension in the issued certificate.
+Under the revised architecture (``constraint.md`` §9 revised, §10 added):
 
-Evidence location
------------------
-Evidence is carried in an ``AttestationBundle`` under OID ``1.2.840.113549.1.9.16.2.59``
-(``id-aa-evidence``).  The bundle may appear in two places depending on the CMP
-body type:
+* The MockCA owns nonce state via :class:`mock_ca.nonce_handler.NonceHandler`.
+* Each ``AttestationStatement`` in the incoming bundle is submitted to its
+  RA-resolved verifier URL via
+  :meth:`mock_ca.remote_att_mockca.attestation_verifier.VeraisonVerifier.submit_evidence`,
+  carrying the nonce as part of the JSON body.
+* The verifier becomes stateless w.r.t. freshness — it appraises one
+  ``(evidence, expected_nonce, oid)`` triple per call and returns an EAR JWT.
 
-* **CertTemplate extensions** – used by ``cr`` and ``ir`` body types.  The OID
-  appears in ``CertReqMessages[0].certReq.certTemplate.extensions``.
-* **CSR attributes** – used by ``p10cr`` body type.  The OID appears in
-  ``CertificationRequestInfo.attributes``.
+This handler does the per-statement work:
 
-Both locations are transparently supported; the extraction is transparent to
-the downstream verifier path.
-
-Evidence type dispatch
------------------------
-The first ``AttestationStatement`` inside the bundle carries a ``type`` OID
-that identifies the evidence format:
-
-* Any OID other than ``2.23.133.20.1`` → JWT / RATS path (``remote_att_handler``).
-* ``2.23.133.20.1`` (``id-tcg-attest-certify``) → TPM path (``tpm_att_handler``).
+1. Extract the ``AttestationBundle`` DER from the incoming PKIMessage.
+2. Decode all statements and walk them in bundle order.
+3. For each statement, compute its per-OID instance index, ask the
+   :class:`NonceHandler` for the nonce + verifier URL, and submit via the
+   cached :class:`VeraisonVerifier` client for that URL.
+4. If any statement is rejected → raise :class:`BadMessageCheck`.
+5. On success → drop the per-tx nonce state and return the first EAR JWT
+   (embedded in the issued certificate as an X.509 extension).
 """
+
+from __future__ import annotations
 
 import base64
 import json
@@ -46,9 +43,11 @@ from cryptography.x509 import load_der_x509_certificate
 import cryptography.x509 as cx509
 from pyasn1.codec.der import decoder as asn1_decoder
 from pyasn1.codec.der import encoder as asn1_encoder
-from pyasn1.type import univ
+from pyasn1.type import char, namedtype, univ
 from pyasn1_alt_modules import rfc9480
 
+from mock_ca.nonce_handler import NonceHandler, ReplayError, SystemFailure
+from mock_ca.remote_att_mockca.attestation_verifier import VeraisonVerifier
 from resources.asn1_structures import PKIMessageTMP
 from resources.cmputils import get_cert_response_from_pkimessage
 from resources.convertutils import copy_asn1_certificate
@@ -59,18 +58,75 @@ from resources.typingutils import SignKey
 # Constants
 # ---------------------------------------------------------------------------
 
-# OID for the evidence attribute in certTemplate.extensions or CSR attributes
-# draft-ietf-lamps-csr-attestation / id-aa-evidence
-EVIDENCE_OID = "1.2.840.113549.1.9.16.2.59"
-# Legacy alias kept for external callers
-RATS_TOKEN_OID = EVIDENCE_OID
+# OID (id-aa-attestation) for the attestation attribute in
+# certTemplate.extensions or CSR attributes.
+ATTESTATION_OID = "1.2.840.113549.1.9.16.2.59"
+EVIDENCE_OID = ATTESTATION_OID   # legacy alias kept for external callers
+RATS_TOKEN_OID = ATTESTATION_OID  # legacy alias kept for external callers
 
-# OID for the Veraison EAR JWT extension embedded in the issued certificate
-EAR_EXT_OID = "1.7.6.5.123"
+# OID of the standard RATS Conceptual Message Wrapper (CMW) certificate
+# extension, ``id-pe-cmw`` (draft-ietf-rats-msg-wrap-23 §4.4).
+ID_PE_CMW_OID = "1.3.6.1.5.5.7.1.35"
 
-# Evidence type OIDs (AttestationStatement.type)
-# id-tcg-attest-certify — TCG CSR Attestation (TcgAttestCertify SEQUENCE)
-TPM_CERTIFY_OID = "2.23.133.20.1"
+# OID under which the EAR JWT is embedded as an X.509 extension on the issued
+# cert.  Configurable via ``EAR_OID`` so a deployment can choose between the
+# demo OID (default, raw-JWT extnValue) and the standard ``id-pe-cmw`` extension
+# (CMW-wrapped extnValue).  When set to ``id-pe-cmw`` the value is a CMW JSON
+# record per draft-ietf-rats-msg-wrap-23 §3; otherwise the EAR JWT bytes are
+# placed verbatim (legacy behaviour, unchanged for the TPM platform flow).
+EAR_EXT_OID = os.environ.get("EAR_OID", "1.7.6.5.123")
+
+
+def _wrap_ear_in_cmw_json(ear_jwt: str) -> bytes:
+    """Return the DER extnValue content for an ``id-pe-cmw`` EAR extension.
+
+    Builds a CMW (Conceptual Message Wrapper) JSON *record*
+    ``[media-type, base64url-nopad(message)]`` (draft-ietf-rats-msg-wrap-23 §3)
+    and carries it in the CMW ``json`` (UTF8String) alternative (§4.4).  The
+    value field is base64url-encoded without padding even though a JWT is
+    already textual, exactly as the draft requires.
+
+    Reuses :class:`libattest.x509.extensions.CMW` when importable (the MockCA
+    ships libattest); falls back to an inline mirror of the same schema so the
+    handler never fails to embed merely because that submodule is absent.
+    """
+    value_b64 = base64.urlsafe_b64encode(ear_jwt.encode("utf-8")).decode("ascii").rstrip("=")
+    record = json.dumps(["application/eat+jwt", value_b64], separators=(",", ":"))
+    try:
+        from libattest.x509.extensions import CMW  # noqa: PLC0415 — canonical schema
+    except Exception:  # noqa: BLE001 — libattest CMW submodule optional
+
+        class CMW(univ.Choice):  # CMW ::= CHOICE { json UTF8String, cbor OCTET STRING }
+            componentType = namedtype.NamedTypes(
+                namedtype.NamedType("json", char.UTF8String()),
+                namedtype.NamedType("cbor", univ.OctetString()),
+            )
+
+    cmw = CMW()
+    cmw.setComponentByName("json", char.UTF8String(record))
+    return asn1_encoder.encode(cmw)
+
+
+def _unwrap_context_tag(der: bytes) -> bytes:
+    """Strip one outer context-specific tag from *der*, if present.
+
+    pyasn1 components extracted from a tagged CHOICE (e.g.
+    ``CertOrEncCert.certificate``) re-encode with the context tag attached.
+    For an EXPLICIT tag the inner TLV is returned verbatim; for an IMPLICIT
+    tag the outer tag byte is rewritten to SEQUENCE (0x30).
+    """
+    if not der or der[0] == 0x30:
+        return der
+    # Skip the outer tag + length octets.
+    idx = 1
+    first_len = der[idx]
+    idx += 1
+    if first_len & 0x80:
+        idx += first_len & 0x7F
+    inner = der[idx:]
+    if inner and inner[0] == 0x30:
+        return inner  # EXPLICIT tag: inner TLV is the full SEQUENCE
+    return b"\x30" + der[1:]  # IMPLICIT tag: retag as SEQUENCE
 
 
 # ---------------------------------------------------------------------------
@@ -79,32 +135,35 @@ TPM_CERTIFY_OID = "2.23.133.20.1"
 
 
 @dataclass
+class ExtractedStatement:
+    """One ``AttestationStatement`` decoded from an ``AttestationBundle``."""
+
+    type_oid: str
+    """Dot-form OID of the evidence type (e.g. ``2.23.133.20.1``)."""
+
+    type_oid_der: bytes
+    """DER encoding of the OBJECT IDENTIFIER — used as the ``NonceHandler`` key."""
+
+    stmt_bytes: bytes
+    """DER substrate of the statement payload (TcgAttestCertify SEQUENCE,
+    or raw JWT bytes after the OCTET STRING wrapper is stripped)."""
+
+    is_octet_string_wrapped: bool
+    """``True`` when the original bundle wrapped the statement in an
+    OCTET STRING (JWT case); ``False`` for direct SEQUENCE encoding (TCG)."""
+
+
+@dataclass
 class ExtractedEvidence:
-    """Evidence extracted from a CMP request.
+    """All statements and bundle-level certificates for one IR.
 
-    Carries the full ``AttestationBundle`` DER plus pre-parsed fields so the
-    caller can dispatch to the right verifier without re-parsing.
-
-    Attributes:
-        bundle_der: Full DER encoding of the ``AttestationBundle``.
-        type_oid:   OID string from the first ``AttestationStatement.type``
-                    field.  Used to select the verifier back-end.
-        stmt_bytes: Payload of the first attestation statement.  For JWT/RATS
-                    evidence this is the raw JWT bytes (the OCTET STRING
-                    wrapper has been stripped).  For TCG evidence this is the
-                    full DER of the ``TcgAttestCertify`` SEQUENCE (tag
-                    included).
-        is_octet_string_wrapped: ``True`` when the original ``stmt`` field was
-                    an OCTET STRING (JWT case); ``False`` when it was a
-                    directly-encoded SEQUENCE (TCG case).
-        certs_der:  DER-encoded certificates from the ``certs`` field of the
-                    bundle, e.g. the AK certificate chain for TPM attestation.
+    ``bundle_der`` is the full DER encoding of the ``AttestationBundle``
+    and is what we forward to the verifier in the ``evidence`` JSON field.
+    The ``statements`` list lets the dispatcher iterate without re-decoding.
     """
 
     bundle_der: bytes
-    type_oid: str
-    stmt_bytes: bytes
-    is_octet_string_wrapped: bool
+    statements: List[ExtractedStatement]
     certs_der: List[bytes] = field(default_factory=list)
 
 
@@ -114,37 +173,165 @@ class ExtractedEvidence:
 
 
 class RatsHandler:
-    """Handles RATS / CSR-attestation token extraction, verification, and EAR embedding.
+    """Phase-3 dispatcher for RATS / CSR-attestation evidence.
 
-    Typical usage inside a CMP CR handler::
+    Holds:
 
-        rats_handler = RatsHandler(remote_att_handler=jwt_verifier)
-        rats_handler.process_cr_attestation(pki_message, response, ca_key)
+    * ``remote_att_handler`` — a
+      :class:`~mock_ca.remote_att_mockca.remote_attestation_handler.RemoteAttestationHandler`
+      whose ``nonce_handler`` attribute provides per-tx nonce consumption
+      and per-nonce verifier URL routing.
+    * ``_clients`` — small URL → :class:`VeraisonVerifier` cache so repeat
+      submissions to the same verifier reuse one HTTP client (and one
+      cached EAR public key).
 
-    The handler is a no-op when both verifier references are ``None``.
-
-    The ``remote_att_handler`` is used for JWT / RATS evidence (any type OID
-    other than the TCG certify OID).  The ``tpm_att_handler`` is used for
-    ``TcgAttestCertify`` evidence.  Either may be ``None``; when the
-    corresponding verifier is absent the evidence type is still extracted and
-    logged, but no EAR is embedded.
+    Construction takes ``remote_att_handler=None`` because the MockCA
+    wires the handler up after the GENM-side machinery is available
+    (see ``ca_handler.py``).
     """
 
-    def __init__(self, remote_att_handler=None, tpm_att_handler=None):
-        """Initialise the handler.
+    def __init__(self, remote_att_handler=None):
+        """Initialise the dispatcher.
 
-        :param remote_att_handler: Verifier for JWT / RATS evidence.  Provides
-            ``verify_token(token_bytes, media_type, nonce)`` and
-            ``get_nonce(size)``.  May be ``None``.
-        :param tpm_att_handler: Verifier for TPM ``TcgAttestCertify`` evidence.
-            Provides ``verify_token(bundle_der, media_type, nonce)``.
-            May be ``None``; if ``None`` the handler will try to create one
-            lazily from the ``VERIFIER_NONCE_URL_TPM`` environment variable.
+        :param remote_att_handler: a ``RemoteAttestationHandler`` whose
+            ``nonce_handler`` will be consulted per statement.  May be
+            ``None`` at construction; assigned by the CA wiring code
+            once the GENM handler exists.
         """
         self.remote_att_handler = remote_att_handler
-        self.tpm_att_handler = tpm_att_handler
+        # url → VeraisonVerifier cache.  Keyed on the rstrip("/") form so
+        # ``http://x:8444`` and ``http://x:8444/`` share one client.
+        self._clients: dict[str, VeraisonVerifier] = {}
 
     # ── Public API ────────────────────────────────────────────────────────────
+
+    def verify_and_get_ear(self, pki_message: PKIMessageTMP) -> Optional[str]:
+        """Verify every statement in the bundle; return one EAR JWT.
+
+        Call this BEFORE building the CMP CP response so a failure raises
+        :class:`resources.exceptions.BadMessageCheck` and the outer CMP
+        layer returns a rejection (no certificate issued).
+
+        :param pki_message: The incoming CMP CR / IR / KUR / P10CR.
+        :return: EAR JWT string on success; ``None`` when the request
+            carries no evidence (soft skip).
+        :raises BadMessageCheck:  if any statement was rejected.
+        :raises SystemFailure:    if the NonceHandler cannot route an entry
+            (mapped to ``PKIFailureInfo: systemFailure`` by the outer handler).
+        """
+        ear_jwt, _ = self._verify_bundle(pki_message)
+        return ear_jwt
+
+    def _verify_bundle(
+        self, pki_message: PKIMessageTMP
+    ) -> tuple[Optional[str], Optional[bytes]]:
+        """Backbone of :meth:`verify_and_get_ear`.
+
+        Returns ``(ear_jwt, None)``; the second element is kept for source
+        compatibility with earlier KeyAttestPoP callers and is always
+        ``None`` in the platform-only profile.  ``ear_jwt`` is ``None``
+        when the request carries no evidence.
+        """
+        from resources.exceptions import BadMessageCheck  # noqa: PLC0415
+
+        evidence = self.extract_evidence(pki_message)
+        if evidence is None:
+            logging.debug("RatsHandler: no evidence in request — skip")
+            return None, None
+
+        if (
+            self.remote_att_handler is None
+            or getattr(self.remote_att_handler, "nonce_handler", None) is None
+        ):
+            raise BadMessageCheck(
+                "RatsHandler: evidence is present but no NonceHandler is "
+                "configured — cannot dispatch."
+            )
+        nonce_handler: NonceHandler = self.remote_att_handler.nonce_handler
+
+        tx_id = bytes(pki_message["header"]["transactionID"])
+
+        # Two parallel counters so we can support both lookup modes:
+        #
+        #   per_oid_counter[oid_der]  — N-th statement *of this OID* in the
+        #                               bundle.  Used when the GenM had
+        #                               NonceRequest.type set per entry, so
+        #                               nonces were stored under (oid, inst).
+        #   total_position            — N-th statement overall in the bundle.
+        #                               Used for the positional fallback when
+        #                               the GenM did not set NonceRequest.type
+        #                               (the freshness draft NonceRequest has no
+        #                               hint field; the current gencmpclient
+        #                               sets NonceRequest.type, so the (oid,
+        #                               inst) keying above is normally used and
+        #                               this positional fallback only applies to
+        #                               legacy/typeless clients).
+        per_oid_counter: dict[bytes, int] = {}
+        total_position = 0
+
+        ear_jwts: List[str] = []
+        try:
+            for stmt in evidence.statements:
+                oid_instance = per_oid_counter.get(stmt.type_oid_der, 0)
+                per_oid_counter[stmt.type_oid_der] = oid_instance + 1
+                positional_instance = total_position
+                total_position += 1
+
+                # 1. Pull nonce + resolved verifier URL from the NonceHandler.
+                #    Prefer the OID-keyed slot (set when GenM carried per-
+                #    entry NonceRequest.type); fall through to the positional
+                #    slot under None when the wire didn't carry types.
+                nonce_state = self._consume_nonce(
+                    nonce_handler,
+                    tx_id,
+                    stmt.type_oid_der,
+                    oid_instance,
+                    positional_instance,
+                    stmt.type_oid,
+                    BadMessageCheck,
+                )
+
+                # 2. (KeyAttestPoP check moved out of this loop — runs once
+                #    per IR via _run_key_attest_pop_check above, since v2
+                #    KeyAttestPoP no longer appears as a bundle statement.)
+
+                # 3. Submit the bundle DER + nonce to the resolved verifier URL.
+                # For TcgAttestQuote slots, also forward the TpmAttestationParams
+                # DER the MockCA broadcast in NonceResponse.respInfo so the
+                # verifier can check the attester quoted the requested PCR set
+                # using the negotiated hash algorithm.
+                pcr_selection_der = nonce_state.resp_info
+                client = self._get_client(nonce_state.verifier_url)
+                ear_jwt = client.submit_evidence(
+                    nonce=nonce_state.nonce,
+                    evidence=evidence.bundle_der,
+                    evidence_oid=stmt.type_oid,
+                    pcr_selection_der=pcr_selection_der,
+                )
+                if ear_jwt is None:
+                    raise BadMessageCheck(
+                        f"RatsHandler: verifier {nonce_state.verifier_url} "
+                        f"rejected statement oid={stmt.type_oid} "
+                        f"(oid-instance={oid_instance}, positional={positional_instance})"
+                    )
+                ear_jwts.append(ear_jwt)
+
+            logging.info(
+                "RatsHandler: verified %d statement(s) for tx=%s",
+                len(ear_jwts), tx_id.hex(),
+            )
+        finally:
+            # Whether the loop succeeded or raised, drop the per-tx state so
+            # memory is freed and a retried IR with a new tx_id starts clean.
+            nonce_handler.drop_transaction(tx_id)
+
+        # The cert extension only carries one EAR JWT; for multi-statement
+        # bundles return the first (the others have already been validated).
+        # A future change could embed all of them; for now the first verdict
+        # is sufficient evidence that the enrollment was attested.
+        first_ear = ear_jwts[0] if ear_jwts else None
+        # Platform-only profile: no KeyAttestPoP proof to surface.
+        return first_ear, None
 
     def process_cr_attestation(
         self,
@@ -152,55 +339,34 @@ class RatsHandler:
         response: PKIMessageTMP,
         ca_key: SignKey,
     ) -> None:
-        """Extract evidence from *pki_message*, verify it, and embed the EAR.
+        """Verify evidence and embed the EAR (+ KeyAttestPoP) extension.
 
-        Dispatches to ``remote_att_handler`` for JWT evidence or
-        ``tpm_att_handler`` for TPM evidence.  Logs a warning if any step
-        fails but does not raise — the certificate is still issued, just
-        without the EAR extension.
-
-        :param pki_message: The incoming CMP request (``cr``, ``ir``, or
-            ``p10cr`` body).
-        :param response: The outgoing CMP CP PKIMessage (modified in-place).
-        :param ca_key: The CA private key used to re-sign the certificate after
-            the EAR extension is added.
+        Best-effort wrapper that does not raise; failures are logged and
+        the certificate is issued without an EAR extension.  Use
+        :meth:`verify_and_get_ear` directly when a verifier rejection
+        should fail the enrollment with a CMP error.
         """
-        evidence = self.extract_evidence(pki_message)
-        if evidence is None:
-            logging.debug("RatsHandler: no evidence found in request")
+        try:
+            ear_jwt, _ = self._verify_bundle(pki_message)
+        except Exception as exc:  # noqa: BLE001
+            logging.warning(
+                "RatsHandler.process_cr_attestation: verify_and_get_ear raised: %s",
+                exc,
+            )
             return
-
-        logging.info(
-            "RatsHandler: found evidence (type=%s, bundle=%d bytes)",
-            evidence.type_oid,
-            len(evidence.bundle_der),
-        )
-
-        ear_jwt: Optional[str] = None
-
-        if evidence.type_oid == TPM_CERTIFY_OID:
-            ear_jwt = self._verify_tpm_evidence(evidence)
-        else:
-            ear_jwt = self._verify_jwt_evidence(evidence)
-
         if not ear_jwt:
-            logging.warning("RatsHandler: verification failed; EAR will not be embedded")
             return
-
-        self.embed_ear_extension(response, ear_jwt, ca_key)
+        self.embed_extensions(response, ear_jwt, ca_key)
 
     # ── Evidence extraction ───────────────────────────────────────────────────
 
     def extract_evidence(self, pki_message: PKIMessageTMP) -> Optional[ExtractedEvidence]:
         """Extract ``AttestationBundle`` from a CMP request.
 
-        Checks two locations:
+        Looks in two places:
 
         * ``p10cr`` body → ``certificationRequestInfo.attributes``
         * ``cr`` / ``ir`` / ``kur`` body → ``certTemplate.extensions``
-
-        :return: Parsed :class:`ExtractedEvidence`, or ``None`` if the OID is
-            absent or parsing fails.
         """
         body_name = pki_message["body"].getName()
 
@@ -217,27 +383,29 @@ class RatsHandler:
 
         return self._parse_att_bundle_full(bundle_der)
 
-    def extract_token(self, pki_message: PKIMessageTMP) -> Optional[bytes]:
-        """Extract the raw RATS token bytes.
-
-        Deprecated compatibility wrapper around :meth:`extract_evidence`.
-        Returns only the ``stmt_bytes`` of the first attestation statement.
-        Use :meth:`extract_evidence` for new code.
-
-        :return: Raw token bytes (JWT for RATS; DER for TCG), or ``None``.
-        """
-        evidence = self.extract_evidence(pki_message)
-        return evidence.stmt_bytes if evidence else None
+    @staticmethod
+    def has_evidence(pki_message: PKIMessageTMP) -> bool:
+        """Lightweight OID scan — does not parse the bundle."""
+        body_name = pki_message["body"].getName()
+        try:
+            if body_name == "p10cr":
+                cri = pki_message["body"]["p10cr"]["certificationRequestInfo"]
+                if not cri["attributes"].isValue:
+                    return False
+                return any(str(attr["attrType"]) == ATTESTATION_OID for attr in cri["attributes"])
+            if body_name in ("ir", "cr", "kur"):
+                cert_req = pki_message["body"][body_name][0]["certReq"]
+                exts = cert_req["certTemplate"]["extensions"]
+                if not exts.isValue:
+                    return False
+                return any(str(ext["extnID"]) == ATTESTATION_OID for ext in exts)
+        except Exception as exc:  # noqa: BLE001
+            logging.debug("RatsHandler.has_evidence: scan failed: %s", exc)
+        return False
 
     @staticmethod
     def _extract_from_cert_template_extensions(pki_message: PKIMessageTMP) -> Optional[bytes]:
-        """Return ``AttestationBundle`` DER from ``certTemplate.extensions``.
-
-        Searches the extensions of the first ``CertReqMessages`` entry for OID
-        ``1.2.840.113549.1.9.16.2.59`` (``id-aa-evidence``).
-
-        :return: Raw DER of the ``AttestationBundle``, or ``None``.
-        """
+        """Return ``AttestationBundle`` DER from ``certTemplate.extensions``."""
         try:
             body_name = pki_message["body"].getName()
             cert_req = pki_message["body"][body_name][0]["certReq"]
@@ -245,15 +413,14 @@ class RatsHandler:
             if not extensions.isValue:
                 return None
             for ext in extensions:
-                if str(ext["extnID"]) == EVIDENCE_OID:
-                    # extnValue is OCTET STRING whose content is AttestationBundle DER
+                if str(ext["extnID"]) == ATTESTATION_OID:
                     bundle_der = bytes(ext["extnValue"])
                     logging.info(
                         "RatsHandler: found evidence in certTemplate.extensions (%d bytes)",
                         len(bundle_der),
                     )
                     return bundle_der
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logging.warning(
                 "RatsHandler: failed to extract from certTemplate.extensions: %s", exc
             )
@@ -261,32 +428,24 @@ class RatsHandler:
 
     @staticmethod
     def _extract_from_csr_attributes(pki_message: PKIMessageTMP) -> Optional[bytes]:
-        """Return ``AttestationBundle`` DER from PKCS#10 CSR attributes.
-
-        Searches ``certificationRequestInfo.attributes`` for OID
-        ``1.2.840.113549.1.9.16.2.59`` (``id-aa-evidence``) and returns the
-        raw DER of the first attribute value.
-
-        :return: Raw DER of the ``AttestationBundle``, or ``None``.
-        """
+        """Return ``AttestationBundle`` DER from PKCS#10 CSR attributes."""
         try:
             csr = pki_message["body"]["p10cr"]
             cri = csr["certificationRequestInfo"]
             if not cri["attributes"].isValue:
                 return None
             for attr in cri["attributes"]:
-                if str(attr["attrType"]) == EVIDENCE_OID:
+                if str(attr["attrType"]) == ATTESTATION_OID:
                     values = attr["attrValues"]
                     if len(values) == 0:
                         continue
-                    # attrValues[0] is univ.Any; .asOctets() returns the raw DER
                     bundle_der = values[0].asOctets()
                     logging.info(
                         "RatsHandler: found evidence in CSR attributes (%d bytes)",
                         len(bundle_der),
                     )
                     return bundle_der
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logging.warning(
                 "RatsHandler: failed to extract from CSR attributes: %s", exc
             )
@@ -296,296 +455,277 @@ class RatsHandler:
 
     @staticmethod
     def _parse_att_bundle_full(bundle_der: bytes) -> Optional[ExtractedEvidence]:
-        """Parse an ``AttestationBundle`` DER into an :class:`ExtractedEvidence`.
+        """Decode an ``AttestationBundle`` into per-statement records.
 
-        Decodes the bundle with pyasn1 to identify the evidence type OID and
-        extract the statement payload.
-
-        For **OCTET STRING** statements (JWT / RATS): the wrapper is stripped
-        and ``stmt_bytes`` contains the raw JWT bytes.
-
-        For **SEQUENCE** statements (TCG ``TcgAttestCertify``): the full DER
-        including the SEQUENCE tag is preserved in ``stmt_bytes``.
-
-        Falls back to the legacy raw-DER walk on pyasn1 decode failure so that
-        existing JWT-based tests are not broken by a minor schema mismatch.
-
-        :return: :class:`ExtractedEvidence`, or ``None`` on total failure.
+        Walks every statement in the bundle (not just the first).  Each
+        statement is captured along with its OID in both string and DER
+        forms so :class:`NonceHandler` can be keyed without re-encoding.
         """
         try:
             bundle, _ = asn1_decoder.decode(bundle_der, asn1Spec=AttestationBundle())
+        except Exception as exc:  # noqa: BLE001
+            logging.warning("RatsHandler: pyasn1 parse of AttestationBundle failed: %s", exc)
+            return None
 
-            if len(bundle["attestations"]) == 0:
-                logging.warning("RatsHandler: AttestationBundle has no attestations")
-                return None
+        if len(bundle["attestations"]) == 0:
+            logging.warning("RatsHandler: AttestationBundle has no attestations")
+            return None
 
-            first_stmt = bundle["attestations"][0]
-            type_oid = str(first_stmt["type"])
+        statements: List[ExtractedStatement] = []
+        for stmt in bundle["attestations"]:
+            type_oid = str(stmt["type"])
+            type_oid_der = bytes(asn1_encoder.encode(stmt["type"]))
 
-            # stmt is univ.Any — raw substrate bytes including the outer ASN.1 tag
-            stmt_raw: bytes = bytes(first_stmt["stmt"])
-
+            stmt_raw: bytes = bytes(stmt["stmt"])
             if not stmt_raw:
-                logging.warning("RatsHandler: empty stmt in AttestationStatement")
-                return None
+                logging.warning("RatsHandler: empty stmt in AttestationStatement (oid=%s)", type_oid)
+                continue
 
-            # Determine encoding: OCTET STRING (0x04) → JWT; SEQUENCE (0x30) → TCG
+            # OCTET STRING (0x04) → JWT; SEQUENCE (0x30) → TCG
             if stmt_raw[0] == 0x04:
                 inner, _ = asn1_decoder.decode(stmt_raw, asn1Spec=univ.OctetString())
                 stmt_bytes = bytes(inner)
                 is_wrapped = True
             else:
-                # Structured type (e.g., TcgAttestCertify SEQUENCE)
                 stmt_bytes = stmt_raw
                 is_wrapped = False
 
-            # Extract certificate chain from optional certs field
-            certs_der: List[bytes] = []
-            if bundle["certs"].isValue:
-                for cert_choice in bundle["certs"]:
-                    name = cert_choice.getName()
-                    if name == "certificate":
-                        certs_der.append(asn1_encoder.encode(cert_choice["certificate"]))
-
-            logging.info(
-                "RatsHandler: parsed bundle — type=%s, stmt=%d bytes, certs=%d",
-                type_oid,
-                len(stmt_bytes),
-                len(certs_der),
-            )
-            return ExtractedEvidence(
-                bundle_der=bundle_der,
-                type_oid=type_oid,
-                stmt_bytes=stmt_bytes,
-                is_octet_string_wrapped=is_wrapped,
-                certs_der=certs_der,
+            statements.append(
+                ExtractedStatement(
+                    type_oid=type_oid,
+                    type_oid_der=type_oid_der,
+                    stmt_bytes=stmt_bytes,
+                    is_octet_string_wrapped=is_wrapped,
+                )
             )
 
-        except Exception as exc:
-            logging.warning(
-                "RatsHandler: pyasn1 parse of AttestationBundle failed: %s; "
-                "falling back to raw-DER walk",
-                exc,
-            )
-
-        # Legacy fallback: raw DER walk (handles JWT-only bundles)
-        token = RatsHandler._parse_att_bundle_der(bundle_der)
-        if token:
-            logging.info("RatsHandler: legacy DER walk succeeded (%d bytes)", len(token))
-            return ExtractedEvidence(
-                bundle_der=bundle_der,
-                type_oid=EVIDENCE_OID,  # type unknown, assume RATS/JWT
-                stmt_bytes=token,
-                is_octet_string_wrapped=True,
-                certs_der=[],
-            )
-        return None
-
-    @staticmethod
-    def _parse_att_bundle_der(der: bytes) -> Optional[bytes]:
-        """Extract the OCTET STRING token from a DER-encoded ``AttestationBundle``.
-
-        Legacy raw-DER walk for JWT bundles.  Walks the fixed structure::
-
-            SEQUENCE {               ← AttestationBundle
-              SEQUENCE {             ← attestations SEQUENCE OF
-                SEQUENCE {           ← first AttestationStatement
-                  OID                ← type
-                  OCTET STRING       ← stmt (JWT bytes)
-                }
-              }
-            }
-
-        :return: Raw JWT bytes, or ``None`` if the structure is unexpected.
-        """
-
-        def _read_length(data: bytes, pos: int):
-            if data[pos] & 0x80:
-                n = data[pos] & 0x7F
-                length = int.from_bytes(data[pos + 1 : pos + 1 + n], "big")
-                return length, pos + 1 + n
-            return data[pos], pos + 1
-
-        try:
-            pos = 0
-            if der[pos] != 0x30:
-                return None
-            pos += 1
-            _, pos = _read_length(der, pos)
-            if der[pos] != 0x30:
-                return None
-            pos += 1
-            _, pos = _read_length(der, pos)
-            if der[pos] != 0x30:
-                return None
-            pos += 1
-            _, pos = _read_length(der, pos)
-            if der[pos] != 0x06:
-                return None
-            pos += 1
-            oid_len, pos = _read_length(der, pos)
-            pos += oid_len
-            if der[pos] != 0x04:
-                return None
-            pos += 1
-            token_len, pos = _read_length(der, pos)
-            return der[pos : pos + token_len]
-        except Exception as exc:
-            logging.warning("RatsHandler: legacy DER walk failed: %s", exc)
-            return None
-
-    # ── Verifier dispatch ─────────────────────────────────────────────────────
-
-    def _verify_jwt_evidence(self, evidence: ExtractedEvidence) -> Optional[str]:
-        """Verify JWT / RATS evidence with ``remote_att_handler``.
-
-        :return: EAR JWT string, or ``None`` on failure.
-        """
-        if self.remote_att_handler is None:
-            logging.debug("RatsHandler: no remote_att_handler configured, skipping JWT verification")
-            return None
-
-        token = evidence.stmt_bytes
-        nonce = self.extract_nonce_from_token(token)
-        logging.info("RatsHandler: submitting JWT token (%d bytes) to remote verifier", len(token))
-        return self.remote_att_handler.verify_token(
-            token,
-            media_type="application/eat-jwt",
-            nonce=nonce,
-        )
-
-    def _verify_tpm_evidence(self, evidence: ExtractedEvidence) -> Optional[str]:
-        """Verify TPM ``TcgAttestCertify`` evidence with ``tpm_att_handler``.
-
-        If ``tpm_att_handler`` is ``None``, attempts lazy creation from the
-        ``VERIFIER_NONCE_URL_TPM`` environment variable.
-
-        :return: EAR JWT string, or ``None`` on failure.
-        """
-        handler = self._get_tpm_att_handler()
-        if handler is None:
-            logging.warning(
-                "RatsHandler: TPM evidence (type=%s) found but no tpm_att_handler "
-                "configured and VERIFIER_NONCE_URL_TPM is not set",
-                evidence.type_oid,
-            )
-            return None
+        certs_der: List[bytes] = []
+        if bundle["certs"].isValue:
+            for cert_choice in bundle["certs"]:
+                if cert_choice.getName() == "certificate":
+                    certs_der.append(asn1_encoder.encode(cert_choice["certificate"]))
 
         logging.info(
-            "RatsHandler: submitting TPM evidence bundle (%d bytes) to TPM verifier",
-            len(evidence.bundle_der),
+            "RatsHandler: parsed bundle — %d statement(s), %d cert(s)",
+            len(statements), len(certs_der),
         )
-        return handler.verify_token(
-            evidence.bundle_der,
-            media_type="application/vnd.tcg.attest-certify",
-            nonce=None,  # nonce is embedded in TPMS_ATTEST.qualifyingData
+        return ExtractedEvidence(
+            bundle_der=bundle_der,
+            statements=statements,
+            certs_der=certs_der,
         )
 
-    def _get_tpm_att_handler(self):
-        """Return ``tpm_att_handler``, creating it lazily from env var if needed."""
-        if self.tpm_att_handler is not None:
-            return self.tpm_att_handler
-
-        tpm_url = os.environ.get("VERIFIER_NONCE_URL_TPM", "").strip()
-        if not tpm_url:
-            return None
-
-        # Lazy import to avoid circular dependency at module load time
-        from mock_ca.remote_att_mockca.attestation_verifier import VeraisonVerifier  # noqa: PLC0415
-
-        logging.info("RatsHandler: lazily creating TPM verifier from VERIFIER_NONCE_URL_TPM=%s", tpm_url)
-        self.tpm_att_handler = VeraisonVerifier(base_url=tpm_url, fetch_timeout=10)
-        return self.tpm_att_handler
-
-    # ── Nonce / EAR helpers ───────────────────────────────────────────────────
+    # ── Nonce consume helper (OID → positional fallback) ─────────────────────
 
     @staticmethod
-    def extract_nonce_from_token(token_bytes: bytes) -> Optional[bytes]:
-        """Decode the JWT payload and return the ``eat_nonce`` as raw bytes.
+    def _consume_nonce(
+        nonce_handler: "NonceHandler",
+        tx_id: bytes,
+        oid_der: bytes,
+        oid_instance: int,
+        positional_instance: int,
+        oid_dot: str,
+        BadMessageCheck,  # injected to avoid the import cycle on the inner-class side
+    ):
+        """Try OID-keyed consume first; fall back to positional (None-keyed).
 
-        :return: Nonce bytes, or ``None`` if the token is not a JWT or has no nonce.
+        The bundle's ``AttestationStatement.type`` always carries an OID, but
+        the GenM's ``NonceRequest.type`` field is optional and the current
+        gencmpclient does NOT set it.  When that's the case the issued nonce
+        is filed under ``(None, position)`` rather than ``(oid_der, instance)``.
+
+        This helper:
+          1. Tries the OID-keyed slot (the future-proof path: works when the
+             attester sets NonceRequest.type to match the AttestationStatement OID).
+          2. On KeyError, falls back to ``(None, positional_instance)`` —
+             today's wire reality.  Other exceptions (expired, replay) come
+             through unchanged because they are real errors regardless of mode.
+
+        :raises BadMessageCheck: on any final lookup failure.
         """
         try:
-            parts = token_bytes.split(b".")
-            if len(parts) < 2:
-                return None
-            payload_b64 = parts[1]
-            padding = (4 - len(payload_b64) % 4) % 4
-            payload = json.loads(
-                base64.urlsafe_b64decode(payload_b64 + b"=" * padding)
+            return nonce_handler.consume(
+                tx_id=tx_id,
+                evidence_oid_der=oid_der,
+                instance=oid_instance,
             )
-            nonce_val = payload.get("eat_nonce")
-            if nonce_val is None:
-                return None
-            if isinstance(nonce_val, str):
-                return base64.urlsafe_b64decode(nonce_val + "==")
-            return bytes(nonce_val)
-        except Exception as exc:
-            logging.debug("RatsHandler: could not extract nonce from token: %s", exc)
-        return None
+        except KeyError:
+            # Fall through to positional lookup below.
+            pass
+        except ValueError as exc:
+            raise BadMessageCheck(
+                f"RatsHandler: nonce expired for oid={oid_dot} "
+                f"instance={oid_instance}: {exc}"
+            ) from exc
+        except ReplayError as exc:
+            raise BadMessageCheck(
+                f"RatsHandler: nonce already consumed (replay) for "
+                f"oid={oid_dot} instance={oid_instance}: {exc}"
+            ) from exc
 
-    @staticmethod
+        try:
+            state = nonce_handler.consume(
+                tx_id=tx_id,
+                evidence_oid_der=None,
+                instance=positional_instance,
+            )
+            logging.debug(
+                "RatsHandler: positional fallback consume(None, %d) hit for oid=%s",
+                positional_instance, oid_dot,
+            )
+            return state
+        except KeyError as exc:
+            raise BadMessageCheck(
+                f"RatsHandler: no nonce for evidence statement "
+                f"oid={oid_dot} (oid-instance={oid_instance}, "
+                f"positional={positional_instance}): {exc}"
+            ) from exc
+        except ValueError as exc:
+            raise BadMessageCheck(
+                f"RatsHandler: nonce expired (positional={positional_instance}): {exc}"
+            ) from exc
+        except ReplayError as exc:
+            raise BadMessageCheck(
+                f"RatsHandler: nonce already consumed (positional={positional_instance}): {exc}"
+            ) from exc
+
+    # ── Verifier-client cache ─────────────────────────────────────────────────
+
+    def _get_client(self, verifier_url: str) -> VeraisonVerifier:
+        """Return (creating if needed) the VeraisonVerifier for *verifier_url*.
+
+        Caching is per-URL — repeat submissions inside one enrollment reuse
+        the same client and therefore the same cached EAR public key.
+        """
+        normalized = verifier_url.rstrip("/")
+        client = self._clients.get(normalized)
+        if client is None:
+            client = VeraisonVerifier(base_url=normalized)
+            self._clients[normalized] = client
+            logging.debug("RatsHandler: created VeraisonVerifier client for %s", normalized)
+        return client
+
+    # ── Cert extension embedding ─────────────────────────────────────────────
+
+    @classmethod
     def embed_ear_extension(
+        cls,
         response: PKIMessageTMP,
         ear_jwt: str,
         ca_key: SignKey,
     ) -> None:
-        """Add the EAR JWT as OID ``1.7.6.5.123`` OctetString to the issued certificate.
+        """Backward-compatible shim — embed only the EAR JWT extension.
 
-        The certificate is extracted from the CP response, rebuilt with the new
-        extension using the ``cryptography`` library, re-signed with *ca_key*,
-        and written back into *response* in-place.
+        Equivalent to :meth:`embed_extensions` with ``pop_proof_der=None``;
+        kept so external callers (and the legacy non-PoP enrollment path)
+        continue to compile.
+        """
+        cls.embed_extensions(response, ear_jwt, ca_key, pop_proof_der=None)
 
-        :param response: CMP CP PKIMessage to modify.
-        :param ear_jwt: EAR JWT string returned by the verifier.
-        :param ca_key: CA private key for re-signing.
+    @staticmethod
+    def embed_extensions(
+        response: PKIMessageTMP,
+        ear_jwt: str,
+        ca_key: SignKey,
+        *,
+        pop_proof_der: Optional[bytes] = None,
+    ) -> None:
+        """Add the EAR JWT (and optionally the KeyAttestPoP proof) extensions.
+
+        The certificate is extracted from the CP response, rebuilt with the
+        new extension(s) using the ``cryptography`` library, re-signed with
+        *ca_key*, and copied back into the response in place.
+
+        :param response: the CMP CP response containing the issued cert.
+        :param ear_jwt: the compact-serialised EAR JWT string.
+        :param ca_key: CA private key used to re-sign the rebuilt cert.
+        :param pop_proof_der: when supplied, the DER bytes of the
+            ``KeyAttestPoPProof`` from the CSR are copied verbatim onto
+            the issued cert as an X.509 v3 extension under
+            :func:`resolve_key_attest_pop_oid` (SPEC §DR-8).  ``None``
+            for non-PoP enrollments.
         """
         try:
-            cert_response = get_cert_response_from_pkimessage(response, response_index=0)
-            cert_asn1 = cert_response["certifiedKeyPair"]["certOrEncCert"]["certificate"]
-            cert_asn1_untagged = copy_asn1_certificate(cert_asn1)
-            cert_der = asn1_encoder.encode(cert_asn1_untagged)
-            cert = load_der_x509_certificate(cert_der)
+            cert_resp = get_cert_response_from_pkimessage(response, response_index=0)
+            cert_choice = cert_resp["certifiedKeyPair"]["certOrEncCert"]["certificate"]
+
+            # Re-encode the existing certificate, add the extensions, re-sign.
+            # cert_choice carries CertOrEncCert's context tag from the CHOICE;
+            # unwrap it so the DER is a plain Certificate TLV.
+            cmp_cert_der = _unwrap_context_tag(asn1_encoder.encode(cert_choice))
+            x509_cert = load_der_x509_certificate(cmp_cert_der)
+
+            existing_extensions = list(x509_cert.extensions)
 
             ear_oid = cx509.ObjectIdentifier(EAR_EXT_OID)
-            ear_value = asn1_encoder.encode(univ.OctetString(ear_jwt.encode()))
-
-            builder = cx509.CertificateBuilder(
-                subject_name=cert.subject,
-                issuer_name=cert.issuer,
-                public_key=cert.public_key(),
-                serial_number=cert.serial_number,
-                not_valid_before=cert.not_valid_before_utc,
-                not_valid_after=cert.not_valid_after_utc,
-            )
-            for ext in cert.extensions:
-                builder = builder.add_extension(ext.value, critical=ext.critical)
-            builder = builder.add_extension(
-                cx509.UnrecognizedExtension(ear_oid, ear_value),
-                critical=False,
-            )
-
-            ca_key_der = ca_key.private_bytes(
-                encoding=serialization.Encoding.DER,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption(),
-            )
-            crypto_ca_key = load_der_private_key(ca_key_der, password=None)
-
-            if isinstance(crypto_ca_key, Ed25519PrivateKey):
-                new_cert = builder.sign(crypto_ca_key, algorithm=None)
+            if EAR_EXT_OID == ID_PE_CMW_OID:
+                # Standard RATS CMW extension: extnValue is a CMW JSON record
+                # wrapping the EAR JWT (draft-ietf-rats-msg-wrap-23 §4.4).
+                ear_value = _wrap_ear_in_cmw_json(ear_jwt)
             else:
-                new_cert = builder.sign(crypto_ca_key, algorithm=hashes.SHA256())
+                # Legacy/demo OID: EAR JWT bytes placed verbatim.
+                ear_value = ear_jwt.encode("utf-8")
+            existing_extensions.append(cx509.Extension(
+                oid=ear_oid,
+                critical=False,
+                value=cx509.UnrecognizedExtension(ear_oid, ear_value),
+            ))
 
-            new_cert_asn1, _ = asn1_decoder.decode(
-                new_cert.public_bytes(serialization.Encoding.DER),
+            if pop_proof_der is not None:
+                # Lazy import: only the dormant KeyAttestPoP path needs it
+                # (the platform-only libattest tree may not ship the module).
+                from libattest.formats.key_attest_pop import (  # noqa: PLC0415
+                    resolve_key_attest_pop_oid,
+                )
+
+                pop_oid = cx509.ObjectIdentifier(resolve_key_attest_pop_oid())
+                existing_extensions.append(cx509.Extension(
+                    oid=pop_oid,
+                    critical=False,
+                    value=cx509.UnrecognizedExtension(pop_oid, pop_proof_der),
+                ))
+
+            builder = (
+                cx509.CertificateBuilder()
+                .subject_name(x509_cert.subject)
+                .issuer_name(x509_cert.issuer)
+                .public_key(x509_cert.public_key())
+                .serial_number(x509_cert.serial_number)
+                .not_valid_before(x509_cert.not_valid_before_utc)
+                .not_valid_after(x509_cert.not_valid_after_utc)
+            )
+            for ext in existing_extensions:
+                try:
+                    builder = builder.add_extension(ext.value, critical=ext.critical)
+                except Exception:  # noqa: BLE001
+                    pass
+
+            # Re-sign with the CA key.  ca_key may be Ed25519 or another scheme;
+            # cryptography handles the dispatch internally.
+            if isinstance(ca_key, Ed25519PrivateKey):
+                rebuilt = builder.sign(private_key=ca_key, algorithm=None)
+            else:
+                rebuilt = builder.sign(private_key=ca_key, algorithm=hashes.SHA256())
+
+            # Copy the rebuilt cert back into the CMP response in place.
+            new_cmp_cert, _ = asn1_decoder.decode(
+                rebuilt.public_bytes(serialization.Encoding.DER),
                 asn1Spec=rfc9480.CMPCertificate(),
             )
-            copy_asn1_certificate(new_cert_asn1, target=cert_asn1)
-            logging.info("RatsHandler: embedded EAR JWT extension (OID %s)", EAR_EXT_OID)
-        except Exception as exc:
-            logging.error(
-                "RatsHandler: failed to embed EAR extension: %s\n%s",
-                exc,
-                traceback.format_exc(),
+            copy_asn1_certificate(new_cmp_cert, cert_choice)
+            embedded = [EAR_EXT_OID]
+            if pop_proof_der is not None:
+                from libattest.formats.key_attest_pop import (  # noqa: PLC0415
+                    resolve_key_attest_pop_oid,
+                )
+
+                embedded.append(resolve_key_attest_pop_oid())
+            logging.info(
+                "RatsHandler: embedded extension(s) on issued cert: %s",
+                ", ".join(embedded),
+            )
+        except Exception as exc:  # noqa: BLE001
+            logging.warning(
+                "RatsHandler.embed_extensions failed: %s\n%s",
+                exc, traceback.format_exc(),
             )

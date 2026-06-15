@@ -581,10 +581,8 @@ AttestationBundle: TypeAlias = csr_attest_structures.AttestationBundle
 
 
 NonceResponseASN1: TypeAlias = attest_nonce_freshness_structures.NonceResponseASN1
-NonceRequestValueASN1: TypeAlias = attest_nonce_freshness_structures.NonceRequestValueASN1
 
 NonceRequestASN1: TypeAlias = attest_nonce_freshness_structures.NonceRequestASN1
-NonceRequestValueASN1: TypeAlias = attest_nonce_freshness_structures.NonceRequestValueASN1
 
 ## Specific Remote Attestation structures
 
