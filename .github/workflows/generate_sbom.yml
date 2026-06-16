@@ -33,15 +33,12 @@ jobs:
     container:
       image: ${{ needs.prepare_env.outputs.image_url }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
       - name: Generate SBOM in CycloneDX 1.5 format
-        run: uv export --format cyclonedx1.5 --locked -o sbom.cdx.json
+        run: uv --project /app export --format cyclonedx1.5 --locked -o /tmp/sbom.cdx.json
 
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v7.0.1
         with:
           name: sbom-cdx
-          path: sbom.cdx.json
+          path: /tmp/sbom.cdx.json
           retention-days: 30
