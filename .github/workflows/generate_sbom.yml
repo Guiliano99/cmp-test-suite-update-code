@@ -34,10 +34,7 @@ jobs:
       image: ${{ needs.prepare_env.outputs.image_url }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6.0.3
-
-      - name: Ensure lockfile is up to date
-        run: uv lock
+        uses: actions/checkout@v6
 
       - name: Generate SBOM in CycloneDX 1.5 format
         run: uv export --format cyclonedx1.5 --locked -o sbom.cdx.json
