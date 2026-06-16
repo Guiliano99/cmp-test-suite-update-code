@@ -8,7 +8,13 @@ on:
   push:
     branches:
       - main
+    paths:
+      - pyproject.toml
+      - .github/workflows/generate_sbom.yml
   pull_request:
+    paths:
+      - pyproject.toml
+      - .github/workflows/generate_sbom.yml
   workflow_dispatch:
 
 jobs:
