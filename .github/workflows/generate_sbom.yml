@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: Copyright 2025 Siemens AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Generate SBOM
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  # Generate a docker image URL where all the characters are lower-case, for situations where an external contributor
+  # has a username that begins with a capital letter. This is a limitation of GHCR, which only allows lower-case
+  # characters. Subsequent jobs use this URL.
+  prepare_env:
+    runs-on: ubuntu-24.04
+    outputs:
+      image_url: ${{ steps.setenv.outputs.image_url }}
+    steps:
+      - name: Set lowercase image name
+        id: setenv
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "image_url=ghcr.io/${OWNER_LC}/cmp-test-dev:latest" >> $GITHUB_OUTPUT
+
+  generate_sbom:
+    needs: prepare_env
+    name: Generate CycloneDX SBOM
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ needs.prepare_env.outputs.image_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.3
+
+      - name: Ensure lockfile is up to date
+        run: uv lock --locked
+
+      - name: Generate SBOM in CycloneDX 1.5 format
+        run: uv export --format cyclonedx1.5 --locked -o sbom.cdx.json
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: sbom-cdx
+          path: sbom.cdx.json
+          retention-days: 30
