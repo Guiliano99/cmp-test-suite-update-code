@@ -2,8 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+# Generates a CycloneDX SBOM from the locked dependencies and publishes it so it
+# can always be fetched for analysis: on push to main the SBOM is committed back
+# to the repository, and on a published release it is attached as a release asset.
+
 name: Generate SBOM
 
+# Triggered when the dependencies (pyproject.toml) or this workflow change, on
+# every published release, and manually.
 on:
   push:
     branches:
@@ -15,7 +21,18 @@ on:
     paths:
       - pyproject.toml
       - .github/workflows/generate_sbom.yml
+  release:
+    types: [published]
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Serialize runs per ref so two commits to main can't race their git push.
+# Releases and PRs use separate groups; a run is never cancelled mid push.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   # Generate a docker image URL where all the characters are lower-case, for situations where an external contributor
@@ -28,9 +45,12 @@ jobs:
     steps:
       - name: Set lowercase image name
         id: setenv
+        # Pass via env, not inline ${{ }}, so the value can't be parsed as shell.
+        env:
+          REPO_OWNER: ${{ github.repository_owner }}
         run: |
-          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "image_url=ghcr.io/${OWNER_LC}/cmp-test-dev:latest" >> $GITHUB_OUTPUT
+          OWNER_LC=$(echo "$REPO_OWNER" | tr '[:upper:]' '[:lower:]')
+          echo "image_url=ghcr.io/${OWNER_LC}/cmp-test-dev:latest" >> "$GITHUB_OUTPUT"
 
   generate_sbom:
     needs: prepare_env
@@ -39,12 +59,76 @@ jobs:
     container:
       image: ${{ needs.prepare_env.outputs.image_url }}
     steps:
+      - uses: actions/checkout@v6.0.3
+        with:
+          # Read-only job: don't leave the token in git config for later steps.
+          persist-credentials: false
+
       - name: Generate SBOM in CycloneDX 1.5 format
-        run: uv --project /app export --format cyclonedx1.5 --locked -o /tmp/sbom.cdx.json
+        run: uv --project "$GITHUB_WORKSPACE" export --format cyclonedx1.5 --locked -o "$GITHUB_WORKSPACE/sbom.cdx.json"
 
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v7.0.1
         with:
           name: sbom-cdx
-          path: /tmp/sbom.cdx.json
+          path: ${{ github.workspace }}/sbom.cdx.json
           retention-days: 30
+
+  # Only on direct pushes to main, never from PRs/forks (which get a read-only
+  # token), so the committed-back SBOM always reflects merged dependencies.
+  commit_sbom:
+    needs: generate_sbom
+    name: Commit SBOM to main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6.0.3
+        with:
+          ref: main
+
+      - name: Download SBOM artifact
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: sbom-cdx
+          path: .
+
+      - name: Commit and push updated SBOM
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sbom.cdx.json
+          if git diff --staged --quiet; then
+            echo "SBOM unchanged, nothing to commit"
+          else
+            # [skip ci] keeps the bot commit from re-triggering CI.
+            git commit -m "chore: update SBOM [skip ci]"
+            # Rebase in case main advanced since checkout; only this job edits
+            # the SBOM, so the rebase can't conflict.
+            git pull --rebase origin main
+            git push
+          fi
+
+  # Only on published releases; attaches the SBOM to that release's assets.
+  release_sbom:
+    needs: generate_sbom
+    name: Attach SBOM to release
+    if: github.event_name == 'release'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download SBOM artifact
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: sbom-cdx
+          path: .
+
+      - name: Upload SBOM to GitHub release
+        # Pass the tag via env, not inline ${{ }}, to avoid shell injection;
+        # --clobber lets re-runs replace the asset instead of failing.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" sbom.cdx.json --clobber --repo "$GITHUB_REPOSITORY"
