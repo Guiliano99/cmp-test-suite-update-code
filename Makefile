@@ -18,6 +18,7 @@ help:
 	@echo  '  verify  - Run a bunch of checks, to see if there are any obvious deficiencies in the code '
 	@echo  '  verifyformat   -  Check formatting only '
 	@echo  '  show-outdated - Show outdated packages (depth 1)'
+	@echo  '  sbom    - Generate Software Bill of Materials (SBOM) in CycloneDX 1.5 format'
 	@echo  '  start-mock-ca   -  Start the mock CA server, so that it can listens to requests '
 	@echo  '  test-mock-ca   -  Run the test against the mock CA server '
 	@echo  '  test-mock-ca-verbose   -  Run all tests against the mock CA server '
@@ -107,6 +108,12 @@ verifyformat:
 
 show-outdated:
 	uv tree --outdated --depth 1
+
+sbom:
+	uv sync --all-extras
+	uv lock --locked
+	uv export --format cyclonedx1.5 --locked -o sbom.cdx.json
+	@echo "SBOM generated: sbom.cdx.json"
 
 dryrun:
 	robot --dryrun --pythonpath=./ --variable environment:$(env) tests tests_pq_and_hybrid  tests_mock_ca
