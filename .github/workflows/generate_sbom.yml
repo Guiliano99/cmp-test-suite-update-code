@@ -65,7 +65,12 @@ jobs:
           persist-credentials: false
 
       - name: Generate SBOM in CycloneDX 1.5 format
-        run: uv --project "$GITHUB_WORKSPACE" export --format cyclonedx1.5 --locked -o "$GITHUB_WORKSPACE/sbom.cdx.json"
+        # The container image already resolves and locks the dependencies at build
+        # time (data/dockerfiles/Dockerfile.dev: `WORKDIR /app` + `uv sync`, which
+        # writes /app/uv.lock). The checked-out workspace has no committed uv.lock,
+        # so point --project at /app to reuse the image's lockfile. Output still
+        # goes to the workspace so the upload-artifact step can find it.
+        run: uv --project /app export --format cyclonedx1.5 --locked -o "$GITHUB_WORKSPACE/sbom.cdx.json"
 
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@v7.0.1
