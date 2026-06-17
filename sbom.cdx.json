@@ -1,0 +1,490 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "version": 1,
+  "serialNumber": "urn:uuid:753ea5e3-53e0-4a96-833a-5d327c83ec4a",
+  "metadata": {
+    "timestamp": "2026-06-17T14:47:58.158382213Z",
+    "tools": [
+      {
+        "vendor": "Astral Software Inc.",
+        "name": "uv",
+        "version": "0.11.21"
+      }
+    ],
+    "component": {
+      "type": "library",
+      "bom-ref": "cmp-test-suite-1@0.0.2",
+      "name": "cmp-test-suite",
+      "version": "0.0.2",
+      "properties": [
+        {
+          "name": "uv:package:is_project_root",
+          "value": "true"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "bitarray-2@3.8.1",
+      "name": "bitarray",
+      "version": "3.8.1",
+      "purl": "pkg:pypi/bitarray@3.8.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "bitstring-3@4.4.0",
+      "name": "bitstring",
+      "version": "4.4.0",
+      "purl": "pkg:pypi/bitstring@4.4.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "blinker-4@1.9.0",
+      "name": "blinker",
+      "version": "1.9.0",
+      "purl": "pkg:pypi/blinker@1.9.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "certifi-5@2026.5.20",
+      "name": "certifi",
+      "version": "2026.5.20",
+      "purl": "pkg:pypi/certifi@2026.5.20"
+    },
+    {
+      "type": "library",
+      "bom-ref": "cffi-6@2.0.0",
+      "name": "cffi",
+      "version": "2.0.0",
+      "purl": "pkg:pypi/cffi@2.0.0",
+      "properties": [
+        {
+          "name": "uv:package:marker",
+          "value": "platform_python_implementation != 'PyPy'"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "charset-normalizer-7@3.4.7",
+      "name": "charset-normalizer",
+      "version": "3.4.7",
+      "purl": "pkg:pypi/charset-normalizer@3.4.7"
+    },
+    {
+      "type": "library",
+      "bom-ref": "click-8@8.4.1",
+      "name": "click",
+      "version": "8.4.1",
+      "purl": "pkg:pypi/click@8.4.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "colorama-9@0.4.6",
+      "name": "colorama",
+      "version": "0.4.6",
+      "purl": "pkg:pypi/colorama@0.4.6",
+      "properties": [
+        {
+          "name": "uv:package:marker",
+          "value": "sys_platform == 'win32'"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "cryptography-10@48.0.1",
+      "name": "cryptography",
+      "version": "48.0.1",
+      "purl": "pkg:pypi/cryptography@48.0.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "flask-11@3.1.3",
+      "name": "flask",
+      "version": "3.1.3",
+      "purl": "pkg:pypi/flask@3.1.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "idna-12@3.18",
+      "name": "idna",
+      "version": "3.18",
+      "purl": "pkg:pypi/idna@3.18"
+    },
+    {
+      "type": "library",
+      "bom-ref": "iso3166-13@2.1.1",
+      "name": "iso3166",
+      "version": "2.1.1",
+      "purl": "pkg:pypi/iso3166@2.1.1"
+    },
+    {
+      "type": "library",
+      "bom-ref": "iso4217-14@1.16.20260101",
+      "name": "iso4217",
+      "version": "1.16.20260101",
+      "purl": "pkg:pypi/iso4217@1.16.20260101"
+    },
+    {
+      "type": "library",
+      "bom-ref": "itsdangerous-15@2.2.0",
+      "name": "itsdangerous",
+      "version": "2.2.0",
+      "purl": "pkg:pypi/itsdangerous@2.2.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "jinja2-16@3.1.6",
+      "name": "jinja2",
+      "version": "3.1.6",
+      "purl": "pkg:pypi/jinja2@3.1.6"
+    },
+    {
+      "type": "library",
+      "bom-ref": "keyutils-py-17@0.0.1",
+      "name": "keyutils-py",
+      "version": "0.0.1",
+      "purl": "pkg:pypi/keyutils-py@0.0.1?vcs_url=https://github.com/Guiliano99/keyutils-py.git%23d731e9540148372f28d4abbe6c4b9243131e2629"
+    },
+    {
+      "type": "library",
+      "bom-ref": "markupsafe-18@3.0.3",
+      "name": "markupsafe",
+      "version": "3.0.3",
+      "purl": "pkg:pypi/markupsafe@3.0.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pkilint-19@0.13.3",
+      "name": "pkilint",
+      "version": "0.13.3",
+      "purl": "pkg:pypi/pkilint@0.13.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "publicsuffixlist-20@1.0.2.20260615",
+      "name": "publicsuffixlist",
+      "version": "1.0.2.20260615",
+      "purl": "pkg:pypi/publicsuffixlist@1.0.2.20260615"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pyasn1-21@0.6.3",
+      "name": "pyasn1",
+      "version": "0.6.3",
+      "purl": "pkg:pypi/pyasn1@0.6.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pyasn1-alt-modules-22@0.4.10",
+      "name": "pyasn1-alt-modules",
+      "version": "0.4.10",
+      "purl": "pkg:pypi/pyasn1-alt-modules@0.4.10"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pyasn1-fasder-23@0.1.3",
+      "name": "pyasn1-fasder",
+      "version": "0.1.3",
+      "purl": "pkg:pypi/pyasn1-fasder@0.1.3"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pycparser-24@3.0",
+      "name": "pycparser",
+      "version": "3.0",
+      "purl": "pkg:pypi/pycparser@3.0",
+      "properties": [
+        {
+          "name": "uv:package:marker",
+          "value": "implementation_name != 'PyPy' and platform_python_implementation != 'PyPy'"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "pycryptodome-25@3.23.0",
+      "name": "pycryptodome",
+      "version": "3.23.0",
+      "purl": "pkg:pypi/pycryptodome@3.23.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "pyhsslms-26@2.0.0",
+      "name": "pyhsslms",
+      "version": "2.0.0",
+      "purl": "pkg:pypi/pyhsslms@2.0.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "python-dateutil-27@2.9.0.post0",
+      "name": "python-dateutil",
+      "version": "2.9.0.post0",
+      "purl": "pkg:pypi/python-dateutil@2.9.0.post0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "python-iso639-28@2026.4.20",
+      "name": "python-iso639",
+      "version": "2026.4.20",
+      "purl": "pkg:pypi/python-iso639@2026.4.20"
+    },
+    {
+      "type": "library",
+      "bom-ref": "requests-29@2.34.2",
+      "name": "requests",
+      "version": "2.34.2",
+      "purl": "pkg:pypi/requests@2.34.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "robotframework-30@7.4.2",
+      "name": "robotframework",
+      "version": "7.4.2",
+      "purl": "pkg:pypi/robotframework@7.4.2"
+    },
+    {
+      "type": "library",
+      "bom-ref": "robotframework-requests-31@0.9.7",
+      "name": "robotframework-requests",
+      "version": "0.9.7",
+      "purl": "pkg:pypi/robotframework-requests@0.9.7"
+    },
+    {
+      "type": "library",
+      "bom-ref": "six-32@1.17.0",
+      "name": "six",
+      "version": "1.17.0",
+      "purl": "pkg:pypi/six@1.17.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "tibs-33@0.5.7",
+      "name": "tibs",
+      "version": "0.5.7",
+      "purl": "pkg:pypi/tibs@0.5.7"
+    },
+    {
+      "type": "library",
+      "bom-ref": "tinyec-34@0.4.0",
+      "name": "tinyec",
+      "version": "0.4.0",
+      "purl": "pkg:pypi/tinyec@0.4.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "urllib3-35@2.7.0",
+      "name": "urllib3",
+      "version": "2.7.0",
+      "purl": "pkg:pypi/urllib3@2.7.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "validators-36@0.22.0",
+      "name": "validators",
+      "version": "0.22.0",
+      "purl": "pkg:pypi/validators@0.22.0"
+    },
+    {
+      "type": "library",
+      "bom-ref": "werkzeug-37@3.1.8",
+      "name": "werkzeug",
+      "version": "3.1.8",
+      "purl": "pkg:pypi/werkzeug@3.1.8"
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "bitarray-2@3.8.1"
+    },
+    {
+      "ref": "bitstring-3@4.4.0",
+      "dependsOn": [
+        "bitarray-2@3.8.1",
+        "tibs-33@0.5.7"
+      ]
+    },
+    {
+      "ref": "blinker-4@1.9.0"
+    },
+    {
+      "ref": "certifi-5@2026.5.20"
+    },
+    {
+      "ref": "cffi-6@2.0.0",
+      "dependsOn": [
+        "pycparser-24@3.0"
+      ]
+    },
+    {
+      "ref": "charset-normalizer-7@3.4.7"
+    },
+    {
+      "ref": "click-8@8.4.1",
+      "dependsOn": [
+        "colorama-9@0.4.6"
+      ]
+    },
+    {
+      "ref": "cmp-test-suite-1@0.0.2",
+      "dependsOn": [
+        "flask-11@3.1.3",
+        "jinja2-16@3.1.6",
+        "keyutils-py-17@0.0.1",
+        "pkilint-19@0.13.3",
+        "pyasn1-21@0.6.3",
+        "pyasn1-alt-modules-22@0.4.10",
+        "robotframework-30@7.4.2",
+        "robotframework-requests-31@0.9.7"
+      ]
+    },
+    {
+      "ref": "colorama-9@0.4.6"
+    },
+    {
+      "ref": "cryptography-10@48.0.1",
+      "dependsOn": [
+        "cffi-6@2.0.0"
+      ]
+    },
+    {
+      "ref": "flask-11@3.1.3",
+      "dependsOn": [
+        "blinker-4@1.9.0",
+        "click-8@8.4.1",
+        "itsdangerous-15@2.2.0",
+        "jinja2-16@3.1.6",
+        "markupsafe-18@3.0.3",
+        "werkzeug-37@3.1.8"
+      ]
+    },
+    {
+      "ref": "idna-12@3.18"
+    },
+    {
+      "ref": "iso3166-13@2.1.1"
+    },
+    {
+      "ref": "iso4217-14@1.16.20260101"
+    },
+    {
+      "ref": "itsdangerous-15@2.2.0"
+    },
+    {
+      "ref": "jinja2-16@3.1.6",
+      "dependsOn": [
+        "markupsafe-18@3.0.3"
+      ]
+    },
+    {
+      "ref": "keyutils-py-17@0.0.1",
+      "dependsOn": [
+        "bitstring-3@4.4.0",
+        "cryptography-10@48.0.1",
+        "pyasn1-21@0.6.3",
+        "pyasn1-alt-modules-22@0.4.10",
+        "pycryptodome-25@3.23.0",
+        "pyhsslms-26@2.0.0",
+        "tinyec-34@0.4.0"
+      ]
+    },
+    {
+      "ref": "markupsafe-18@3.0.3"
+    },
+    {
+      "ref": "pkilint-19@0.13.3",
+      "dependsOn": [
+        "cryptography-10@48.0.1",
+        "iso3166-13@2.1.1",
+        "iso4217-14@1.16.20260101",
+        "publicsuffixlist-20@1.0.2.20260615",
+        "pyasn1-21@0.6.3",
+        "pyasn1-alt-modules-22@0.4.10",
+        "pyasn1-fasder-23@0.1.3",
+        "python-dateutil-27@2.9.0.post0",
+        "python-iso639-28@2026.4.20",
+        "validators-36@0.22.0"
+      ]
+    },
+    {
+      "ref": "publicsuffixlist-20@1.0.2.20260615"
+    },
+    {
+      "ref": "pyasn1-21@0.6.3"
+    },
+    {
+      "ref": "pyasn1-alt-modules-22@0.4.10",
+      "dependsOn": [
+        "pyasn1-21@0.6.3"
+      ]
+    },
+    {
+      "ref": "pyasn1-fasder-23@0.1.3",
+      "dependsOn": [
+        "pyasn1-21@0.6.3"
+      ]
+    },
+    {
+      "ref": "pycparser-24@3.0"
+    },
+    {
+      "ref": "pycryptodome-25@3.23.0"
+    },
+    {
+      "ref": "pyhsslms-26@2.0.0"
+    },
+    {
+      "ref": "python-dateutil-27@2.9.0.post0",
+      "dependsOn": [
+        "six-32@1.17.0"
+      ]
+    },
+    {
+      "ref": "python-iso639-28@2026.4.20"
+    },
+    {
+      "ref": "requests-29@2.34.2",
+      "dependsOn": [
+        "certifi-5@2026.5.20",
+        "charset-normalizer-7@3.4.7",
+        "idna-12@3.18",
+        "urllib3-35@2.7.0"
+      ]
+    },
+    {
+      "ref": "robotframework-30@7.4.2"
+    },
+    {
+      "ref": "robotframework-requests-31@0.9.7",
+      "dependsOn": [
+        "requests-29@2.34.2",
+        "robotframework-30@7.4.2"
+      ]
+    },
+    {
+      "ref": "six-32@1.17.0"
+    },
+    {
+      "ref": "tibs-33@0.5.7"
+    },
+    {
+      "ref": "tinyec-34@0.4.0"
+    },
+    {
+      "ref": "urllib3-35@2.7.0"
+    },
+    {
+      "ref": "validators-36@0.22.0"
+    },
+    {
+      "ref": "werkzeug-37@3.1.8",
+      "dependsOn": [
+        "markupsafe-18@3.0.3"
+      ]
+    }
+  ]
+}
