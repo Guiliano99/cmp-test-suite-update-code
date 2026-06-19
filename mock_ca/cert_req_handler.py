@@ -397,7 +397,11 @@ class CertReqHandler:
 
         if ear_jwt is not None:
             self.rats_handler.embed_extensions(
-                response, ear_jwt, self.ca_key, pop_proof_der=pop_proof_der
+                response,
+                ear_jwt,
+                self.ca_key,
+                pop_proof_der=pop_proof_der,
+                encode_ear_extension=self.rats_handler._ear_encoder_for(pki_message),
             )
 
         return self.process_after_request(
@@ -467,7 +471,11 @@ class CertReqHandler:
 
         if ear_jwt is not None:
             self.rats_handler.embed_extensions(
-                response, ear_jwt, self.ca_key, pop_proof_der=pop_proof_der
+                response,
+                ear_jwt,
+                self.ca_key,
+                pop_proof_der=pop_proof_der,
+                encode_ear_extension=self.rats_handler._ear_encoder_for(pki_message),
             )
 
         return self.process_after_request(
@@ -516,7 +524,12 @@ class CertReqHandler:
         )
 
         if ear_jwt is not None:
-            self.rats_handler.embed_ear_extension(response, ear_jwt, self.ca_key)
+            self.rats_handler.embed_ear_extension(
+                response,
+                ear_jwt,
+                self.ca_key,
+                encode_ear_extension=self.rats_handler._ear_encoder_for(pki_message),
+            )
 
         return self.process_after_request(
             request=pki_message,
@@ -594,7 +607,12 @@ class CertReqHandler:
             )
 
         if ear_jwt is not None:
-            self.rats_handler.embed_ear_extension(response, ear_jwt, self.ca_key)
+            self.rats_handler.embed_ear_extension(
+                response,
+                ear_jwt,
+                self.ca_key,
+                encode_ear_extension=self.rats_handler._ear_encoder_for(pki_message),
+            )
 
         return self.process_after_request(
             request=pki_message,
