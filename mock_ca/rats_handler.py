@@ -190,7 +190,10 @@ class RatsHandler:
 
         if not outcome.accepted:
             failure = outcome.first_failure
-            reason = failure.reason if failure is not None else "no statements verified"
+            if failure is not None:
+                reason = "; ".join(failure.errors) or failure.status.value
+            else:
+                reason = "no statements verified"
             raise BadMessageCheck(
                 f"RatsHandler: bundle verification rejected for tx={tx_id.hex()}: {reason}"
             )
