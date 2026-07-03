@@ -1143,13 +1143,14 @@ def get_certificates_from_signed_data(certificates: rfc5652.CertificateSet) -> L
 
 
 def _validate_signature_and_algorithm_in_signed_data(
-    data: dict, asym_key_package_bytes: bytes, encap_content_info_data: bytes, kga_certificate: rfc9480.CMPCertificate
+    data: dict, asym_key_package_bytes: bytes, signed_attrs_der: bytes, kga_certificate: rfc9480.CMPCertificate
 ) -> None:
     """Validate the signature and algorithm in the SignedData structure.
 
     :param data: A dictionary containing signature data extracted from the SignerInfo.
     :param asym_key_package_bytes: The bytes of the AsymmetricKeyPackage used for digest comparison.
-    :param encap_content_info_data: The encoded EncapsulatedContentInfo data.
+    :param signed_attrs_der: The DER-encoded `SignedAttributes` (as SET OF), which the signature
+    is computed over, as defined in RFC 5652 Section 5.4.
     :param kga_certificate: The KGA certificate used to verify the signature.
     :raises ValueError: If the digest does not match or signature verification fails.
     """
@@ -1164,10 +1165,10 @@ def _validate_signature_and_algorithm_in_signed_data(
         logging.info("Newly calculated digest with %s: %s", hash_alg, digest.hex())
         raise ValueError("The digest of the eContent is different!")
 
-    logging.info("Hash algorithm used for signing the `encapContentInfo`: %s", hash_alg)
-    logging.info("Signature of `encapContentInfo`: %s", signature.hex())
+    logging.info("Hash algorithm used for signing the `SignedAttributes`: %s", hash_alg)
+    logging.info("Signature of the `SignedAttributes`: %s", signature.hex())
     certutils.verify_signature_with_cert(
-        signature=signature, asn1cert=kga_certificate, data=encap_content_info_data, hash_alg=hash_alg
+        signature=signature, asn1cert=kga_certificate, data=signed_attrs_der, hash_alg=hash_alg
     )
 
 
@@ -1224,18 +1225,18 @@ def validate_signed_data_structure(
         signed_data["signerInfos"], dig_alg_id, kga_certificate=kga_certificate, expected_digests=expected_size
     )
 
-    encap_content_info_data = encoder.encode(signed_data["encapContentInfo"])
+    signed_attrs_der = data["signed_attrs_der"]
 
     _validate_signature_and_algorithm_in_signed_data(
         data=data,
         asym_key_package_bytes=asym_key_package_bytes,
-        encap_content_info_data=encap_content_info_data,
+        signed_attrs_der=signed_attrs_der,
         kga_certificate=kga_certificate,
     )
 
     _validate_kga_certificate(
         certs=certs,
-        asym_key_package_bytes=encap_content_info_data,
+        signed_attrs_der=signed_attrs_der,
         signature=data["signature"],
         hash_alg=get_hash_from_oid(data["signatureAlgorithm"]["algorithm"], only_hash=True),
         trustanchors=trustanchors,
@@ -1261,7 +1262,7 @@ def _check_is_hybrid_or_pq_sig_alg_cert_chain(certs: List[rfc9480.CMPCertificate
 
 def _validate_kga_certificate(
     certs: List[rfc9480.CMPCertificate],
-    asym_key_package_bytes: bytes,
+    signed_attrs_der: bytes,
     signature: bytes,
     hash_alg: Optional[str],
     trustanchors: str,
@@ -1269,7 +1270,8 @@ def _validate_kga_certificate(
     """Validate the Key Generation Authority (KGA) certificate chain.
 
     :param certs: A list of certificates from the `SignedData` structure.
-    :param asym_key_package_bytes: The bytes of the `AsymmetricKeyPackage` used for signature validation.
+    :param signed_attrs_der: The DER-encoded `SignedAttributes` (as SET OF), which the signature
+    is computed over, used to find the signing certificate.
     :param signature: The signature applied to the `SignedData` content.
     :param hash_alg: The hash algorithm used to compute the signature, if necessary.
     :param trustanchors: The path to the directory where the trust anchors are saved.
@@ -1296,7 +1298,7 @@ def _validate_kga_certificate(
 
         certutils.verify_cert_chain_openssl(cert_chain=certs)
         signer_cert_index = checkutils.find_right_cert_pos(
-            certs, asym_key_package_bytes, signature=signature, hash_alg=hash_alg
+            certs, signed_attrs_der, signature=signature, hash_alg=hash_alg
         )
         if signer_cert_index == -1:
             raise ValueError(
@@ -1329,7 +1331,8 @@ def check_signer_infos(
     :param kga_certificate: The CMP certificate of the Key Generation Authority (KGA).
     :param expected_digests: The expected number of digests inside the `SignedAttributes` structure.
     :param key_index: The index of the key to extract the necessary information from the `signerInfos` structure.
-    :return: A dictionary containing the message digest (`digest_eContent`), the signature algorithm, and the signature.
+    :return: A dictionary containing the message digest (`digest_eContent`), the signature algorithm, the signature,
+             and the DER-encoded `SignedAttributes` (`signed_attrs_der`), which the signature is computed over.
     :raises ValueError: If validation fails due to incorrect signer information,
                         signature absence, or algorithm mismatch.
     """
@@ -1366,12 +1369,17 @@ def check_signer_infos(
             f"KGA certificate OID as signature algorithm: {may_return_oid_to_name(alg)}"
         )
 
-    # Must be the digital signature of the encapContentInfo
+    # Must be the digital signature of the DER-encoded `SignedAttributes` (RFC 5652 Section 5.4).
     if not signer_info["signature"].isValue:
         raise ValueError("The `signature` field was absent!")
 
     signature = signer_info["signature"].asOctets()
-    return {"digest_eContent": message_digest_value, "signatureAlgorithm": sig_alg_id, "signature": signature}
+    return {
+        "digest_eContent": message_digest_value,
+        "signatureAlgorithm": sig_alg_id,
+        "signature": signature,
+        "signed_attrs_der": asn1utils.encode_signed_attrs(sign_attr),
+    }
 
 
 def _is_signature_alg_id(alg_id: rfc5652.SignatureAlgorithmIdentifier) -> None:
@@ -1400,7 +1408,7 @@ def validate_signature_and_digest_alg(
 ) -> None:
     """Ensure that the same hash algorithm is used.
 
-    :param sig_alg_id: The signature algorithm identifier used for the `encapContentInfo` signature.
+    :param sig_alg_id: The signature algorithm identifier used for the `SignedData` signature.
     :param digest_alg_id: The digest algorithm identifier used to calculate the digest of the eContent.
     :param dig_alg_id_enc_content: The digest algorithm identifier from the encapsulated content.
     :raises ValueError: If the algorithms do not match or are not as expected.
@@ -1467,7 +1475,8 @@ def validate_signed_attributes(sign_attr: rfc5652.SignedAttributes, expected_dig
                 raise ValueError("The `id-messageDigest` `attrValues` must contain exactly one value!")
 
             val = attr["attrValues"][index]
-            message_digest_value, _ = decoder.decode(val, rfc5652.MessageDigest())
+            message_digest, _ = decoder.decode(val, rfc5652.MessageDigest())
+            message_digest_value = message_digest.asOctets()
 
     if message_digest_value is None:
         raise ValueError("The `id-messageDigest` attribute was not found in the `SignedAttributes` structure!")

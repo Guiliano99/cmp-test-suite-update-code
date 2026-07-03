@@ -733,6 +733,23 @@ def encode_to_der(  # noqa D417 undocumented-param
 
 
 @not_keyword
+def encode_signed_attrs(signed_attrs: base.Asn1Item) -> bytes:
+    """Encode the CMS `SignedAttributes` for signature computation, as defined in RFC 5652 Section 5.4.
+
+    The message digest calculation and the signature are computed over the complete DER encoding
+    of the `SignedAttrs` value, using the EXPLICIT SET OF tag instead of the IMPLICIT [0] tag,
+    which is used inside the `SignerInfo` structure.
+
+    :param signed_attrs: The `SignedAttributes` structure from a `SignerInfo` structure.
+    :return: The DER-encoded `SignedAttributes` with the SET OF tag.
+    """
+    der_data = encoder.encode(signed_attrs)
+    # Only the tag octet differs between the IMPLICIT [0] and the SET OF encoding;
+    # the length and content octets are identical.
+    return b"\x31" + der_data[1:]
+
+
+@not_keyword
 def try_decode_pyasn1(
     data: Union[bytes, univ.Any, univ.OctetString], asn1_spec: Asn1Type, for_nested: bool = False, verbose: bool = False
 ) -> Tuple[Asn1Item, bytes]:

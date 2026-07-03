@@ -511,11 +511,10 @@ def prepare_signer_info(  # noqa D417 undocumented-param
     signer_info["signedAttrs"] = prepare_signed_attributes(message_digest)
     signer_info["sid"] = prepare_signer_identifier(cert)
 
-    # Generate signature over the signed attributes
-    encap_content_info = prepare_encapsulated_content_info(e_content)
-    der_encap_content_info = encoder.encode(encap_content_info)
+    # Generate signature over the signed attributes, as defined in RFC 5652 Section 5.4.
+    signed_attrs_der = asn1utils.encode_signed_attrs(signer_info["signedAttrs"])
 
-    signature = cryptoutils.sign_data(data=der_encap_content_info, key=signing_key, hash_alg=sig_hash_name)
+    signature = cryptoutils.sign_data(data=signed_attrs_der, key=signing_key, hash_alg=sig_hash_name)
     signature += b"" if not bad_sig else b"AA"
     signer_info["signature"] = univ.OctetString(signature)
 
