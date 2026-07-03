@@ -4,6 +4,8 @@
 
 """Client test logic for CMP operations."""
 
+import shlex
+
 from jinja2 import Template
 from robot.api.deco import keyword
 
@@ -15,23 +17,35 @@ openssl cmp
  -server {{ server }}
  -subject {{ subject }}
  -secret {{ secret }}
- -ref {{ ref | default('NULL-DN') }}
-{% if recipient %}-recipient {{ recipient }}{% endif %}
+{% if ref %}-ref {{ ref }}{% endif %}
+{% if recipient %}-recipient "{{ recipient }}"{% endif %}
 {% if csr %}-csr {{ csr }}{% endif %}
 {% if newkey %}-newkey {{ newkey }}{% endif %}
 {% if certout %}-certout {{ certout }}{% endif %}
+{% if implicit_confirm %}-implicit_confirm{% endif %}
 {% if unprotected_requests %}-unprotected_requests{% endif %}
 """
 
+# The genCMPClient CLI (https://github.com/siemens/gencmpclient), built as `cmpClient`.
+# `-config ""` disables loading its default config file, so that all options
+# are given explicitly on the command line and the tests are self-contained.
+# `-unprotected_errors` lets the client accept and report CMP error messages
+# that it cannot authenticate (e.g., on wrong-secret or unprotected requests).
 gencmpclient = """
-gencmpclient  {{ cmd }}
- --server {{ server }}
- --ref {{ ref }}
- --subject "{{ subject }}"
- --secret "{{ secret }}"
- {% if csr %}--csr {{ csr }}{% endif %}
- {% if newkey %}--newkey {{ newkey }}{% endif %}
- {% if certout %}--certout {{ certout }}{% endif %}
+{{ bin | default('../../gencmpclient/cmpClient') }}
+ -config ""
+ -cmd {{ cmd }}
+ -server {{ server }}
+{% if ref %} -ref {{ ref }}{% endif %}
+{% if subject %} -subject {{ subject }}{% endif %}
+{% if secret %} -secret {{ secret }}{% endif %}
+{% if recipient %} -recipient "{{ recipient }}"{% endif %}
+{% if csr %} -csr {{ csr }}{% endif %}
+{% if newkey %} -newkey {{ newkey }}{% endif %}
+{% if certout %} -certout {{ certout }}{% endif %}
+{% if implicit_confirm %} -implicit_confirm{% endif %}
+ -unprotected_errors
+{% if unprotected_requests %} -unprotected_requests{% endif %}
 """
 
 embedded_cmp = """
@@ -66,4 +80,4 @@ def get_cmp_command(client: str = "openssl", **kwargs) -> list:  # noqa: D417
         raise ValueError(f"Unsupported CMP client: {client}") from e
 
     rendered = template.render(**kwargs)
-    return rendered.strip().split()
+    return shlex.split(rendered)
