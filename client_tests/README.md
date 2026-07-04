@@ -52,3 +52,31 @@ CMP implementations.
         {% if unprotected_requests %}-unprotected_requests{% endif %}
         """
    ```
+
+## gencmpclient-rs
+
+A ready-made command template for the Rust reference client
+[`gencmpclient-rs`](https://github.com/Guiliano99/gencmpclient-rs) is included
+(`gencmpclient_rs` in `cmp_client.py`).
+
+1. Build the client (`cargo build --release` in the `gencmpclient-rs` checkout).
+2. Tell the suite where the binary is (defaults to
+   `../../gencmpclient-rs/target/release/gencmpclient-rs` relative to
+   `client_tests/`):
+   ```bash
+   export GENCMPCLIENT_RS_BIN=/path/to/gencmpclient-rs/target/release/gencmpclient-rs
+   ```
+3. Start the Mock CA and run the suite selecting the Rust client. `kur`/`rr` are
+   stubbed in the client, so disable those positive tests:
+   ```bash
+   python3 mock_ca/ca_handler.py            # freshly started
+   cd client_tests
+   robot --variable CMP_CLIENT:gencmpclient_rs \
+         --variable CLIENT_SUPPORTS_KUR:False \
+         --variable CLIENT_SUPPORTS_RR:False \
+         cmp_tests_jinja.robot
+   ```
+
+The `${CLIENT_SUPPORTS_KUR}` / `${CLIENT_SUPPORTS_RR}` variables gate the positive
+key-update / revocation tests; set them to `True` for a client that implements
+those commands.

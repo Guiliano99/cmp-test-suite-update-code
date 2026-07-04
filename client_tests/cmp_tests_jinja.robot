@@ -23,11 +23,19 @@ ${CERT_OUT}         certs/received_cert.pem
 
 # CMP Commands - Adapt these for you cmp client, default is OpenSSL
 # CMP_CLIENT variable is always called first in the cli command
-${CMP_CLIENT}    openssl 
+${CMP_CLIENT}    openssl
 ${INITIATION_REQUEST}      ir
 ${CERTIFICATION_REQUEST}   p10cr
+${CR_REQUEST}              cr
 ${KEY_UPDATE_REQUEST}      kur
-${REVOCATION_REQUEST}      rr  
+${REVOCATION_REQUEST}      rr
+
+# Client capability flags gating the positive KUR/RR tests. They default to False
+# because neither the minimal OpenSSL command template nor gencmpclient-rs wire up
+# full key-update / revocation enrolment here. A client that supports them opts in:
+#     robot --variable CLIENT_SUPPORTS_KUR:True --variable CLIENT_SUPPORTS_RR:True ...
+${CLIENT_SUPPORTS_KUR}     ${FALSE}
+${CLIENT_SUPPORTS_RR}      ${FALSE}
 
 *** Keywords ***
 Ensure Environment Clean
@@ -169,5 +177,130 @@ P10CR 03 - Valid P10CR With CSR Should Pass
     Run Process    @{args}    stdout=PIPE    stderr=STDOUT    alias=cmp_run
     ${output}=    Wait For Process    cmp_run
     LOG    CMP Request Output: ${output.stdout}
-    Should Be Equal As Integers  ${output.rc}    0  
+    Should Be Equal As Integers  ${output.rc}    0
     Should Not Contain    ${output.stdout.lower()}    error
+
+# === Additional IR Test ===
+IR 03 - Issued Certificate Is A Parseable Certificate
+    [Documentation]    According to RFC 9483 Section 4.1.1, a successful Initialization Request must yield a
+    ...                certificate. Beyond checking the exit code, this test verifies that the client actually
+    ...                wrote a well-formed PEM certificate to the requested output path, guarding against a
+    ...                client that returns success but produces no usable certificate.
+    [Tags]    ir    valid    positive
+    ${args}=    Get CMP Command
+    ...    ${CMP_CLIENT}
+    ...    cmd=${INITIATION_REQUEST}
+    ...    server=${CMP_URL}
+    ...    ref=IR-Client-3
+    ...    subject=/CN=IR-Client-3
+    ...    secret=${CMP_SECRET}
+    ...    recipient=${CMP_RECIPIENT}
+    ...    newkey=${CMP_KEY}
+    ...    certout=${CERT_OUT}
+    Run Process    @{args}    stdout=PIPE    stderr=STDOUT    alias=cmp_run
+    ${output}=    Wait For Process    cmp_run
+    LOG    CMP Request Output: ${output.stdout}
+    Should Be Equal As Integers    ${output.rc}    0
+    File Should Exist    ${CERT_OUT}
+    ${cert}=    Get File    ${CERT_OUT}
+    Should Contain    ${cert}    BEGIN CERTIFICATE
+    Should Contain    ${cert}    END CERTIFICATE
+
+# === CR Tests ===
+CR 01 - Valid CR CMP Request Should Pass
+    [Documentation]    According to RFC 9483 Section 4.1.2, a Certification Request (CR) enrols a new certificate
+    ...                for a freshly generated key, just like an IR but for an already-initialised end entity.
+    ...                This test sends a MAC-protected CR and expects a certificate to be issued.
+    [Tags]    cr    valid    positive
+    ${args}=    Get CMP Command
+    ...    ${CMP_CLIENT}
+    ...    cmd=${CR_REQUEST}
+    ...    server=${CMP_URL}
+    ...    ref=CR-Client-1
+    ...    subject=/CN=CR-Client-1
+    ...    secret=${CMP_SECRET}
+    ...    recipient=${CMP_RECIPIENT}
+    ...    newkey=${CMP_KEY}
+    ...    certout=${CERT_OUT}
+    Run Process    @{args}    stdout=PIPE    stderr=STDOUT    alias=cmp_run
+    ${output}=    Wait For Process    cmp_run
+    LOG    CMP Request Output: ${output.stdout}
+    ${out}=    Convert To Lowercase    ${output.stdout}
+    Should Not Contain Any    ${out}    error
+    Should Be Equal As Integers    ${output.rc}    0
+    File Should Exist    ${CERT_OUT}
+
+# === KUR Tests ===
+KUR 01 - Valid Key Update Request Should Pass
+    [Documentation]    According to RFC 9483 Section 4.1.3, a Key Update Request (KUR) updates an existing
+    ...                certificate. This positive test is only executed for clients that advertise KUR support
+    ...                via ${CLIENT_SUPPORTS_KUR}; clients that stub KUR (e.g. gencmpclient-rs) skip it.
+    [Tags]    kur    positive
+    Skip If    not ${CLIENT_SUPPORTS_KUR}    Client does not support kur (set CLIENT_SUPPORTS_KUR to enable)
+    ${args}=    Get CMP Command
+    ...    ${CMP_CLIENT}
+    ...    cmd=${KEY_UPDATE_REQUEST}
+    ...    server=${CMP_URL}
+    ...    ref=IR-Client-1
+    ...    subject=/CN=IR-Client-1
+    ...    secret=${CMP_SECRET}
+    ...    recipient=${CMP_RECIPIENT}
+    ...    newkey=${CMP_KEY}
+    ...    certout=${CERT_OUT}
+    Run Process    @{args}    stdout=PIPE    stderr=STDOUT    alias=cmp_run
+    ${output}=    Wait For Process    cmp_run
+    LOG    CMP Request Output: ${output.stdout}
+    Should Be Equal As Integers    ${output.rc}    0
+    File Should Exist    ${CERT_OUT}
+
+KUR 02 - Key Update Request With No Inputs Should Fail
+    [Documentation]    A KUR sent without a subject, secret or certificate to update is malformed and the client
+    ...                MUST reject it rather than emitting a request. This negative test applies to every client:
+    ...                a full client fails validation, a client that stubs KUR reports it is unimplemented.
+    [Tags]    kur    negative
+    ${args}=    Get CMP Command
+    ...    ${CMP_CLIENT}
+    ...    cmd=${KEY_UPDATE_REQUEST}
+    ...    server=${CMP_URL}
+    Run Process    @{args}    stdout=PIPE    stderr=STDOUT    alias=cmp_run
+    ${output}=    Wait For Process    cmp_run
+    LOG    CMP Request Output: ${output.stdout}
+    ${out}=    Convert To Lowercase    ${output.stdout}
+    Should Not Be Equal As Integers    ${output.rc}    0
+    Should Contain    ${out}    error
+
+# === RR Tests ===
+RR 01 - Valid Revocation Request Should Pass
+    [Documentation]    According to RFC 9483 Section 4.2, a Revocation Request (RR) revokes a certificate.
+    ...                This positive test is only executed for clients that advertise RR support via
+    ...                ${CLIENT_SUPPORTS_RR}; clients that stub RR (e.g. gencmpclient-rs) skip it.
+    [Tags]    rr    positive
+    Skip If    not ${CLIENT_SUPPORTS_RR}    Client does not support rr (set CLIENT_SUPPORTS_RR to enable)
+    ${args}=    Get CMP Command
+    ...    ${CMP_CLIENT}
+    ...    cmd=${REVOCATION_REQUEST}
+    ...    server=${CMP_URL}
+    ...    ref=IR-Client-1
+    ...    subject=/CN=IR-Client-1
+    ...    secret=${CMP_SECRET}
+    ...    recipient=${CMP_RECIPIENT}
+    Run Process    @{args}    stdout=PIPE    stderr=STDOUT    alias=cmp_run
+    ${output}=    Wait For Process    cmp_run
+    LOG    CMP Request Output: ${output.stdout}
+    Should Be Equal As Integers    ${output.rc}    0
+
+RR 02 - Revocation Request With No Inputs Should Fail
+    [Documentation]    An RR sent without a certificate, subject or secret is malformed and the client MUST reject
+    ...                it. This negative test applies to every client: a full client fails validation, a client
+    ...                that stubs RR reports it is unimplemented.
+    [Tags]    rr    negative
+    ${args}=    Get CMP Command
+    ...    ${CMP_CLIENT}
+    ...    cmd=${REVOCATION_REQUEST}
+    ...    server=${CMP_URL}
+    Run Process    @{args}    stdout=PIPE    stderr=STDOUT    alias=cmp_run
+    ${output}=    Wait For Process    cmp_run
+    LOG    CMP Request Output: ${output.stdout}
+    ${out}=    Convert To Lowercase    ${output.stdout}
+    Should Not Be Equal As Integers    ${output.rc}    0
+    Should Contain    ${out}    error

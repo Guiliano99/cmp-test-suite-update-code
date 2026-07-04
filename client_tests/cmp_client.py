@@ -4,8 +4,14 @@
 
 """Client test logic for CMP operations."""
 
+import os
+
 from jinja2 import Template
 from robot.api.deco import keyword
+
+# Default location of the Rust `gencmpclient-rs` binary, relative to the
+# `client_tests/` directory. Override with the GENCMPCLIENT_RS_BIN env var.
+DEFAULT_GENCMPCLIENT_RS_BIN = "../../gencmpclient-rs/target/release/gencmpclient-rs"
 
 # Jinja2 templates for CMP CLI commands, define your template here
 # This translates the tests in cmp_tests_jinja.robot to the actual commands that your CMP client will execute.
@@ -41,6 +47,24 @@ embedded_cmp = """
 {% if cmd == "kur" %}-k{% endif %}
 """
 
+# Rust reference client (https://github.com/Guiliano99/gencmpclient-rs).
+# The binary path comes from `bin` (injected in get_cmp_command from the
+# GENCMPCLIENT_RS_BIN env var). Unlike the `gencmpclient` template above this one
+# maps every keyword argument the test cases pass, including `recipient` and
+# `unprotected_requests`.
+gencmpclient_rs = """
+{{ bin }} {{ cmd }}
+ --server {{ server }}
+{% if ref %}--ref {{ ref }}{% endif %}
+{% if subject %}--subject {{ subject }}{% endif %}
+{% if secret %}--secret {{ secret }}{% endif %}
+{% if recipient %}--recipient {{ recipient }}{% endif %}
+{% if csr %}--csr {{ csr }}{% endif %}
+{% if newkey %}--newkey {{ newkey }}{% endif %}
+{% if certout %}--certout {{ certout }}{% endif %}
+{% if unprotected_requests %}--unprotected_requests{% endif %}
+"""
+
 
 @keyword(name="Get CMP Command")
 def get_cmp_command(client: str = "openssl", **kwargs) -> list:  # noqa: D417
@@ -64,6 +88,10 @@ def get_cmp_command(client: str = "openssl", **kwargs) -> list:  # noqa: D417
         template = Template(globals()[client])
     except KeyError as e:
         raise ValueError(f"Unsupported CMP client: {client}") from e
+
+    # Resolve the gencmpclient-rs binary path from the environment so the suite
+    # can point at any build without editing the template.
+    kwargs.setdefault("bin", os.environ.get("GENCMPCLIENT_RS_BIN", DEFAULT_GENCMPCLIENT_RS_BIN))
 
     rendered = template.render(**kwargs)
     return rendered.strip().split()
