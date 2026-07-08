@@ -25,7 +25,10 @@ from resources.exceptions import BadAsn1Data, BadNonceRequest, BadRemoteAttestat
 from resources.oidutils import ATTESTATION_TYPE_2_STRUCTURE, ATTESTATION_TYPE_OID_2_NAME
 from resources.remote_att_utils.attest_nonce_freshness_structures import (
     NonceRequestASN1,
+    NonceRequestTypeInfo,
     NonceResponseASN1,
+    NonceResponseTypeInfo,
+    nonce_request_type_oid,
 )
 from resources.remote_att_utils.csr_attest_structures import (
     AttestationBundle,
@@ -56,11 +59,12 @@ def validate_nonce_request(
                 raise BadNonceRequest(f"Nonce length {len(nonce)} is less than minimum length {min_nonce_length}.")
 
     # Per the freshness draft, reqInfo MUST be omitted when type is absent.
-    if nonce_request["reqInfo"].isValue and not nonce_request["type"].isValue:
-        raise BadNonceRequest("NonceRequest.reqInfo is present but type is absent.")
+    # This is now structurally enforced: reqInfo lives inside reqTypeInfo,
+    # which mandates type, so the old violation is no longer representable.
 
-    if nonce_request["type"].isValue:
-        atte_type = nonce_request["type"]
+    atte_type_oid = nonce_request_type_oid(nonce_request)
+    if atte_type_oid is not None:
+        atte_type = univ.ObjectIdentifier(atte_type_oid)
         if atte_type not in ATTESTATION_TYPE_OID_2_NAME and strict_type_validation:
             raise RemoteAttestationError(f"Attestation type '{atte_type}' is not supported.")
 
@@ -110,10 +114,11 @@ def prepare_nonce_request(
         nonce_req["len"] = nonce_length
 
     if evidence_type is not None:
-        nonce_req["type"] = evidence_type
-
-    if req_info is not None:
-        nonce_req["reqInfo"] = univ.Any(req_info)
+        req_type_info = NonceRequestTypeInfo()
+        req_type_info["type"] = evidence_type
+        if req_info is not None:
+            req_type_info["reqInfo"] = univ.Any(req_info)
+        nonce_req["reqTypeInfo"] = req_type_info
 
     return nonce_req
 
@@ -216,11 +221,13 @@ def _parse_bad_type(nonce_request: NonceRequestASN1) -> univ.ObjectIdentifier:
     :return: The modified attestation type.
     :raises ValueError: If the attestation type cannot be modified.
     """
-    if not nonce_request["type"].isValue:
+    atte_type_oid = nonce_request_type_oid(nonce_request)
+    if atte_type_oid is None:
         return list(ATTESTATION_TYPE_OID_2_NAME.keys())[0]
 
+    atte_type = univ.ObjectIdentifier(atte_type_oid)
     for x in ATTESTATION_TYPE_OID_2_NAME:
-        if x != nonce_request["type"]:
+        if x != atte_type:
             return x
 
     raise ValueError("Could not find a different attestation type to set in nonce response.")
@@ -256,21 +263,25 @@ def prepare_nonce_response_from_request(
     nonce_response["nonce"] = _parse_nonce(nonce_request["len"], nonce_value, min_nonce_length, bad_nonce_length)
 
     if bad_type:
-        nonce_response["type"] = _parse_bad_type(nonce_request)
-    elif nonce_request["type"].isValue:
-        nonce_response["type"] = nonce_request["type"]
+        resp_type = _parse_bad_type(nonce_request)
+    else:
+        atte_type_oid = nonce_request_type_oid(nonce_request)
+        resp_type = univ.ObjectIdentifier(atte_type_oid) if atte_type_oid is not None else None
 
     if expiry_time is not None:
         nonce_response["expiry"] = expiry_time
 
-    if resp_info is not None:
-        if not nonce_response["type"].isValue:
-            logging.warning(
-                "prepare_nonce_response_from_request: dropping respInfo because "
-                "the response carries no type (draft: respInfo requires type)"
-            )
-        else:
-            nonce_response["respInfo"] = univ.Any(resp_info)
+    if resp_type is not None:
+        resp_type_info = NonceResponseTypeInfo()
+        resp_type_info["type"] = resp_type
+        if resp_info is not None:
+            resp_type_info["respInfo"] = univ.Any(resp_info)
+        nonce_response["respTypeInfo"] = resp_type_info
+    elif resp_info is not None:
+        logging.warning(
+            "prepare_nonce_response_from_request: dropping respInfo because "
+            "the response carries no type (draft: respInfo requires type)"
+        )
 
     return nonce_response
 

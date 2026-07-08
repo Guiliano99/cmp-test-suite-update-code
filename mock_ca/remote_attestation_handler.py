@@ -40,6 +40,8 @@ from resources.certextractutils import csr_contains_attribute
 from resources.exceptions import RemoteAttestationError
 from resources.remote_att_utils.attest_nonce_freshness_structures import (
     NonceRequestASN1,
+    nonce_request_info,
+    nonce_request_type_oid,
 )
 from resources.remote_att_utils.csr_attest_structures import id_aa_attestation
 from resources.remote_attestation_utils import (
@@ -113,11 +115,8 @@ class RemoteAttestationHandler:
 
         # CMP-side extraction: the request type OID and the (opaque-to-the-CA)
         # reqInfo DER.  The engine resolves the profile and parses the reqInfo.
-        request_type_oid = (
-            str(nonce_request["type"]) if nonce_request["type"].isValue else None
-        )
-        req_info = nonce_request["reqInfo"]
-        req_info_der = bytes(req_info) if req_info.isValue else None
+        request_type_oid = nonce_request_type_oid(nonce_request)
+        req_info_der = nonce_request_info(nonce_request)
 
         state = self.engine.issue_nonce(
             tx_id=tx_id,
