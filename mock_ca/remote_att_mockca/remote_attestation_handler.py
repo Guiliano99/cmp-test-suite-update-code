@@ -32,6 +32,7 @@ import logging
 from typing import Optional
 
 from libattest.ra import NonceStore, RemoteAttestationEngine
+
 from mock_ca.attestation_routes import build_profile_registry_from_environment
 from mock_ca.db_config_vars import RemoteAttestationConfig
 from mock_ca.remote_attestation_handler import RemoteAttestationHandler as _BaseHandler
@@ -55,12 +56,8 @@ class RemoteAttestationHandler(_BaseHandler):
         """Build the env-wired engine (unless one is injected) and wire the base."""
         if engine is None:
             registry = VerifierRegistry.from_environment()
-            profiles = build_profile_registry_from_environment(
-                verifier_registry=registry
-            )
-            engine = RemoteAttestationEngine(
-                profiles=profiles, nonce_store=NonceStore()
-            )
+            profiles = build_profile_registry_from_environment(verifier_registry=registry)
+            engine = RemoteAttestationEngine(profiles=profiles, nonce_store=NonceStore())
             self._verifier_registry: Optional[VerifierRegistry] = registry
             logging.info(
                 "Veraison RemoteAttestationHandler ready: registry=%s profiles=%s",

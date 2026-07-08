@@ -18,6 +18,7 @@ from pyasn1_alt_modules import rfc9480
 # Import from the local cmp-test-suite resources
 # from resources.utils import pyasn1_pkimessage_to_pem
 
+
 def pyasn1_pkimessage_to_pem(pkimessage):
     """Convert a pyasn1 PKIMessage to PEM format.
 
@@ -26,6 +27,7 @@ def pyasn1_pkimessage_to_pem(pkimessage):
 
     Returns:
         str: PEM formatted PKIMessage
+
     """
     der_data = encoder.encode(pkimessage)
     b64_encoded = base64.b64encode(der_data).decode("utf-8")
@@ -49,10 +51,7 @@ def main():
 
         # Parse the PKIMessage
         try:
-            pkimessage, _ = decoder.decode(
-                input_path.read_bytes(),
-                asn1Spec=rfc9480.PKIMessage()
-            )
+            pkimessage, _ = decoder.decode(input_path.read_bytes(), asn1Spec=rfc9480.PKIMessage())
             print("   ✓ Successfully parsed PKIMessage")
         except Exception as e:
             print(f"   ✗ Failed to parse PKIMessage: {e}")
@@ -65,6 +64,7 @@ def main():
         except Exception as e:
             print(f"   ✗ Failed to convert to PEM: {e}")
             import traceback
+
             traceback.print_exc()
             continue
 

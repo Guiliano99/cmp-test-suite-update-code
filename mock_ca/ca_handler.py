@@ -712,9 +712,7 @@ class CAHandler:
         # subsequent CR, so allow it when RATS verification is active.
         allow_recip_nonce = self.allow_recipient_nonce
         try:
-            response = self.cert_req_handler.process_cert_request(
-                pki_message, allow_recipient_nonce=allow_recip_nonce
-            )
+            response = self.cert_req_handler.process_cert_request(pki_message, allow_recipient_nonce=allow_recip_nonce)
         except CMPTestSuiteError as e:
             logging.info("An error occurred: %s", str(e.message))
             return self.build_error_from_exception(e, pki_message)
@@ -1786,6 +1784,6 @@ if __name__ == "__main__":
     _register_routes(app)
 
     root_cert_der = asn1utils.encode_to_der(handler.ca_cert)
-    print(f"Root CA certificate (Base64 DER): {base64.b64encode(root_cert_der).decode('ascii')}") # noqa: T201
+    print(f"Root CA certificate (Base64 DER): {base64.b64encode(root_cert_der).decode('ascii')}")  # noqa: T201
 
     app.run(host=args.host, port=args.port, debug=True)

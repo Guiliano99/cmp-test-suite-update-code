@@ -30,9 +30,9 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
+from libattest.ra import RemoteAttestationEngine
 from pyasn1_alt_modules import rfc6402, rfc9480
 
-from libattest.ra import RemoteAttestationEngine
 from mock_ca.db_config_vars import RemoteAttestationConfig
 from pq_logic.tmp_oids import id_it_nonceResponse
 from resources.asn1utils import encode_to_der
@@ -109,9 +109,7 @@ class RemoteAttestationHandler:
 
         logging.debug("Processing nonce request for tx_id=%s", tx_id.hex())
 
-        validate_nonce_request(
-            nonce_request, min_nonce_length=self.nonce_config.min_nonce_length
-        )
+        validate_nonce_request(nonce_request, min_nonce_length=self.nonce_config.min_nonce_length)
 
         # CMP-side extraction: the request type OID and the (opaque-to-the-CA)
         # reqInfo DER.  The engine resolves the profile and parses the reqInfo.

@@ -106,9 +106,7 @@ def build_profile_registry_from_environment(
     #    negotiated hash algorithm via the tpm_profile factory.
     quote_request_oid = resolve_tpm_pcr_selection_oid()
     quote_url = (
-        registry.resolve_oid(ID_TCG_ATTEST_QUOTE)
-        or registry.resolve_oid(quote_request_oid)
-        or registry.fallback_url
+        registry.resolve_oid(ID_TCG_ATTEST_QUOTE) or registry.resolve_oid(quote_request_oid) or registry.fallback_url
     )
     if quote_url:
         profiles.register(
@@ -123,8 +121,7 @@ def build_profile_registry_from_environment(
         )
     else:
         logger.warning(
-            "ProfileRegistry: no verifier URL for the TPM quote profile "
-            "(request_type=%s, statement=%s); skipping it",
+            "ProfileRegistry: no verifier URL for the TPM quote profile (request_type=%s, statement=%s); skipping it",
             quote_request_oid,
             ID_TCG_ATTEST_QUOTE,
         )
@@ -154,8 +151,7 @@ def build_profile_registry_from_environment(
         )
     else:
         logger.warning(
-            "ProfileRegistry: no verifier URL for the certify profile "
-            "(request_type=%s, statement=%s); skipping it",
+            "ProfileRegistry: no verifier URL for the certify profile (request_type=%s, statement=%s); skipping it",
             certify_request_oid,
             ID_TCG_ATTEST_CERTIFY,
         )

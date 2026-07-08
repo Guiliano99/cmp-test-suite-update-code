@@ -35,11 +35,10 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+import cryptography.x509 as cx509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.x509 import load_der_x509_certificate
-import cryptography.x509 as cx509
-
 from libattest.formats.csrattest import (
     decode_attestation_bundle,
     encode_oid_der,
@@ -64,7 +63,7 @@ from resources.typingutils import SignKey
 # OID (id-aa-attestation) for the attestation attribute in
 # certTemplate.extensions or CSR attributes.
 ATTESTATION_OID = "1.2.840.113549.1.9.16.2.59"
-EVIDENCE_OID = ATTESTATION_OID   # legacy alias kept for external callers
+EVIDENCE_OID = ATTESTATION_OID  # legacy alias kept for external callers
 RATS_TOKEN_OID = ATTESTATION_OID  # legacy alias kept for external callers
 
 # Fallback EAR-extension OID used only when no profile resolves for a statement.
@@ -157,9 +156,7 @@ class RatsHandler:
         ear_jwt, _ = self._verify_bundle(pki_message)
         return ear_jwt
 
-    def _verify_bundle(
-        self, pki_message: PKIMessageTMP
-    ) -> tuple[Optional[str], Optional[bytes]]:
+    def _verify_bundle(self, pki_message: PKIMessageTMP) -> tuple[Optional[str], Optional[bytes]]:
         """Backbone of :meth:`verify_and_get_ear`.
 
         Returns ``(ear_jwt, None)``; the second element is kept for source
@@ -177,8 +174,7 @@ class RatsHandler:
         engine = self._engine()
         if engine is None:
             raise BadMessageCheck(
-                "RatsHandler: evidence is present but no RemoteAttestationEngine "
-                "is configured — cannot dispatch."
+                "RatsHandler: evidence is present but no RemoteAttestationEngine is configured — cannot dispatch."
             )
 
         tx_id = bytes(pki_message["header"]["transactionID"])
@@ -194,13 +190,12 @@ class RatsHandler:
                 reason = "; ".join(failure.errors) or failure.status.value
             else:
                 reason = "no statements verified"
-            raise BadMessageCheck(
-                f"RatsHandler: bundle verification rejected for tx={tx_id.hex()}: {reason}"
-            )
+            raise BadMessageCheck(f"RatsHandler: bundle verification rejected for tx={tx_id.hex()}: {reason}")
 
         logging.info(
             "RatsHandler: verified %d statement(s) for tx=%s",
-            len(outcome.result.per_statement), tx_id.hex(),
+            len(outcome.result.per_statement),
+            tx_id.hex(),
         )
 
         # The cert extension carries one EAR JWT; for multi-statement bundles use
@@ -236,9 +231,7 @@ class RatsHandler:
             encode_ear_extension=self._ear_encoder_for(pki_message),
         )
 
-    def _ear_encoder_for(
-        self, pki_message: PKIMessageTMP
-    ) -> Optional[Callable[[str], tuple[str, bytes]]]:
+    def _ear_encoder_for(self, pki_message: PKIMessageTMP) -> Optional[Callable[[str], tuple[str, bytes]]]:
         """Resolve the EAR-extension encoder for *pki_message*'s evidence.
 
         The EAR JWT corresponds to the first statement in the bundle; this
@@ -335,9 +328,7 @@ class RatsHandler:
                     )
                     return bundle_der
         except Exception as exc:  # noqa: BLE001
-            logging.warning(
-                "RatsHandler: failed to extract from certTemplate.extensions: %s", exc
-            )
+            logging.warning("RatsHandler: failed to extract from certTemplate.extensions: %s", exc)
         return None
 
     @staticmethod
@@ -360,9 +351,7 @@ class RatsHandler:
                     )
                     return bundle_der
         except Exception as exc:  # noqa: BLE001
-            logging.warning(
-                "RatsHandler: failed to extract from CSR attributes: %s", exc
-            )
+            logging.warning("RatsHandler: failed to extract from CSR attributes: %s", exc)
         return None
 
     # ── Bundle parsing (inspection only) ──────────────────────────────────────
@@ -417,13 +406,12 @@ class RatsHandler:
                 )
             )
 
-        certs_der: List[bytes] = [
-            bytes(encode_to_der(cert)) for cert in get_attestation_bundle_certs(bundle)
-        ]
+        certs_der: List[bytes] = [bytes(encode_to_der(cert)) for cert in get_attestation_bundle_certs(bundle)]
 
         logging.info(
             "RatsHandler: parsed bundle — %d statement(s), %d cert(s)",
-            len(statements), len(certs_der),
+            len(statements),
+            len(certs_der),
         )
         return ExtractedEvidence(
             bundle_der=bundle_der,
@@ -485,9 +473,7 @@ class RatsHandler:
             lives entirely in the callable — this method never branches on the OID.
         """
         if encode_ear_extension is None:
-            encode_ear_extension = functools.partial(
-                _libattest_encode_ear_extension, oid=_DEFAULT_EAR_EXT_OID
-            )
+            encode_ear_extension = functools.partial(_libattest_encode_ear_extension, oid=_DEFAULT_EAR_EXT_OID)
         try:
             cert_resp = get_cert_response_from_pkimessage(response, response_index=0)
             cert_choice = cert_resp["certifiedKeyPair"]["certOrEncCert"]["certificate"]
@@ -501,11 +487,13 @@ class RatsHandler:
 
             ear_oid_dot, ear_value = encode_ear_extension(ear_jwt)
             ear_oid = cx509.ObjectIdentifier(ear_oid_dot)
-            existing_extensions.append(cx509.Extension(
-                oid=ear_oid,
-                critical=False,
-                value=cx509.UnrecognizedExtension(ear_oid, ear_value),
-            ))
+            existing_extensions.append(
+                cx509.Extension(
+                    oid=ear_oid,
+                    critical=False,
+                    value=cx509.UnrecognizedExtension(ear_oid, ear_value),
+                )
+            )
 
             if pop_proof_der is not None:
                 from libattest.formats.key_attest_pop import (  # noqa: PLC0415
@@ -513,11 +501,13 @@ class RatsHandler:
                 )
 
                 pop_oid = cx509.ObjectIdentifier(resolve_key_attest_pop_oid())
-                existing_extensions.append(cx509.Extension(
-                    oid=pop_oid,
-                    critical=False,
-                    value=cx509.UnrecognizedExtension(pop_oid, pop_proof_der),
-                ))
+                existing_extensions.append(
+                    cx509.Extension(
+                        oid=pop_oid,
+                        critical=False,
+                        value=cx509.UnrecognizedExtension(pop_oid, pop_proof_der),
+                    )
+                )
 
             builder = (
                 cx509.CertificateBuilder()
@@ -541,9 +531,7 @@ class RatsHandler:
             else:
                 rebuilt = builder.sign(private_key=ca_key, algorithm=hashes.SHA256())
 
-            new_cmp_cert = parse_certificate(
-                rebuilt.public_bytes(serialization.Encoding.DER)
-            )
+            new_cmp_cert = parse_certificate(rebuilt.public_bytes(serialization.Encoding.DER))
             copy_asn1_certificate(new_cmp_cert, cert_choice)
             embedded = [ear_oid_dot]
             if pop_proof_der is not None:
@@ -559,7 +547,8 @@ class RatsHandler:
         except Exception as exc:  # noqa: BLE001
             logging.warning(
                 "RatsHandler.embed_extensions failed: %s\n%s",
-                exc, traceback.format_exc(),
+                exc,
+                traceback.format_exc(),
             )
 
 

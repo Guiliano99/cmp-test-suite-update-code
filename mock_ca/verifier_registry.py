@@ -63,9 +63,7 @@ class VerifierRegistry:
     ):
         self._lock = Lock()
         self._oid_routes: dict[str, str] = dict(oid_routes or {})
-        self._fallback_url: Optional[str] = (
-            fallback_url.rstrip("/") if fallback_url else None
-        )
+        self._fallback_url: Optional[str] = fallback_url.rstrip("/") if fallback_url else None
 
     @classmethod
     def from_environment(cls) -> "VerifierRegistry":
@@ -76,6 +74,7 @@ class VerifierRegistry:
                          A registry with no routes and no fallback cannot
                          resolve a single request, so we fail at startup
                          rather than ship a broken CA.
+
         """
         oid_routes = cls._parse_oid_routes_env()
         fallback = (os.environ.get("VERIFIER_URL_FALLBACK") or "").strip() or None
@@ -92,7 +91,8 @@ class VerifierRegistry:
             )
         logger.info(
             "VerifierRegistry initialised: %d OID route(s), fallback=%s",
-            len(oid_routes), fallback or "<unset>",
+            len(oid_routes),
+            fallback or "<unset>",
         )
         return registry
 
@@ -180,9 +180,7 @@ class VerifierRegistry:
         try:
             data = json.loads(raw)
         except json.JSONDecodeError as exc:
-            raise RuntimeError(
-                f"VERIFIER_OID_ROUTES is not valid JSON: {exc}"
-            ) from exc
+            raise RuntimeError(f"VERIFIER_OID_ROUTES is not valid JSON: {exc}") from exc
         if not isinstance(data, dict):
             raise RuntimeError("VERIFIER_OID_ROUTES must decode to a JSON object")
         return {str(k): str(v) for k, v in data.items()}

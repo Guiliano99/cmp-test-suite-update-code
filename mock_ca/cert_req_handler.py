@@ -373,9 +373,7 @@ class CertReqHandler:
         # was found — catches attester bugs early.
         has_evidence = self.rats_handler.has_evidence(pki_message)
         if not has_evidence and os.environ.get("ALLOW_RATS_VERIFICATION", "").lower() == "true":
-            raise BadMessageCheck(
-                "ALLOW_RATS_VERIFICATION is set but the ir carries no id-aa-attestation OID"
-            )
+            raise BadMessageCheck("ALLOW_RATS_VERIFICATION is set but the ir carries no id-aa-attestation OID")
         ear_jwt: Optional[str] = None
         pop_proof_der: Optional[bytes] = None
         if has_evidence:
@@ -449,9 +447,7 @@ class CertReqHandler:
         # Dev-mode guard: raise if ALLOW_RATS_VERIFICATION is set but no evidence.
         has_evidence = self.rats_handler.has_evidence(pki_message)
         if not has_evidence and os.environ.get("ALLOW_RATS_VERIFICATION", "").lower() == "true":
-            raise BadMessageCheck(
-                "ALLOW_RATS_VERIFICATION is set but the cr carries no id-aa-attestation OID"
-            )
+            raise BadMessageCheck("ALLOW_RATS_VERIFICATION is set but the cr carries no id-aa-attestation OID")
         ear_jwt: Optional[str] = None
         pop_proof_der: Optional[bytes] = None
         if has_evidence:
@@ -502,9 +498,7 @@ class CertReqHandler:
         # Dev-mode guard: raise if ALLOW_RATS_VERIFICATION is set but no evidence.
         has_evidence = self.rats_handler.has_evidence(pki_message)
         if not has_evidence and os.environ.get("ALLOW_RATS_VERIFICATION", "").lower() == "true":
-            raise BadMessageCheck(
-                "ALLOW_RATS_VERIFICATION is set but the p10cr carries no id-aa-attestation OID"
-            )
+            raise BadMessageCheck("ALLOW_RATS_VERIFICATION is set but the p10cr carries no id-aa-attestation OID")
         ear_jwt: Optional[str] = None
         if has_evidence:
             ear_jwt = self.rats_handler.verify_and_get_ear(pki_message)
@@ -563,9 +557,7 @@ class CertReqHandler:
         # Dev-mode guard: raise if ALLOW_RATS_VERIFICATION is set but no evidence.
         has_evidence = self.rats_handler.has_evidence(pki_message)
         if not has_evidence and os.environ.get("ALLOW_RATS_VERIFICATION", "").lower() == "true":
-            raise BadMessageCheck(
-                "ALLOW_RATS_VERIFICATION is set but the kur carries no id-aa-attestation OID"
-            )
+            raise BadMessageCheck("ALLOW_RATS_VERIFICATION is set but the kur carries no id-aa-attestation OID")
         ear_jwt: Optional[str] = None
         if has_evidence:
             ear_jwt = self.rats_handler.verify_and_get_ear(pki_message)
@@ -784,7 +776,9 @@ class CertReqHandler:
         :raises NotImplementedError: If the message type is unsupported.
         """
         # raise exception for the error body.
-        self.validate_header(pki_message, must_be_protected=must_be_protected, allow_recipient_nonce=allow_recipient_nonce)
+        self.validate_header(
+            pki_message, must_be_protected=must_be_protected, allow_recipient_nonce=allow_recipient_nonce
+        )
 
         msg_type = pki_message["body"].getName()
         if msg_type not in ["ir", "cr", "p10cr", "kur", "ccr"]:

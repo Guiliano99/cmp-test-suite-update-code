@@ -110,21 +110,17 @@ class KeyAttestTpmVerifier:
         """
         if spki_der is None:
             raise BadMessageCheck(
-                f"KeyAttestPoP ({self._oid}): CSR is missing the "
-                "SubjectPublicKeyInfo required for SPKI binding."
+                f"KeyAttestPoP ({self._oid}): CSR is missing the SubjectPublicKeyInfo required for SPKI binding."
             )
         if pop_proof_der is None:
             raise BadMessageCheck(
-                f"KeyAttestPoP ({self._oid}): CSR is missing the "
-                f"PoP-proof extension under {self._oid}."
+                f"KeyAttestPoP ({self._oid}): CSR is missing the PoP-proof extension under {self._oid}."
             )
 
         try:
             proof = decode_key_attest_pop_proof(pop_proof_der)
         except ValueError as exc:
-            raise BadMessageCheck(
-                f"KeyAttestPoP ({self._oid}): proof DER did not decode: {exc}"
-            ) from exc
+            raise BadMessageCheck(f"KeyAttestPoP ({self._oid}): proof DER did not decode: {exc}") from exc
 
         ok = verify_key_attest_pop_proof(
             attestation_nonce=attestation_nonce,
@@ -144,8 +140,7 @@ class KeyAttestTpmVerifier:
             )
 
         logger.info(
-            "KeyAttestPoP: PBMAC verified — algorithm=%s, spki=%dB, "
-            "value=%dB, oid=%s",
+            "KeyAttestPoP: PBMAC verified — algorithm=%s, spki=%dB, value=%dB, oid=%s",
             proof_algorithm_oid(proof),
             len(spki_der),
             len(bytes(proof["value"])),
@@ -170,29 +165,19 @@ class KeyAttestTpmVerifier:
         body_name = pki_message["body"].getName()
         try:
             if body_name == "p10cr":
-                spki = (
-                    pki_message["body"]["p10cr"]
-                    ["certificationRequestInfo"]["subjectPKInfo"]
-                )
+                spki = pki_message["body"]["p10cr"]["certificationRequestInfo"]["subjectPKInfo"]
             elif body_name in ("ir", "cr", "kur"):
-                spki = (
-                    pki_message["body"][body_name][0]["certReq"]
-                    ["certTemplate"]["publicKey"]
-                )
+                spki = pki_message["body"][body_name][0]["certReq"]["certTemplate"]["publicKey"]
             else:
                 return None
             if not spki.isValue:
                 return None
             return bytes(asn1_encoder.encode(spki))
         except Exception as exc:  # noqa: BLE001
-            logger.debug(
-                "KeyAttestTpmVerifier.extract_subject_spki_der failed: %s", exc
-            )
+            logger.debug("KeyAttestTpmVerifier.extract_subject_spki_der failed: %s", exc)
             return None
 
-    def extract_pop_proof_der(
-        self, pki_message: PKIMessageTMP
-    ) -> Optional[bytes]:
+    def extract_pop_proof_der(self, pki_message: PKIMessageTMP) -> Optional[bytes]:
         """Return the DER bytes of the PoP-proof extension, or None.
 
         Walks the ``PKIMessage`` body looking for the configured PoP
@@ -218,16 +203,12 @@ class KeyAttestTpmVerifier:
             if body_name in ("ir", "cr", "kur"):
                 return self._scan_cert_template_for_pop(pki_message, body_name)
         except Exception as exc:  # noqa: BLE001
-            logger.debug(
-                "KeyAttestTpmVerifier.extract_pop_proof_der failed: %s", exc
-            )
+            logger.debug("KeyAttestTpmVerifier.extract_pop_proof_der failed: %s", exc)
         return None
 
     # ── Internals ───────────────────────────────────────────────────────────
 
-    def _scan_cert_template_for_pop(
-        self, pki_message: PKIMessageTMP, body_name: str
-    ) -> Optional[bytes]:
+    def _scan_cert_template_for_pop(self, pki_message: PKIMessageTMP, body_name: str) -> Optional[bytes]:
         cert_req = pki_message["body"][body_name][0]["certReq"]
         extensions = cert_req["certTemplate"]["extensions"]
         if not extensions.isValue:
@@ -237,9 +218,7 @@ class KeyAttestTpmVerifier:
                 return bytes(ext["extnValue"])
         return None
 
-    def _scan_csr_attribute_for_pop(
-        self, pki_message: PKIMessageTMP
-    ) -> Optional[bytes]:
+    def _scan_csr_attribute_for_pop(self, pki_message: PKIMessageTMP) -> Optional[bytes]:
         cri = pki_message["body"]["p10cr"]["certificationRequestInfo"]
         if not cri["attributes"].isValue:
             return None

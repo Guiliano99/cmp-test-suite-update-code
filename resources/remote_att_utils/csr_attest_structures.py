@@ -5,10 +5,10 @@
 """Compatibility imports for CSR attestation structures used by MockCA."""
 
 from libattest.formats.csrattest import (
-    AttestCertSequence,
     AttestationBundle,
     AttestationSequence,
     AttestationStatement,
+    AttestCertSequence,
     LimitedCertChoices,
     OtherCertificateFormat,
     get_attestation_bundle_certs,
