@@ -17,9 +17,9 @@ Two kinds of profile are seeded:
 1. the **TPM platform (quote) profile** — request type ``TPM_PCR_SELECTION_OID``,
    statement ``TcgAttestQuote`` (``2.23.133.20.2``), respInfo =
    ``TpmAttestationParams`` carrying the configured PCR set + negotiated hash;
-2. the **TPM key-attestation (certify) profile** — request type
-   ``TPM_KEY_ATTEST_OID``, statement ``TcgAttestCertify`` (``2.23.133.20.1``),
-   no respInfo;
+2. the **TPM key-attestation (v5) profile** — request type ``TPM_KEY_ATTEST_OID``,
+   statement ``KeyAttestEvidence`` (``1.3.6.1.4.1.99999.2``), respInfo =
+   ``KeyAttestResp`` from a verifier ``MakeCredential`` round-trip;
 
 plus a **``jwt_profile``** for any *other* OID in ``VERIFIER_OID_ROUTES`` with no
 built-in handler (sw/EAR shapes) — adding such a type is pure configuration.
@@ -34,12 +34,13 @@ from __future__ import annotations
 import logging
 import os
 
+from libattest.formats.key_attest_pop import ID_KEY_ATTEST_EVIDENCE_DOTTED
 from libattest.formats.tpm import resolve_tpm_pcr_selection_oid
 from libattest.ra import (
-    ID_TCG_ATTEST_CERTIFY,
     ID_TCG_ATTEST_QUOTE,
     ProfileRegistry,
     jwt_profile,
+    key_attest_profile,
     tpm_profile,
 )
 
@@ -126,34 +127,32 @@ def build_profile_registry_from_environment(
             ID_TCG_ATTEST_QUOTE,
         )
 
-    # 2. TPM key-attestation (certify) profile.  request_type = TPM_KEY_ATTEST_OID
-    #    (the syntax OID the client sends at GenM), statement = TcgAttestCertify;
-    #    request_type and statement DIFFER, so an explicit register() is needed.
-    #    Certify needs no PCR negotiation (pcrs=None → no respInfo), but its
-    #    reqInfo still carries a TpmAttestationParams hash proposal, which
-    #    tpm_profile parses.
+    # 2. TPM key-attestation (v5 credential-activation) profile.  request_type =
+    #    TPM_KEY_ATTEST_OID (the syntax OID the client sends at GenM, carrying a
+    #    KeyAttestChall reqInfo); statement = KeyAttestEvidence.  request_type and
+    #    statement DIFFER, so key_attest_profile registers under both.  Its
+    #    build_challenge hook runs a verifier MakeCredential round-trip at GenM and
+    #    returns the KeyAttestResp respInfo — there is no PCR negotiation.
     certify_request_oid = os.environ.get("TPM_KEY_ATTEST_OID", "1.3.6.1.4.1.99999.4")
     certify_url = (
-        registry.resolve_oid(ID_TCG_ATTEST_CERTIFY)
+        registry.resolve_oid(ID_KEY_ATTEST_EVIDENCE_DOTTED)
         or registry.resolve_oid(certify_request_oid)
         or registry.fallback_url
     )
     if certify_url:
         profiles.register(
-            tpm_profile(
+            key_attest_profile(
                 request_type_oid=certify_request_oid,
-                statement_oid=ID_TCG_ATTEST_CERTIFY,
+                statement_oid=ID_KEY_ATTEST_EVIDENCE_DOTTED,
                 verifier_url=certify_url,
-                pcrs=None,
-                resp_info_label="TcgAttestCertify",
                 ear_oid=_DEFAULT_EAR_EXT_OID,
             )
         )
     else:
         logger.warning(
-            "ProfileRegistry: no verifier URL for the certify profile (request_type=%s, statement=%s); skipping it",
+            "ProfileRegistry: no verifier URL for the key-attestation profile (request_type=%s, statement=%s); skipping it",
             certify_request_oid,
-            ID_TCG_ATTEST_CERTIFY,
+            ID_KEY_ATTEST_EVIDENCE_DOTTED,
         )
 
     # 3. jwt_profile for any extra OID configured but not built in (sw / EAR
@@ -175,7 +174,7 @@ def build_profile_registry_from_environment(
 
 
 __all__ = [
-    "ID_TCG_ATTEST_CERTIFY",
+    "ID_KEY_ATTEST_EVIDENCE_DOTTED",
     "ID_TCG_ATTEST_QUOTE",
     "build_profile_registry_from_environment",
 ]

@@ -180,9 +180,14 @@ class RatsHandler:
         tx_id = bytes(pki_message["header"]["transactionID"])
 
         # The engine owns the whole flow: per-statement nonce consume → profile
-        # resolve → verifier submit (forwarding respInfo JSON for the quote leg)
-        # → reference check → aggregate.  It drops the per-tx nonce state itself.
-        outcome = engine.verify_bundle(bundle_der, tx_id)
+        # resolve → verifier submit (forwarding respInfo JSON for the quote leg,
+        # sessionId + subject pubkey for the key-attest leg) → reference check →
+        # aggregate.  It drops the per-tx nonce state itself.  The subject SPKI is
+        # threaded unconditionally; quote/jwt profiles ignore it (engine only adds
+        # it to the submit body when the profile carries a session).
+        outcome = engine.verify_bundle(
+            bundle_der, tx_id, pubkey=self._extract_subject_pubkey(pki_message)
+        )
 
         if not outcome.accepted:
             failure = outcome.first_failure
@@ -354,6 +359,32 @@ class RatsHandler:
             logging.warning("RatsHandler: failed to extract from CSR attributes: %s", exc)
         return None
 
+    @staticmethod
+    def _extract_subject_pubkey(pki_message: PKIMessageTMP) -> Optional[bytes]:
+        """Return the to-be-certified SubjectPublicKeyInfo DER from the CMP carrier.
+
+        Mirrors :meth:`_extract_bundle_der`'s body switch: the CSR's
+        ``subjectPublicKeyInfo`` (p10cr) or ``certTemplate.publicKey`` (cr/ir/kur).
+        Crypto-free pyasn1 extraction — the bytes are threaded into
+        ``engine.verify_bundle(pubkey=...)`` so the key-attest verifier can bind the
+        certified TPM key to the key being enrolled (design C6 / Check-2).  Returns
+        ``None`` when the carrier has no public key (quote/jwt profiles ignore it).
+        """
+        try:
+            body_name = pki_message["body"].getName()
+            if body_name == "p10cr":
+                spki = pki_message["body"]["p10cr"]["certificationRequestInfo"]["subjectPublicKeyInfo"]
+            elif body_name in ("cr", "ir", "kur"):
+                spki = pki_message["body"][body_name][0]["certReq"]["certTemplate"]["publicKey"]
+            else:
+                return None
+            if not spki.isValue:
+                return None
+            return bytes(encode_to_der(spki))
+        except Exception as exc:  # noqa: BLE001
+            logging.debug("RatsHandler._extract_subject_pubkey: %s", exc)
+            return None
+
     # ── Bundle parsing (inspection only) ──────────────────────────────────────
 
     @staticmethod
@@ -495,20 +526,6 @@ class RatsHandler:
                 )
             )
 
-            if pop_proof_der is not None:
-                from libattest.formats.key_attest_pop import (  # noqa: PLC0415
-                    resolve_key_attest_pop_oid,
-                )
-
-                pop_oid = cx509.ObjectIdentifier(resolve_key_attest_pop_oid())
-                existing_extensions.append(
-                    cx509.Extension(
-                        oid=pop_oid,
-                        critical=False,
-                        value=cx509.UnrecognizedExtension(pop_oid, pop_proof_der),
-                    )
-                )
-
             builder = (
                 cx509.CertificateBuilder()
                 .subject_name(x509_cert.subject)
@@ -533,16 +550,9 @@ class RatsHandler:
 
             new_cmp_cert = parse_certificate(rebuilt.public_bytes(serialization.Encoding.DER))
             copy_asn1_certificate(new_cmp_cert, cert_choice)
-            embedded = [ear_oid_dot]
-            if pop_proof_der is not None:
-                from libattest.formats.key_attest_pop import (  # noqa: PLC0415
-                    resolve_key_attest_pop_oid,
-                )
-
-                embedded.append(resolve_key_attest_pop_oid())
             logging.info(
-                "RatsHandler: embedded extension(s) on issued cert: %s",
-                ", ".join(embedded),
+                "RatsHandler: embedded EAR extension on issued cert: %s",
+                ear_oid_dot,
             )
         except Exception as exc:  # noqa: BLE001
             logging.warning(
