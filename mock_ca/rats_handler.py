@@ -48,6 +48,7 @@ from libattest.formats.csrattest import (
 from libattest.ra import RemoteAttestationEngine
 from libattest.x509 import encode_ear_extension as _libattest_encode_ear_extension
 from libattest.x509 import unwrap_context_tag
+from pyasn1_alt_modules import rfc5280
 
 from resources.asn1_structures import PKIMessageTMP
 from resources.asn1utils import encode_to_der
@@ -369,18 +370,38 @@ class RatsHandler:
         ``engine.verify_bundle(pubkey=...)`` so the key-attest verifier can bind the
         certified TPM key to the key being enrolled (design C6 / Check-2).  Returns
         ``None`` when the carrier has no public key (quote/jwt profiles ignore it).
+
+        ``CertTemplate.publicKey`` (RFC 4211) is ``[6] IMPLICIT SubjectPublicKeyInfo``:
+        re-encoding the decoded component standalone reuses its current (implicit,
+        context-tagged) ``tagSet``, producing a ``[6]``-tagged TLV instead of the
+        universal ``SEQUENCE`` a plain SubjectPublicKeyInfo consumer (e.g.
+        ``cryptography.hazmat.primitives.serialization.load_der_public_key``)
+        expects. ``libattest.x509.unwrap_context_tag`` does not fix this either: its
+        explicit-vs-implicit heuristic (peek at the first inner byte) misfires here
+        because ``SubjectPublicKeyInfo.algorithm`` is itself a SEQUENCE, so it
+        returns just the inner ``AlgorithmIdentifier`` TLV and silently drops the
+        ``subjectPublicKey`` bits. Rebuilding a "naked" ``rfc5280.SubjectPublicKeyInfo``
+        from the decoded field *values* re-derives a correctly-tagged encoding
+        regardless of how the source field was tagged. p10cr's
+        ``certificationRequestInfo.subjectPublicKeyInfo`` is untagged already, so it
+        is returned as-is.
         """
         try:
             body_name = pki_message["body"].getName()
             if body_name == "p10cr":
                 spki = pki_message["body"]["p10cr"]["certificationRequestInfo"]["subjectPublicKeyInfo"]
-            elif body_name in ("cr", "ir", "kur"):
+                if not spki.isValue:
+                    return None
+                return bytes(encode_to_der(spki))
+            if body_name in ("cr", "ir", "kur"):
                 spki = pki_message["body"][body_name][0]["certReq"]["certTemplate"]["publicKey"]
-            else:
-                return None
-            if not spki.isValue:
-                return None
-            return bytes(encode_to_der(spki))
+                if not spki.isValue:
+                    return None
+                naked = rfc5280.SubjectPublicKeyInfo()
+                naked["algorithm"] = spki["algorithm"]
+                naked["subjectPublicKey"] = spki["subjectPublicKey"]
+                return bytes(encode_to_der(naked))
+            return None
         except Exception as exc:  # noqa: BLE001
             logging.debug("RatsHandler._extract_subject_pubkey: %s", exc)
             return None
