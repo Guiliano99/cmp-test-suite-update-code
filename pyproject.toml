@@ -28,7 +28,7 @@ dependencies = [
     # `uv sync` pulls libattest + its full locked deps (PyJWT, pydantic, …).
     # NOTE: re-run `uv lock` after pushing libattest-py@UpdateV8 so the lock pins
     # the v5 commit, not the current origin tip.
-    "libattest-py @ git+https://github.com/Guiliano99/libattest-py.git@UpdateV8",
+    "libattest-py @ git+https://github.com/Guiliano99/libattest-py.git@UpdateV8_1",
 ]
 
 [tool.pytest.ini_options]
@@ -36,6 +36,10 @@ pythonpath = ["."]
 
 [project.optional-dependencies]
 dev = [
+    # Configured by [tool.pytest.ini_options] above, so it must be declared here:
+    # without it `uv run pytest` silently resolves to a pytest outside this venv,
+    # which cannot import libattest and fails every test at collection.
+    "pytest>=8,<9",
     "safety>=3.7.0,<4.0.0",
     "pylint>=4.0.4,<5.0.0",
     "ruff>=0.15.9,<1.0.0",
