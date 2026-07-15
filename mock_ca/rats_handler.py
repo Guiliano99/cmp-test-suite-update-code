@@ -19,7 +19,7 @@ The MockCA keeps only the CMP/CA glue:
 2. **Transaction id** extraction.
 3. ``engine.verify_bundle(bundle_der, tx_id)`` and CMP status mapping
    (not-accepted → :class:`BadMessageCheck`).
-4. **X.509 cert rebuild + EAR-extension embed + re-sign** of the issued cert.
+4. **EAR-extension handoff** to the normal certificate builder.
 
 The per-statement nonce store / profile registry / verifier client / EAR
 extension encoder all live in the engine now (shared with the GenM leg via the
@@ -30,24 +30,14 @@ from __future__ import annotations
 
 import logging
 import os
-import traceback
 from typing import Optional, Tuple
 
-import cryptography.x509 as cx509
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from cryptography.x509 import load_der_x509_certificate
 from libattest.ra import RemoteAttestationEngine
 from libattest.x509 import encode_ear_extension as _libattest_encode_ear_extension
-from libattest.x509 import unwrap_context_tag
 from pyasn1_alt_modules import rfc5280
 
 from resources.asn1_structures import PKIMessageTMP
 from resources.asn1utils import encode_to_der
-from resources.certutils import parse_certificate
-from resources.cmputils import get_cert_response_from_pkimessage
-from resources.convertutils import copy_asn1_certificate
-from resources.typingutils import SignKey
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -70,7 +60,7 @@ _DEFAULT_EAR_EXT_OID = os.environ.get("EAR_OID", "1.7.6.5.123")
 
 
 class RatsHandler:
-    """CMP IR-side adapter: extract a bundle, verify it via the engine, embed EAR.
+    """CMP IR-side adapter: extract a bundle, verify it, and return its EAR.
 
     Holds ``remote_att_handler`` — a
     :class:`~mock_ca.remote_attestation_handler.RemoteAttestationHandler` whose
@@ -103,16 +93,24 @@ class RatsHandler:
 
         :param pki_message: The incoming CMP CR / IR / KUR / P10CR.
         :return: ``(extn_oid_dot, extn_value_der)`` for the first affirming
-            statement, ready to pass to :meth:`embed_extensions`; ``None`` when
+            statement, ready for the normal certificate builder; ``None`` when
             the request carries no evidence (soft skip).
         :raises BadMessageCheck: if the engine did not accept the bundle.
         """
         from resources.exceptions import BadMessageCheck  # noqa: PLC0415
 
-        bundle_der = self._extract_bundle_der(pki_message)
-        if bundle_der is None:
+        evidence_count = self.evidence_count(pki_message)
+        if evidence_count == 0:
             logging.debug("RatsHandler: no evidence in request — skip")
             return None
+        if evidence_count != 1:
+            raise BadMessageCheck(
+                f"RatsHandler: expected exactly one id-aa-attestation carrier, found {evidence_count}."
+            )
+
+        bundle_der = self._extract_bundle_der(pki_message)
+        if bundle_der is None:
+            raise BadMessageCheck("RatsHandler: evidence carrier did not contain an attestation bundle.")
 
         engine = self._engine()
         if engine is None:
@@ -128,9 +126,7 @@ class RatsHandler:
         # aggregate → resolve the EAR extension encoding. The subject SPKI is
         # threaded unconditionally; quote/jwt profiles ignore it (engine only adds
         # it to the submit body when the profile carries a session).
-        outcome = engine.verify_bundle(
-            bundle_der, tx_id, pubkey=self._extract_subject_pubkey(pki_message)
-        )
+        outcome = engine.verify_bundle(bundle_der, tx_id, pubkey=self._extract_subject_pubkey(pki_message))
 
         if not outcome.accepted:
             failure = outcome.first_failure
@@ -153,7 +149,10 @@ class RatsHandler:
             # Should not happen for an accepted bundle (a profile resolved to
             # verify it, so it resolves again to encode it) — stay defensive
             # rather than silently drop the extension.
-            ear_extension = _libattest_encode_ear_extension(outcome.first_ear, oid=_DEFAULT_EAR_EXT_OID)
+            ear_jwt = outcome.first_ear
+            if ear_jwt is None:
+                raise BadMessageCheck("RatsHandler: accepted bundle did not produce an EAR.")
+            ear_extension = _libattest_encode_ear_extension(ear_jwt, oid=_DEFAULT_EAR_EXT_OID)
         return ear_extension
 
     # ── Engine accessor ────────────────────────────────────────────────────────
@@ -180,24 +179,36 @@ class RatsHandler:
         return None
 
     @staticmethod
-    def has_evidence(pki_message: PKIMessageTMP) -> bool:
-        """Lightweight OID scan — does not parse the bundle."""
+    def evidence_count(pki_message: PKIMessageTMP) -> int:
+        """Return the number of id-aa-attestation carriers in a CMP request."""
         body_name = pki_message["body"].getName()
         try:
             if body_name == "p10cr":
                 cri = pki_message["body"]["p10cr"]["certificationRequestInfo"]
                 if not cri["attributes"].isValue:
-                    return False
-                return any(str(attr["attrType"]) == ATTESTATION_OID for attr in cri["attributes"])
-            if body_name in ("ir", "cr", "kur"):
-                cert_req = pki_message["body"][body_name][0]["certReq"]
-                exts = cert_req["certTemplate"]["extensions"]
-                if not exts.isValue:
-                    return False
-                return any(str(ext["extnID"]) == ATTESTATION_OID for ext in exts)
+                    return 0
+                return sum(
+                    max(1, len(attr["attrValues"]))
+                    for attr in cri["attributes"]
+                    if str(attr["attrType"]) == ATTESTATION_OID
+                )
+            if body_name in ("cr", "ir", "kur"):
+                return sum(
+                    sum(
+                        str(ext["extnID"]) == ATTESTATION_OID
+                        for ext in cert_req_msg["certReq"]["certTemplate"]["extensions"]
+                    )
+                    for cert_req_msg in pki_message["body"][body_name]
+                    if cert_req_msg["certReq"]["certTemplate"]["extensions"].isValue
+                )
         except Exception as exc:  # noqa: BLE001
-            logging.debug("RatsHandler.has_evidence: scan failed: %s", exc)
-        return False
+            logging.debug("RatsHandler.evidence_count: scan failed: %s", exc)
+        return 0
+
+    @staticmethod
+    def has_evidence(pki_message: PKIMessageTMP) -> bool:
+        """Return whether the CMP request carries any attestation evidence."""
+        return RatsHandler.evidence_count(pki_message) > 0
 
     @staticmethod
     def _extract_from_cert_template_extensions(pki_message: PKIMessageTMP) -> Optional[bytes]:
@@ -288,81 +299,6 @@ class RatsHandler:
         except Exception as exc:  # noqa: BLE001
             logging.debug("RatsHandler._extract_subject_pubkey: %s", exc)
             return None
-
-    # ── Cert extension embedding ─────────────────────────────────────────────
-
-    @staticmethod
-    def embed_extensions(
-        response: PKIMessageTMP,
-        ear_extension: Tuple[str, bytes],
-        ca_key: SignKey,
-    ) -> None:
-        """Add the EAR JWT X.509 extension to the issued certificate.
-
-        The certificate is extracted from the CP response, rebuilt with the new
-        extension using ``cryptography``, re-signed with *ca_key*, and copied
-        back into the response in place.
-
-        :param response: the CMP CP response containing the issued cert.
-        :param ear_extension: ``(extn_oid_dot, extn_value_der)`` — normally
-            :meth:`verify_bundle`'s return value.
-        :param ca_key: CA private key used to re-sign the rebuilt cert.
-        """
-        try:
-            cert_resp = get_cert_response_from_pkimessage(response, response_index=0)
-            cert_choice = cert_resp["certifiedKeyPair"]["certOrEncCert"]["certificate"]
-
-            # cert_choice carries CertOrEncCert's context tag from the CHOICE;
-            # unwrap it so the DER is a plain Certificate TLV.
-            cmp_cert_der = unwrap_context_tag(encode_to_der(cert_choice))
-            x509_cert = load_der_x509_certificate(cmp_cert_der)
-
-            existing_extensions = list(x509_cert.extensions)
-
-            ear_oid_dot, ear_value = ear_extension
-            ear_oid = cx509.ObjectIdentifier(ear_oid_dot)
-            existing_extensions.append(
-                cx509.Extension(
-                    oid=ear_oid,
-                    critical=False,
-                    value=cx509.UnrecognizedExtension(ear_oid, ear_value),
-                )
-            )
-
-            builder = (
-                cx509.CertificateBuilder()
-                .subject_name(x509_cert.subject)
-                .issuer_name(x509_cert.issuer)
-                .public_key(x509_cert.public_key())
-                .serial_number(x509_cert.serial_number)
-                .not_valid_before(x509_cert.not_valid_before_utc)
-                .not_valid_after(x509_cert.not_valid_after_utc)
-            )
-            for ext in existing_extensions:
-                try:
-                    builder = builder.add_extension(ext.value, critical=ext.critical)
-                except Exception:  # noqa: BLE001
-                    pass
-
-            # Re-sign with the CA key.  ca_key may be Ed25519 or another scheme;
-            # cryptography handles the dispatch internally.
-            if isinstance(ca_key, Ed25519PrivateKey):
-                rebuilt = builder.sign(private_key=ca_key, algorithm=None)
-            else:
-                rebuilt = builder.sign(private_key=ca_key, algorithm=hashes.SHA256())
-
-            new_cmp_cert = parse_certificate(rebuilt.public_bytes(serialization.Encoding.DER))
-            copy_asn1_certificate(new_cmp_cert, cert_choice)
-            logging.info(
-                "RatsHandler: embedded EAR extension on issued cert: %s",
-                ear_oid_dot,
-            )
-        except Exception as exc:  # noqa: BLE001
-            logging.warning(
-                "RatsHandler.embed_extensions failed: %s\n%s",
-                exc,
-                traceback.format_exc(),
-            )
 
 
 __all__ = [

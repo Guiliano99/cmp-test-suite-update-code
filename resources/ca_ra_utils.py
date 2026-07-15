@@ -1068,6 +1068,7 @@ def prepare_cert_and_private_key_for_kga(
         ca_cert=ca_cert,
         ca_key=ca_key,
         extensions=kwargs.get("extensions"),
+        allow_unknown_extns=kwargs.get("allow_unknown_extns", False),
         hash_alg=kwargs.get("hash_alg", "sha256"),
         use_rsa_pss=kwargs.get("use_rsa_pss", False),
     )
@@ -4025,6 +4026,8 @@ def build_kup_from_kur(  # noqa: D417 undocumented-param
         cert_template=cert_req_msg["certReq"]["certTemplate"],
         ca_key=ca_key,
         ca_cert=ca_cert,
+        extensions=kwargs.get("extensions"),
+        allow_unknown_extns=kwargs.get("allow_unknown_extns", False),
     )
 
     if request is not None and set_ca_header_fields:
