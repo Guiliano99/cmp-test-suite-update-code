@@ -4,10 +4,16 @@
 #
 """Helpers for remote-attestation nonce exchange and CSR attestation bundle handling."""
 
-import logging
-import os
 from typing import List, Optional
 
+from libattest.formats.csrattest import (
+    AttestationBundle,
+    AttestationSequence,
+    AttestCertSequence,
+    NonceRequestASN1,
+    NonceRequestTypeInfo,
+    id_aa_attestation,
+)
 from pyasn1.type import univ
 from pyasn1.type.char import UTF8String
 from pyasn1_alt_modules import rfc6402, rfc9480
@@ -21,52 +27,8 @@ from pq_logic.tmp_oids import (
 from resources import asn1utils, certutils
 from resources.asn1utils import try_decode_pyasn1
 from resources.certextractutils import csr_contains_attribute, csr_get_attribute
-from resources.exceptions import BadAsn1Data, BadNonceRequest, BadRemoteAttestationASN1, RemoteAttestationError
-from resources.oidutils import ATTESTATION_TYPE_2_STRUCTURE, ATTESTATION_TYPE_OID_2_NAME
-from resources.remote_att_utils.attest_nonce_freshness_structures import (
-    NonceRequestASN1,
-    NonceRequestTypeInfo,
-    NonceResponseASN1,
-    NonceResponseTypeInfo,
-    nonce_request_type_oid,
-)
-from resources.remote_att_utils.csr_attest_structures import (
-    AttestationBundle,
-    AttestationSequence,
-    AttestCertSequence,
-    id_aa_attestation,
-)
-
-
-@not_keyword
-def validate_nonce_request(
-    nonce_request: NonceRequestASN1,
-    min_nonce_length: Optional[int] = 32,
-    strict_type_validation: bool = False,
-) -> None:
-    """Validate the nonce request.
-
-    :param nonce_request: The nonce request to validate.
-    :param min_nonce_length: Minimum length of the nonce in bytes. Defaults to `32` (skipped if `None`)
-    :param strict_type_validation: Whether to enforce strict type validation.
-        Defaults to `False` (must be a known attestation type).
-    :raises BadRequest: If the nonce request is invalid.
-    """
-    if min_nonce_length is not None:
-        if nonce_request["len"].isValue:
-            nonce = nonce_request["len"]
-            if len(nonce) < min_nonce_length:
-                raise BadNonceRequest(f"Nonce length {len(nonce)} is less than minimum length {min_nonce_length}.")
-
-    # Per the freshness draft, reqInfo MUST be omitted when type is absent.
-    # This is now structurally enforced: reqInfo lives inside reqTypeInfo,
-    # which mandates type, so the old violation is no longer representable.
-
-    atte_type_oid = nonce_request_type_oid(nonce_request)
-    if atte_type_oid is not None:
-        atte_type = univ.ObjectIdentifier(atte_type_oid)
-        if atte_type not in ATTESTATION_TYPE_OID_2_NAME and strict_type_validation:
-            raise RemoteAttestationError(f"Attestation type '{atte_type}' is not supported.")
+from resources.exceptions import BadAsn1Data, BadRemoteAttestationASN1
+from resources.oidutils import ATTESTATION_TYPE_2_STRUCTURE
 
 
 @keyword(name="Prepare NonceRequest")
@@ -166,124 +128,6 @@ def prepare_nonce_request_info_type_and_value(
     info_type_and_value["infoValue"] = univ.Any(asn1utils.encode_to_der(nonce_request))
 
     return info_type_and_value
-
-
-def _parse_nonce(
-    pos_nonce_length: univ.Integer,
-    nonce_value: Optional[bytes] = None,
-    min_nonce_length: Optional[int] = 32,
-    bad_nonce_length: bool = False,
-) -> bytes:
-    """Parse or generate a nonce value.
-
-    :param pos_nonce_length: The length of the nonce in bytes.
-    :param nonce_value: The nonce value to use. If `None`, a random nonce will be generated.
-    :param min_nonce_length: Minimum length of the nonce in bytes. Defaults to `32` (skipped if `None`)
-    :param bad_nonce_length: Whether to raise an exception if the nonce length is invalid. Defaults to `False`.
-    :return: The nonce value.
-    """
-    nonce_length = int(pos_nonce_length) if pos_nonce_length.isValue else None  # type: ignore
-    if nonce_length is not None and bad_nonce_length:
-        nonce_length: int
-        if min_nonce_length is not None and nonce_length < min_nonce_length:
-            raise BadNonceRequest(f"Nonce length {nonce_length} is less than minimum length {min_nonce_length}.")
-        if nonce_length <= 0:
-            raise BadNonceRequest(f"Nonce length must be positive, got {nonce_length}.")
-        return os.urandom(nonce_length - 1)
-
-    if nonce_value is not None:
-        if nonce_length is not None and len(nonce_value) < nonce_length:
-            logging.debug(f"Nonce value {nonce_value} is shorter than expected length {nonce_length}.")
-        return nonce_value
-
-    if nonce_length is None and min_nonce_length is not None:
-        nonce_length = min_nonce_length
-
-    elif nonce_length is None and min_nonce_length is None:
-        return os.urandom(32)
-
-    if min_nonce_length is None:
-        min_nonce_length = 32
-
-    if nonce_length < min_nonce_length:
-        raise BadNonceRequest(f"Nonce length {nonce_length} is less than minimum length {min_nonce_length}.")
-
-    if nonce_length <= 0:
-        raise BadNonceRequest(f"Nonce length must be positive, got {nonce_length}.")
-
-    return os.urandom(nonce_length)
-
-
-def _parse_bad_type(nonce_request: NonceRequestASN1) -> univ.ObjectIdentifier:
-    """Parse a different attestation type for the nonce response.
-
-    :param nonce_request: The nonce request.
-    :return: The modified attestation type.
-    :raises ValueError: If the attestation type cannot be modified.
-    """
-    atte_type_oid = nonce_request_type_oid(nonce_request)
-    if atte_type_oid is None:
-        return list(ATTESTATION_TYPE_OID_2_NAME.keys())[0]
-
-    atte_type = univ.ObjectIdentifier(atte_type_oid)
-    for x in ATTESTATION_TYPE_OID_2_NAME:
-        if x != atte_type:
-            return x
-
-    raise ValueError("Could not find a different attestation type to set in nonce response.")
-
-
-@not_keyword
-def prepare_nonce_response_from_request(
-    nonce_request: NonceRequestASN1,
-    nonce_value: Optional[bytes] = None,
-    min_nonce_length: Optional[int] = 32,
-    expiry_time: Optional[int] = None,
-    bad_type: bool = False,
-    bad_nonce_length: bool = False,
-    resp_info: Optional[bytes] = None,
-) -> NonceResponseASN1:
-    """Prepare a NonceResponse object from a NonceRequest.
-
-    Per the freshness draft, the response ``type`` is defined by the request
-    ``type`` and ``respInfo`` MUST be omitted when ``type`` is absent.
-
-    :param nonce_request: The NonceRequest object.
-    :param nonce_value: The nonce value to include in the response.
-    :param min_nonce_length: Minimum length of the nonce in bytes. Defaults to `32` (skipped if `None`)
-    :param expiry_time: The expiry time of the nonce in seconds. Defaults to `None`.
-    :param bad_type: Whether to set a mismatching attestation type (negative tests). Defaults to `False`.
-    :param bad_nonce_length: Whether to return a too-short nonce (negative tests). Defaults to `False`.
-    :param resp_info: Optional DER bytes of the type-specific response value
-        (e.g. ``TpmAttestationParams`` — PCR list + negotiated hash
-        algorithm — for the TPM platform profile).  ``None`` ↔ field omitted.
-    :return: The populated NonceResponse object.
-    """
-    nonce_response = NonceResponseASN1()
-    nonce_response["nonce"] = _parse_nonce(nonce_request["len"], nonce_value, min_nonce_length, bad_nonce_length)
-
-    if bad_type:
-        resp_type = _parse_bad_type(nonce_request)
-    else:
-        atte_type_oid = nonce_request_type_oid(nonce_request)
-        resp_type = univ.ObjectIdentifier(atte_type_oid) if atte_type_oid is not None else None
-
-    if expiry_time is not None:
-        nonce_response["expiry"] = expiry_time
-
-    if resp_type is not None:
-        resp_type_info = NonceResponseTypeInfo()
-        resp_type_info["type"] = resp_type
-        if resp_info is not None:
-            resp_type_info["respInfo"] = univ.Any(resp_info)
-        nonce_response["respTypeInfo"] = resp_type_info
-    elif resp_info is not None:
-        logging.warning(
-            "prepare_nonce_response_from_request: dropping respInfo because "
-            "the response carries no type (draft: respInfo requires type)"
-        )
-
-    return nonce_response
 
 
 @not_keyword

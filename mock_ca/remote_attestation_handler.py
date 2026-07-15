@@ -11,14 +11,17 @@ attestation, per:
 * draft-ietf-lamps-csr-attestation        — CSR attestation evidence.
 
 The reusable RA orchestration — resolving a profile for a ``NonceRequest.type``,
-parsing the type-specific ``reqInfo``, building the ``respInfo``, and issuing the
-nonce in the store — lives in :class:`libattest.ra.RemoteAttestationEngine`.
-This module keeps only the CMP-specific work:
+parsing the type-specific ``reqInfo``, negotiating the ``respInfo``, and
+validating + packaging the ``NonceResponse`` (including the response-type OID,
+which for some profiles legitimately differs from the request type) — lives
+in :class:`libattest.ra.RemoteAttestationEngine`.  This module keeps only the
+CMP-specific work:
 
-1. decode the ``NonceRequest`` ITAV and validate it,
-2. pull the ``type`` OID + ``reqInfo`` bytes + transactionID from the CMP carrier,
-3. call :meth:`RemoteAttestationEngine.issue_nonce`, and
-4. pack the issued nonce + ``respInfo`` into a ``NonceResponse`` ITAV for GenP.
+1. decode the ``NonceRequest`` ITAV,
+2. pull the ``type`` OID + ``reqInfo`` bytes + ``len`` + transactionID from the
+   CMP carrier,
+3. call :meth:`RemoteAttestationEngine.build_nonce_response`, and
+4. pack the resulting ``NonceResponse`` into an ITAV for GenP.
 
 There is **no per-type branching** here: the engine resolves the profile and
 builds the respInfo.  The concrete env-wired subclass lives in
@@ -30,24 +33,19 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from libattest.ra import RemoteAttestationEngine
-from pyasn1_alt_modules import rfc6402, rfc9480
-
-from mock_ca.db_config_vars import RemoteAttestationConfig
-from pq_logic.tmp_oids import id_it_nonceResponse
-from resources.asn1utils import encode_to_der
-from resources.certextractutils import csr_contains_attribute
-from resources.exceptions import RemoteAttestationError
-from resources.remote_att_utils.attest_nonce_freshness_structures import (
+from libattest.formats.csrattest import (
     NonceRequestASN1,
+    id_it_nonceResponse,
     nonce_request_info,
     nonce_request_type_oid,
 )
-from resources.remote_att_utils.csr_attest_structures import id_aa_attestation
-from resources.remote_attestation_utils import (
-    prepare_nonce_response_from_request,
-    validate_nonce_request,
-)
+from libattest.ra import BadNonceRequest, RemoteAttestationEngine
+from pyasn1_alt_modules import rfc9480
+
+from mock_ca.db_config_vars import RemoteAttestationConfig
+from resources.asn1utils import encode_to_der
+from resources.exceptions import BadNonceRequest as CmpBadNonceRequest
+from resources.exceptions import RemoteAttestationError
 
 
 class RemoteAttestationHandler:
@@ -86,9 +84,10 @@ class RemoteAttestationHandler:
         """Process the ``id-it-nonceRequest`` ITAV in a CMP GenM body.
 
         Per the attestation-freshness draft the ITAV value is a single
-        ``NonceRequest``.  The engine issues a nonce for the request type (and
-        builds the type-specific ``respInfo``); the result is packed into a
-        single ``NonceResponse`` ITAV for the GenP reply.
+        ``NonceRequest``.  The engine issues a nonce for the request type,
+        builds the type-specific ``respInfo``, and packages the full
+        ``NonceResponse`` (with the correct response-type OID); the result is
+        packed into a single ``NonceResponse`` ITAV for the GenP reply.
 
         :param nonce_request: ``NonceRequest`` decoded from the GenM ITAV.
         :param tx_id: CMP transactionID; the nonce is filed under this id and
@@ -109,39 +108,25 @@ class RemoteAttestationHandler:
 
         logging.debug("Processing nonce request for tx_id=%s", tx_id.hex())
 
-        validate_nonce_request(nonce_request, min_nonce_length=self.nonce_config.min_nonce_length)
+        requested_len = int(nonce_request["len"]) if nonce_request["len"].isValue else None
 
-        # CMP-side extraction: the request type OID and the (opaque-to-the-CA)
-        # reqInfo DER.  The engine resolves the profile and parses the reqInfo.
-        request_type_oid = nonce_request_type_oid(nonce_request)
-        req_info_der = nonce_request_info(nonce_request)
-
-        state = self.engine.issue_nonce(
-            tx_id=tx_id,
-            request_type_oid=request_type_oid,
-            req_info=req_info_der,
-        )
-
-        nonce_response = prepare_nonce_response_from_request(
-            nonce_request,
-            nonce_value=state.nonce,
-            min_nonce_length=self.nonce_config.min_nonce_length,
-            expiry_time=self.nonce_config.expiration_time,
-            resp_info=state.resp_info,
-        )
+        try:
+            nonce_response = self.engine.build_nonce_response(
+                tx_id,
+                nonce_request_type_oid(nonce_request),
+                req_info=nonce_request_info(nonce_request),
+                requested_len=requested_len,
+                min_nonce_length=self.nonce_config.min_nonce_length,
+                expiry_time=self.nonce_config.expiration_time,
+            )
+        except BadNonceRequest as exc:
+            raise CmpBadNonceRequest(str(exc)) from exc
 
         logging.debug("Prepared nonce response: %s", nonce_response.prettyPrint())
         info_value = rfc9480.InfoTypeAndValue()
         info_value["infoType"] = id_it_nonceResponse
         info_value["infoValue"] = encode_to_der(nonce_response)
         return info_value
-
-    # ── Helpers ───────────────────────────────────────────────────────────────
-
-    @staticmethod
-    def csr_contains_attestation_bundle(csr: rfc6402.CertificationRequest) -> bool:
-        """Check if the CSR contains a draft-22 ``AttestationBundle`` attribute."""
-        return csr_contains_attribute(csr, id_aa_attestation)
 
 
 __all__ = ["RemoteAttestationHandler"]

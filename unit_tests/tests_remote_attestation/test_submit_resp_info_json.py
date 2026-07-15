@@ -4,7 +4,7 @@
 
 """The MockCA→verifier hop sends respInfo as a plain JSON object.
 
-Unit-tests the HTTP body :class:`VeraisonVerifier.submit_evidence` constructs
+Unit-tests the HTTP body :class:`VeraisonVerifierClient.submit_evidence` constructs
 (without performing real HTTP): the respInfo must be carried under the
 ``resp_info_json`` field as a JSON object — not base64, not DER.
 """
@@ -12,7 +12,7 @@ Unit-tests the HTTP body :class:`VeraisonVerifier.submit_evidence` constructs
 import unittest
 from unittest import mock
 
-from mock_ca.remote_att_mockca.attestation_verifier import VeraisonVerifier
+from libattest.ra import VeraisonVerifierClient
 
 
 class _FakeResponse:
@@ -31,7 +31,7 @@ class SubmitRespInfoJsonTest(unittest.TestCase):
 
     def _capture_post_body(self, **submit_kwargs) -> dict:
         """Call submit_evidence with HTTP + EAR checks stubbed; return the body."""
-        client = VeraisonVerifier(base_url="http://tpm-verifier:8444")
+        client = VeraisonVerifierClient(base_url="http://tpm-verifier:8444")
         captured: dict = {}
 
         def fake_post(url, json=None, **_kwargs):  # noqa: A002 - mirrors requests API
@@ -39,14 +39,14 @@ class SubmitRespInfoJsonTest(unittest.TestCase):
             captured["body"] = json
             return _FakeResponse()
 
-        # The HTTP client + EAR checks now live in libattest.ra.verifier_client
-        # (the MockCA class is a thin alias). EAR verification is fail-closed, so
-        # provide a non-None key and stub the signature check to pass.
+        # The HTTP client + EAR checks live in libattest.ra.verifier_client.
+        # EAR verification is fail-closed, so provide a non-None key and stub
+        # the signature check to pass.
         with mock.patch(
             "libattest.ra.verifier_client.requests.post",
             side_effect=fake_post,
         ), mock.patch.object(
-            VeraisonVerifier, "_fetch_ear_public_key", return_value=object()
+            VeraisonVerifierClient, "_fetch_ear_public_key", return_value=object()
         ), mock.patch(
             "libattest.ra.verifier_client.verify_ear_jwt",
             return_value=True,

@@ -6,7 +6,8 @@
 
 The reusable bundle-verification flow — decode the ``AttestationBundle``, consume
 each statement's nonce, resolve its profile, submit to the verifier, run the
-optional reference-value check, and aggregate the verdicts + EAR JWTs — lives in
+optional reference-value check, aggregate the verdicts + EAR JWTs, and resolve
+the EAR certificate-extension encoding — lives in
 :class:`libattest.ra.RemoteAttestationEngine`.  The verifier HTTP client comes
 from each profile (the default :class:`~libattest.ra.VeraisonVerifierClient`).
 
@@ -20,31 +21,22 @@ The MockCA keeps only the CMP/CA glue:
    (not-accepted → :class:`BadMessageCheck`).
 4. **X.509 cert rebuild + EAR-extension embed + re-sign** of the issued cert.
 
-The per-statement nonce store / profile registry / verifier client all live in
-the engine now (shared with the GenM leg via the same
-``RemoteAttestationHandler``), so this module no longer owns any of them.
+The per-statement nonce store / profile registry / verifier client / EAR
+extension encoder all live in the engine now (shared with the GenM leg via the
+same ``RemoteAttestationHandler``), so this module no longer owns any of them.
 """
 
 from __future__ import annotations
 
-import functools
 import logging
 import os
 import traceback
-from collections.abc import Callable
-from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Optional, Tuple
 
 import cryptography.x509 as cx509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.x509 import load_der_x509_certificate
-from libattest.formats.csrattest import (
-    decode_attestation_bundle,
-    encode_oid_der,
-    get_attestation_bundle_certs,
-    unwrap_attestation_statement,
-)
 from libattest.ra import RemoteAttestationEngine
 from libattest.x509 import encode_ear_extension as _libattest_encode_ear_extension
 from libattest.x509 import unwrap_context_tag
@@ -64,52 +56,12 @@ from resources.typingutils import SignKey
 # OID (id-aa-attestation) for the attestation attribute in
 # certTemplate.extensions or CSR attributes.
 ATTESTATION_OID = "1.2.840.113549.1.9.16.2.59"
-EVIDENCE_OID = ATTESTATION_OID  # legacy alias kept for external callers
-RATS_TOKEN_OID = ATTESTATION_OID  # legacy alias kept for external callers
 
 # Fallback EAR-extension OID used only when no profile resolves for a statement.
 # The CMW-vs-raw choice and the env-driven default live in :mod:`libattest.x509`
 # / the ``libattest.ra`` profile; this module no longer encodes the EAR
-# extension itself except via the profile's callable (or this fallback).
+# extension itself except via this fallback.
 _DEFAULT_EAR_EXT_OID = os.environ.get("EAR_OID", "1.7.6.5.123")
-
-
-# ---------------------------------------------------------------------------
-# Data containers (kept for source compatibility with external callers/tests)
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class ExtractedStatement:
-    """One ``AttestationStatement`` decoded from an ``AttestationBundle``."""
-
-    type_oid: str
-    """Dot-form OID of the evidence type (e.g. ``2.23.133.20.1``)."""
-
-    type_oid_der: bytes
-    """DER encoding of the OBJECT IDENTIFIER."""
-
-    stmt_bytes: bytes
-    """DER substrate of the statement payload (TcgAttest SEQUENCE, or raw JWT
-    bytes after the OCTET STRING wrapper is stripped)."""
-
-    is_octet_string_wrapped: bool
-    """``True`` when the original bundle wrapped the statement in an OCTET
-    STRING (JWT case); ``False`` for direct SEQUENCE encoding (TCG)."""
-
-
-@dataclass
-class ExtractedEvidence:
-    """All statements and bundle-level certificates for one IR.
-
-    ``bundle_der`` is the full DER of the ``AttestationBundle`` — the bytes the
-    engine verifies.  The ``statements`` list lets callers (and the EAR-encoder
-    resolver) inspect the bundle without re-decoding.
-    """
-
-    bundle_der: bytes
-    statements: List[ExtractedStatement]
-    certs_der: List[bytes] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -142,35 +94,25 @@ class RatsHandler:
 
     # ── Public API ────────────────────────────────────────────────────────────
 
-    def verify_and_get_ear(self, pki_message: PKIMessageTMP) -> Optional[str]:
-        """Verify every statement in the bundle; return one EAR JWT.
+    def verify_bundle(self, pki_message: PKIMessageTMP) -> Optional[Tuple[str, bytes]]:
+        """Verify every statement in the bundle; return the EAR X.509 extension to embed.
 
         Call this BEFORE building the CMP CP response so a failure raises
         :class:`resources.exceptions.BadMessageCheck` and the outer CMP layer
         returns a rejection (no certificate issued).
 
         :param pki_message: The incoming CMP CR / IR / KUR / P10CR.
-        :return: EAR JWT string on success; ``None`` when the request carries
-            no evidence (soft skip).
+        :return: ``(extn_oid_dot, extn_value_der)`` for the first affirming
+            statement, ready to pass to :meth:`embed_extensions`; ``None`` when
+            the request carries no evidence (soft skip).
         :raises BadMessageCheck: if the engine did not accept the bundle.
-        """
-        ear_jwt, _ = self._verify_bundle(pki_message)
-        return ear_jwt
-
-    def _verify_bundle(self, pki_message: PKIMessageTMP) -> tuple[Optional[str], Optional[bytes]]:
-        """Backbone of :meth:`verify_and_get_ear`.
-
-        Returns ``(ear_jwt, None)``; the second element is kept for source
-        compatibility with earlier KeyAttestPoP callers and is always ``None``
-        in the platform-only profile.  ``ear_jwt`` is ``None`` when the request
-        carries no evidence.
         """
         from resources.exceptions import BadMessageCheck  # noqa: PLC0415
 
         bundle_der = self._extract_bundle_der(pki_message)
         if bundle_der is None:
             logging.debug("RatsHandler: no evidence in request — skip")
-            return None, None
+            return None
 
         engine = self._engine()
         if engine is None:
@@ -183,7 +125,7 @@ class RatsHandler:
         # The engine owns the whole flow: per-statement nonce consume → profile
         # resolve → verifier submit (forwarding respInfo JSON for the quote leg,
         # sessionId + subject pubkey for the key-attest leg) → reference check →
-        # aggregate.  It drops the per-tx nonce state itself.  The subject SPKI is
+        # aggregate → resolve the EAR extension encoding. The subject SPKI is
         # threaded unconditionally; quote/jwt profiles ignore it (engine only adds
         # it to the submit body when the profile carries a session).
         outcome = engine.verify_bundle(
@@ -204,55 +146,15 @@ class RatsHandler:
             tx_id.hex(),
         )
 
-        # The cert extension carries one EAR JWT; for multi-statement bundles use
-        # the first affirming one (the others have already been validated).
-        return outcome.first_ear, None
-
-    def process_cr_attestation(
-        self,
-        pki_message: PKIMessageTMP,
-        response: PKIMessageTMP,
-        ca_key: SignKey,
-    ) -> None:
-        """Verify evidence and embed the EAR extension (best-effort).
-
-        Does not raise; failures are logged and the certificate is issued
-        without an EAR extension.  Use :meth:`verify_and_get_ear` directly when
-        a verifier rejection should fail the enrollment with a CMP error.
-        """
-        try:
-            ear_jwt, _ = self._verify_bundle(pki_message)
-        except Exception as exc:  # noqa: BLE001
-            logging.warning(
-                "RatsHandler.process_cr_attestation: verify_and_get_ear raised: %s",
-                exc,
-            )
-            return
-        if not ear_jwt:
-            return
-        self.embed_extensions(
-            response,
-            ear_jwt,
-            ca_key,
-            encode_ear_extension=self._ear_encoder_for(pki_message),
-        )
-
-    def _ear_encoder_for(self, pki_message: PKIMessageTMP) -> Optional[Callable[[str], tuple[str, bytes]]]:
-        """Resolve the EAR-extension encoder for *pki_message*'s evidence.
-
-        The EAR JWT corresponds to the first statement in the bundle; this
-        returns that statement's profile encoder so the embedded extension uses
-        the per-type EAR/CMW choice.  Returns ``None`` (→ libattest default)
-        when there is no evidence or no profile.
-        """
-        engine = self._engine()
-        if engine is None:
-            return None
-        evidence = self.extract_evidence(pki_message)
-        if evidence is None or not evidence.statements:
-            return None
-        profile = engine.profiles.by_statement(evidence.statements[0].type_oid)
-        return profile.encode_ear_extension if profile is not None else None
+        # The cert extension carries one EAR JWT; for multi-statement bundles the
+        # first affirming one is used (the others have already been validated).
+        ear_extension = outcome.first_ear_extension
+        if ear_extension is None:
+            # Should not happen for an accepted bundle (a profile resolved to
+            # verify it, so it resolves again to encode it) — stay defensive
+            # rather than silently drop the extension.
+            ear_extension = _libattest_encode_ear_extension(outcome.first_ear, oid=_DEFAULT_EAR_EXT_OID)
+        return ear_extension
 
     # ── Engine accessor ────────────────────────────────────────────────────────
 
@@ -266,25 +168,6 @@ class RatsHandler:
         return getattr(self.remote_att_handler, "engine", None)
 
     # ── Evidence extraction (CMP carrier) ──────────────────────────────────────
-
-    def extract_evidence(self, pki_message: PKIMessageTMP) -> Optional[ExtractedEvidence]:
-        """Extract + decode the ``AttestationBundle`` from a CMP request.
-
-        Looks in two places:
-
-        * ``p10cr`` body → ``certificationRequestInfo.attributes``
-        * ``cr`` / ``ir`` / ``kur`` body → ``certTemplate.extensions``
-
-        Decoding here is for callers that want to inspect statements (e.g. the
-        EAR-encoder resolver); the engine re-decodes the bundle DER itself when
-        verifying, so the canonical bytes stay ``ExtractedEvidence.bundle_der``.
-        """
-        bundle_der = self._extract_bundle_der(pki_message)
-        if bundle_der is None:
-            return None
-        engine = self._engine()
-        profiles = engine.profiles if engine is not None else None
-        return self._parse_att_bundle_full(bundle_der, profiles)
 
     def _extract_bundle_der(self, pki_message: PKIMessageTMP) -> Optional[bytes]:
         """Return the raw ``AttestationBundle`` DER from the CMP carrier."""
@@ -406,126 +289,25 @@ class RatsHandler:
             logging.debug("RatsHandler._extract_subject_pubkey: %s", exc)
             return None
 
-    # ── Bundle parsing (inspection only) ──────────────────────────────────────
-
-    @staticmethod
-    def _parse_att_bundle_full(
-        bundle_der: bytes,
-        profiles=None,
-    ) -> Optional[ExtractedEvidence]:
-        """Decode an ``AttestationBundle`` into per-statement records.
-
-        Walks every statement; each ``stmt`` open type is unwrapped via the
-        profile registered for its statement OID (``profile.unwrap_statement``)
-        so the format choice lives in the per-type plugin.  When no profile
-        resolves, the libattest default
-        :func:`~libattest.formats.csrattest.unwrap_attestation_statement` is
-        used.  This is inspection only — the engine re-verifies the raw bundle
-        DER independently.
-
-        :param profiles: a :class:`libattest.ra.ProfileRegistry` (or ``None``).
-        """
-        try:
-            bundle = decode_attestation_bundle(bundle_der)
-        except ValueError as exc:
-            logging.warning("RatsHandler: parse of AttestationBundle failed: %s", exc)
-            return None
-
-        if len(bundle["attestations"]) == 0:
-            logging.warning("RatsHandler: AttestationBundle has no attestations")
-            return None
-
-        statements: List[ExtractedStatement] = []
-        for stmt in bundle["attestations"]:
-            type_oid = str(stmt["type"])
-            type_oid_der = encode_oid_der(stmt["type"])
-
-            stmt_raw: bytes = bytes(stmt["stmt"])
-            if not stmt_raw:
-                logging.warning("RatsHandler: empty stmt in AttestationStatement (oid=%s)", type_oid)
-                continue
-
-            profile = profiles.by_statement(type_oid) if profiles is not None else None
-            unwrap = profile.unwrap_statement if profile is not None else unwrap_attestation_statement
-            stmt_bytes, is_wrapped = unwrap(stmt_raw)
-
-            statements.append(
-                ExtractedStatement(
-                    type_oid=type_oid,
-                    type_oid_der=type_oid_der,
-                    stmt_bytes=stmt_bytes,
-                    is_octet_string_wrapped=is_wrapped,
-                )
-            )
-
-        certs_der: List[bytes] = [bytes(encode_to_der(cert)) for cert in get_attestation_bundle_certs(bundle)]
-
-        logging.info(
-            "RatsHandler: parsed bundle — %d statement(s), %d cert(s)",
-            len(statements),
-            len(certs_der),
-        )
-        return ExtractedEvidence(
-            bundle_der=bundle_der,
-            statements=statements,
-            certs_der=certs_der,
-        )
-
     # ── Cert extension embedding ─────────────────────────────────────────────
-
-    @classmethod
-    def embed_ear_extension(
-        cls,
-        response: PKIMessageTMP,
-        ear_jwt: str,
-        ca_key: SignKey,
-        *,
-        encode_ear_extension: Optional[Callable[[str], tuple[str, bytes]]] = None,
-    ) -> None:
-        """Backward-compatible shim — embed only the EAR JWT extension.
-
-        Equivalent to :meth:`embed_extensions` with ``pop_proof_der=None``; kept
-        so external callers (and the legacy non-PoP enrollment path) compile.
-        """
-        cls.embed_extensions(
-            response,
-            ear_jwt,
-            ca_key,
-            pop_proof_der=None,
-            encode_ear_extension=encode_ear_extension,
-        )
 
     @staticmethod
     def embed_extensions(
         response: PKIMessageTMP,
-        ear_jwt: str,
+        ear_extension: Tuple[str, bytes],
         ca_key: SignKey,
-        *,
-        pop_proof_der: Optional[bytes] = None,
-        encode_ear_extension: Optional[Callable[[str], tuple[str, bytes]]] = None,
     ) -> None:
-        """Add the EAR JWT (and optionally the KeyAttestPoP proof) extensions.
+        """Add the EAR JWT X.509 extension to the issued certificate.
 
         The certificate is extracted from the CP response, rebuilt with the new
-        extension(s) using ``cryptography``, re-signed with *ca_key*, and copied
+        extension using ``cryptography``, re-signed with *ca_key*, and copied
         back into the response in place.
 
         :param response: the CMP CP response containing the issued cert.
-        :param ear_jwt: the compact-serialised EAR JWT string.
+        :param ear_extension: ``(extn_oid_dot, extn_value_der)`` — normally
+            :meth:`verify_bundle`'s return value.
         :param ca_key: CA private key used to re-sign the rebuilt cert.
-        :param pop_proof_der: when supplied, the DER bytes of the
-            ``KeyAttestPoPProof`` are copied verbatim onto the issued cert as an
-            X.509 v3 extension under :func:`resolve_key_attest_pop_oid`
-            (lazy import; the platform-only libattest tree may not ship it).
-            ``None`` for non-PoP enrollments.
-        :param encode_ear_extension: ``(ear_jwt) -> (extn_oid_dot, extn_value_der)``
-            callable selecting the EAR extension OID + value encoding.  Normally
-            the profile's ``encode_ear_extension``; when ``None`` the libattest
-            default bound to the env ``EAR_OID`` is used.  The CMW-vs-raw choice
-            lives entirely in the callable — this method never branches on the OID.
         """
-        if encode_ear_extension is None:
-            encode_ear_extension = functools.partial(_libattest_encode_ear_extension, oid=_DEFAULT_EAR_EXT_OID)
         try:
             cert_resp = get_cert_response_from_pkimessage(response, response_index=0)
             cert_choice = cert_resp["certifiedKeyPair"]["certOrEncCert"]["certificate"]
@@ -537,7 +319,7 @@ class RatsHandler:
 
             existing_extensions = list(x509_cert.extensions)
 
-            ear_oid_dot, ear_value = encode_ear_extension(ear_jwt)
+            ear_oid_dot, ear_value = ear_extension
             ear_oid = cx509.ObjectIdentifier(ear_oid_dot)
             existing_extensions.append(
                 cx509.Extension(
@@ -585,9 +367,5 @@ class RatsHandler:
 
 __all__ = [
     "ATTESTATION_OID",
-    "EVIDENCE_OID",
-    "RATS_TOKEN_OID",
-    "ExtractedEvidence",
-    "ExtractedStatement",
     "RatsHandler",
 ]

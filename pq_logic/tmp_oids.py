@@ -11,6 +11,12 @@ version.
 from pyasn1.type import univ
 from pyasn1_alt_modules import rfc5990, rfc9480
 
+# Re-exported (not used in this file) so the CA and libattest share one source
+# of truth for these OIDs. The `as`-aliases are the standard re-export idiom
+# and keep linters from treating this as an unused import.
+from libattest.formats.csrattest import id_it_nonceRequest as id_it_nonceRequest
+from libattest.formats.csrattest import id_it_nonceResponse as id_it_nonceResponse
+
 ##############################
 # Test Suite OIDs
 ##############################
@@ -343,14 +349,10 @@ COMPOSITE_KEM_OID_2_NAME = {oid: name for name, oid in COMPOSITE_KEM_NAME_2_OID.
 # Based on draft-ietf-lamps-attestation-freshness-05 and draft-ietf-lamps-csr-attestation-22
 ##################################
 
-# InfoType OIDs for CMP General Messages (from draft-ietf-lamps-attestation-freshness-05)
-# Note: These use placeholder values (TBD1, TBD2) pending IANA assignment
-id_it_nonceRequest = univ.ObjectIdentifier(
-    "1.2.840.113549.1.9.16.2.8888"
-)  # TBD1 - Nonce request for remote attestation
-id_it_nonceResponse = univ.ObjectIdentifier(
-    "1.2.840.113549.1.9.16.2.8889"
-)  # TBD2 - Nonce response for remote attestation
+# InfoType OIDs for CMP General Messages (from draft-ietf-lamps-attestation-freshness-05).
+# id_it_nonceRequest / id_it_nonceResponse are libattest's — imported above —
+# so the CA and the library share one source of truth for these placeholder
+# values (TBD1/TBD2 pending IANA assignment) rather than risking drift.
 
 # Attribute OIDs for CSR (from draft-ietf-lamps-csr-attestation-22)
 # id-aa-attestation = { id-aa 59 } where id-aa = 1.2.840.113549.1.9.16.2

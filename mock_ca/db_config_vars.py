@@ -6,10 +6,9 @@
 
 from abc import ABC
 from dataclasses import asdict, dataclass, field, fields
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from resources.data_objects import KARICertsAndKeys
-from resources.exceptions import RemoteAttestationError
 from resources.typingutils import SignKey
 
 
@@ -151,35 +150,12 @@ class ProtectionHandlerConfig(ConfigVal):
 
 
 @dataclass
-class VerifierEntry(ConfigVal):
-    """An entry for a known verifier.
-
-    Attributes
-    ----------
-        name: The name of the verifier.
-        location: The location of the verifier.
-
-    """
-
-    name: str
-    location: str
-
-    def to_dict(self) -> dict:
-        """Convert the configuration to a dictionary."""
-        return {
-            "name": self.name,
-            "location": self.location,
-        }
-
-
-@dataclass
 class AttestationNonceConfig(ConfigVal):
     """Configuration for the Attestation Nonce handling.
 
     Attributes
     ----------
         `min_nonce_length`: The minimum length of the nonce. Defaults to `None`.
-        `verifiers`: The list of known verifiers for the remote attestation. Defaults to `None`.
         `allow_self_generated_nonce`: If self-generated nonces are allowed. Defaults to `True`.
         `fetch_timeout`: The timeout for fetching the nonce from the verifier. Defaults to `10 seconds`.
         `expiration_time`: The expiration time of the nonce in seconds. Defaults to `50 seconds`.
@@ -215,45 +191,7 @@ class RemoteAttestationConfig(ConfigVal):
 
     Attributes:
         - `attestation_nonce_config`: The configuration for the attestation nonce handling.
-        - `verifiers`: The list of known verifiers for the remote attestation.
 
     """
 
     attestation_nonce_config: AttestationNonceConfig = field(default_factory=AttestationNonceConfig)
-    attention_config: Optional[dict] = None
-    verifiers: Optional[List[VerifierEntry]] = None
-
-    def __post_init__(self):
-        """Post-initialization to convert the verifiers to VerifierEntry objects."""
-        if self.verifiers is not None:
-            for i, v in enumerate(self.verifiers):
-                if isinstance(v, dict):
-                    self.verifiers[i] = VerifierEntry(**v)
-
-    def contains_verifier(self, name: str) -> bool:
-        """Check if the verifier is known.
-
-        :param name: The name of the verifier.
-        :return: True if the verifier is known, False otherwise.
-        """
-        if self.verifiers is None:
-            return False
-
-        for verifier in self.verifiers:
-            if verifier.name == name:
-                return True
-        return False
-
-    def get_verifier(self, name: str) -> Optional[VerifierEntry]:
-        """Get the verifier with the given name.
-
-        :param name: The name of the verifier.
-        """
-        if not self.verifiers:
-            raise RemoteAttestationError("No remote attestation verifiers configured.")
-
-        for verifier in self.verifiers:
-            if verifier.name == name:
-                return verifier
-
-        return None

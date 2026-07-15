@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from libattest.formats.csrattest import NonceRequestASN1
 from pyasn1.codec.der import encoder
 from pyasn1.type import univ
 from pyasn1.type.base import Asn1Type
@@ -53,7 +54,6 @@ from resources.oidutils import (
 )
 from resources.prepare_alg_ids import get_all_supported_ecc_alg_ids, prepare_alg_id
 from resources.protectionutils import get_protection_type_from_pkimessage
-from resources.remote_att_utils.attest_nonce_freshness_structures import NonceRequestASN1
 from resources.typingutils import EnvDataPrivateKey, SignKey
 from resources.utils import get_openssl_name_notation
 from unit_tests.utils_for_test import compare_pyasn1_objects, try_decode_pyasn1
@@ -269,7 +269,7 @@ class GeneralMessageHandler:
         if oid == rfc9480.id_it_certProfile:
             return self._process_cert_profile(entry), "The certificate profile is not implemented."
 
-        if oid == univ.ObjectIdentifier("1.2.840.113549.1.9.16.2.8888") or oid == id_it_nonceRequest:
+        if oid == id_it_nonceRequest:
             return self._process_get_nonce_request(entry, pki_message=pki_message)
 
         raise NotImplementedError(f"The processing of the info type {entry['infoType']} is not implemented.")

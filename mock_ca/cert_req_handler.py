@@ -374,13 +374,9 @@ class CertReqHandler:
         has_evidence = self.rats_handler.has_evidence(pki_message)
         if not has_evidence and os.environ.get("ALLOW_RATS_VERIFICATION", "").lower() == "true":
             raise BadMessageCheck("ALLOW_RATS_VERIFICATION is set but the ir carries no id-aa-attestation OID")
-        ear_jwt: Optional[str] = None
-        pop_proof_der: Optional[bytes] = None
+        ear_extension: Optional[tuple] = None
         if has_evidence:
-            # _verify_bundle returns both the EAR JWT and the
-            # KeyAttestPoPProof DER from the CSR/certTemplate so we can
-            # embed them as cert extensions in one re-sign step.
-            ear_jwt, pop_proof_der = self.rats_handler._verify_bundle(pki_message)
+            ear_extension = self.rats_handler.verify_bundle(pki_message)
             verify_ra_verified = False
 
         for_mac = self._get_for_mac(request=pki_message)
@@ -393,14 +389,8 @@ class CertReqHandler:
             **self.issuing_params,
         )
 
-        if ear_jwt is not None:
-            self.rats_handler.embed_extensions(
-                response,
-                ear_jwt,
-                self.ca_key,
-                pop_proof_der=pop_proof_der,
-                encode_ear_extension=self.rats_handler._ear_encoder_for(pki_message),
-            )
+        if ear_extension is not None:
+            self.rats_handler.embed_extensions(response, ear_extension, self.ca_key)
 
         return self.process_after_request(
             request=pki_message,
@@ -441,17 +431,16 @@ class CertReqHandler:
         self.check_signer_is_a_issued_cert(pki_message)
 
         # Drive RATS by message content: if certTemplate.extensions carries
-        # id-aa-attestation, verify it before issuing.  verify_and_get_ear() raises
+        # id-aa-attestation, verify it before issuing.  verify_bundle() raises
         # BadMessageCheck on failure so the outer except returns a CMP rejection.
         # allow_unknown_extns suppresses rejection of the id-aa-attestation OID.
         # Dev-mode guard: raise if ALLOW_RATS_VERIFICATION is set but no evidence.
         has_evidence = self.rats_handler.has_evidence(pki_message)
         if not has_evidence and os.environ.get("ALLOW_RATS_VERIFICATION", "").lower() == "true":
             raise BadMessageCheck("ALLOW_RATS_VERIFICATION is set but the cr carries no id-aa-attestation OID")
-        ear_jwt: Optional[str] = None
-        pop_proof_der: Optional[bytes] = None
+        ear_extension: Optional[tuple] = None
         if has_evidence:
-            ear_jwt, pop_proof_der = self.rats_handler._verify_bundle(pki_message)
+            ear_extension = self.rats_handler.verify_bundle(pki_message)
 
         response, certs = build_cp_cmp_message(
             request=pki_message,
@@ -465,14 +454,8 @@ class CertReqHandler:
             allow_unknown_extns=has_evidence,
         )
 
-        if ear_jwt is not None:
-            self.rats_handler.embed_extensions(
-                response,
-                ear_jwt,
-                self.ca_key,
-                pop_proof_der=pop_proof_der,
-                encode_ear_extension=self.rats_handler._ear_encoder_for(pki_message),
-            )
+        if ear_extension is not None:
+            self.rats_handler.embed_extensions(response, ear_extension, self.ca_key)
 
         return self.process_after_request(
             request=pki_message,
@@ -499,9 +482,9 @@ class CertReqHandler:
         has_evidence = self.rats_handler.has_evidence(pki_message)
         if not has_evidence and os.environ.get("ALLOW_RATS_VERIFICATION", "").lower() == "true":
             raise BadMessageCheck("ALLOW_RATS_VERIFICATION is set but the p10cr carries no id-aa-attestation OID")
-        ear_jwt: Optional[str] = None
+        ear_extension: Optional[tuple] = None
         if has_evidence:
-            ear_jwt = self.rats_handler.verify_and_get_ear(pki_message)
+            ear_extension = self.rats_handler.verify_bundle(pki_message)
 
         response, cert = build_cp_from_p10cr(
             request=pki_message,
@@ -517,13 +500,8 @@ class CertReqHandler:
             verify_ra_verified=verify_ra_verified,
         )
 
-        if ear_jwt is not None:
-            self.rats_handler.embed_ear_extension(
-                response,
-                ear_jwt,
-                self.ca_key,
-                encode_ear_extension=self.rats_handler._ear_encoder_for(pki_message),
-            )
+        if ear_extension is not None:
+            self.rats_handler.embed_extensions(response, ear_extension, self.ca_key)
 
         return self.process_after_request(
             request=pki_message,
@@ -558,9 +536,9 @@ class CertReqHandler:
         has_evidence = self.rats_handler.has_evidence(pki_message)
         if not has_evidence and os.environ.get("ALLOW_RATS_VERIFICATION", "").lower() == "true":
             raise BadMessageCheck("ALLOW_RATS_VERIFICATION is set but the kur carries no id-aa-attestation OID")
-        ear_jwt: Optional[str] = None
+        ear_extension: Optional[tuple] = None
         if has_evidence:
-            ear_jwt = self.rats_handler.verify_and_get_ear(pki_message)
+            ear_extension = self.rats_handler.verify_bundle(pki_message)
 
         if prot_type == ProtectedType.KEM:
             verify_pkimessage_protection(
@@ -598,13 +576,8 @@ class CertReqHandler:
                 **self.issuing_params,
             )
 
-        if ear_jwt is not None:
-            self.rats_handler.embed_ear_extension(
-                response,
-                ear_jwt,
-                self.ca_key,
-                encode_ear_extension=self.rats_handler._ear_encoder_for(pki_message),
-            )
+        if ear_extension is not None:
+            self.rats_handler.embed_extensions(response, ear_extension, self.ca_key)
 
         return self.process_after_request(
             request=pki_message,

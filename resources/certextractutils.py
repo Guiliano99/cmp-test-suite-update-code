@@ -13,6 +13,7 @@ structure, which is used to securely exchange data between two parties.
 import logging
 from typing import Optional, Union
 
+from libattest.formats.csrattest import AttestationBundle, id_aa_attestation
 from pyasn1.codec.der import decoder
 from pyasn1.type import base, univ
 from pyasn1_alt_modules import rfc5280, rfc5652, rfc6402, rfc9480
@@ -23,7 +24,6 @@ from resources.asn1utils import try_decode_pyasn1
 from resources.exceptions import BadAsn1Data
 from resources.oid_mapping import may_return_oid_to_name
 from resources.oidutils import EXTENSION_NAME_2_OID, EXTENSION_OID_2_SPECS
-from resources.remote_att_utils.csr_attest_structures import AttestationBundle, id_aa_attestation
 
 # TODO refactor.
 

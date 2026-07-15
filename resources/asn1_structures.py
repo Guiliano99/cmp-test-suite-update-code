@@ -9,11 +9,11 @@ Will be removed as soon as the draft becomes an RFC.
 
 from typing import TypeAlias
 
+from libattest.formats import csrattest as _libattest_csrattest
+from libattest.formats import tpm as _libattest_tpm
 from pkilint.itu.x520_name import ub_business_category, ub_postal_code, ub_street_address
 from pyasn1.type import char, constraint, namedtype, tag, univ
 from pyasn1_alt_modules import rfc5280, rfc9480
-
-from resources.remote_att_utils import attest_nonce_freshness_structures, attest_structures, csr_attest_structures
 
 
 class OIDs(univ.SequenceOf):
@@ -571,23 +571,23 @@ class X520OrganizationNameASN1(X520nameASN1):
 ## CSR Attestation
 # https://datatracker.ietf.org/doc/html/draft-ietf-lamps-csr-attestation-22
 
-AttestationStatement: TypeAlias = csr_attest_structures.AttestationStatement
-AttestationSequence: TypeAlias = csr_attest_structures.AttestationSequence
-AttestCertSequence: TypeAlias = csr_attest_structures.AttestCertSequence
-AttestationBundle: TypeAlias = csr_attest_structures.AttestationBundle
+AttestationStatement: TypeAlias = _libattest_csrattest.AttestationStatement
+AttestationSequence: TypeAlias = _libattest_csrattest.AttestationSequence
+AttestCertSequence: TypeAlias = _libattest_csrattest.AttestCertSequence
+AttestationBundle: TypeAlias = _libattest_csrattest.AttestationBundle
 
 ## Nonce Freshness
 # https://datatracker.ietf.org/doc/draft-ietf-lamps-attestation-freshness/
 
 
-NonceResponseASN1: TypeAlias = attest_nonce_freshness_structures.NonceResponseASN1
+NonceResponseASN1: TypeAlias = _libattest_csrattest.NonceResponseASN1
 
-NonceRequestASN1: TypeAlias = attest_nonce_freshness_structures.NonceRequestASN1
+NonceRequestASN1: TypeAlias = _libattest_csrattest.NonceRequestASN1
 
 ## Specific Remote Attestation structures
 
 
-TcgAttestCertify = attest_structures.TcgAttestCertify
+TcgAttestCertify = _libattest_tpm.TcgAttestCertify
 
 
 ### Dummy Format
