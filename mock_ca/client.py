@@ -188,9 +188,8 @@ def build_kem_cert_request(
     :param url: The URL of the Mock CA server.
     :return: The response PKIMessage from the server, or None if the request failed.
     """
-    key = keyutils.generate_key(algorithm, by_name=True) # type: ignore
+    key = keyutils.generate_key(algorithm, by_name=True)  # type: ignore
     key: KEMPrivateKey
-
 
     pki_message = cmputils.build_cr_from_key(
         key,
@@ -226,7 +225,7 @@ def build_kem_cert_request(
         password="SiemensIT",
     )
     response_pkiconf = send_pkimessage_to_mock_ca(pki_message=protected_cert, url=url, verify=False)
-    response_pkiconf =  _check_response(response_pkiconf, for_pkiconf=True)
+    response_pkiconf = _check_response(response_pkiconf, for_pkiconf=True)
     if response_pkiconf is None:
         return None
 

@@ -39,8 +39,8 @@ from pq_logic.keys.composite_sig import (
 )
 from pq_logic.keys.hybrid_key_factory import HybridKeyFactory
 from pq_logic.keys.kem_keys import MLKEMPrivateKey
+from pq_logic.keys.key_pyasn1_utils import encrypt_private_key_pkcs8_pem
 from pq_logic.keys.pq_key_factory import PQKeyFactory
-from pq_logic.keys.serialize_utils import prepare_enc_key_pem
 from pq_logic.keys.sig_keys import MLDSAPrivateKey, MLDSAPublicKey
 from pq_logic.keys.trad_kem_keys import DHKEMPrivateKey, RSADecapKey, RSAEncapKey
 from pq_logic.keys.trad_key_factory import (
@@ -708,7 +708,7 @@ class CombinedKeyFactory:
             raise TypeError(f"Unsupported key type: {type(private_key)} for PEM encoding.")
 
         if password is not None:
-            return prepare_enc_key_pem(password, der_data, key_name=header_name)  # pylint: disable=protected-access
+            return encrypt_private_key_pkcs8_pem(private_key_der=der_data, password=password)
 
         if encoding == Encoding.PEM:
             if isinstance(header_name, bytes):
