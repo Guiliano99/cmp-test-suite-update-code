@@ -15,6 +15,7 @@ path = [
     "scripts/**", "pq_logic/fips/frodokem.py",
     "pyrightconfig.json", "VERSION",
     "client_tests/certs/**",
+    "sbom.cdx.json"
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "Copyright 2024 Siemens AG"
