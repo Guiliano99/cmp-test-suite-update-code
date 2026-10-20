@@ -404,7 +404,7 @@ class ProtectionHandler:
 
         if prot_type == ProtectedType.KEM:
             ss = self.kem_shared_secret.get_shared_secret_object(request=request)
-            logging.info("Looking for the shared secret object: %s", str(ss is not None))
+            logging.info("Looking for KEM keying material: %s", str(ss is not None))
             if ss is not None:
                 response = self.patch_for_mac(response)
                 protected_response = protect_pkimessage_kem_based_mac(

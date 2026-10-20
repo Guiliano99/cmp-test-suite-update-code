@@ -445,7 +445,9 @@ def compute_aes_cbc(key: bytes, data: bytes, iv: bytes, decrypt: bool = True) ->
     if len(iv) != 16:
         raise ValueError("IV must be 16 bytes long for AES-CBC.")
 
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
+    # nosemgrep suppresses the no-authenticated-encryption-mode rule on this line: CBC is a
+    # protocol-under-test input for the CMP compliance tests, not this tool's transport.
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv))  # nosemgrep
 
     if decrypt:
         decryptor = cipher.decryptor()
@@ -965,7 +967,7 @@ def perform_static_dh(
     key_length = length // 8
     other_info = encoder.encode(ecc_cms_info)
     shared_secret = perform_ecdh(private_key, public_key, use_cofactor=use_cofactor)
-    logging.info("shared_secret for static-dh: %s", shared_secret.hex())
+    logging.info("shared_secret for static-dh: %d bytes", len(shared_secret))
 
     k = compute_ansi_x9_63_kdf(shared_secret, key_length, other_info=other_info, hash_alg=hash_alg, use_version_2=True)
     return k
@@ -1078,7 +1080,7 @@ def perform_one_pass_mqv(
         static_public_key=peer_cert,
     )
 
-    logging.info("MQV shared secret: %s", z.hex())
+    logging.info("MQV shared secret: %d bytes", len(z))
     # Derive the key using the ANSI X9.63 KDF
     k = derive_shared_secret_ec(z, key_wrap_oid, hash_alg=hash_alg, ukm=ukm)
     logging.info("Derived One-Pass-MQV key: %s", k.hex())

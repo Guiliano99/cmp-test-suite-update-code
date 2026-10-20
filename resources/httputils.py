@@ -270,17 +270,6 @@ def ssl_client(
             logging.info(f"Sent: {message}")
 
 
-def _unsafe_client() -> Optional[bytes]:
-    """Connect to an unsafe TCP server and sends a message."""
-    try:
-        # DISABLES SSL verification, should not be used unless local testing!!!.
-        response = requests.post("http://localhost:8443", data=b"Hello, World!", verify=False, timeout=20)
-        return response.content
-    except requests.exceptions.ReadTimeout:
-        logging.info("Timeout occurred.")
-        return None
-
-
 """
 # will fail because of the mismatch between the server's certificate 
 and the Hostname "localhost" !!!

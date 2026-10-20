@@ -197,3 +197,7 @@ data/EJBCA/*.tar.gz
 /data/cert_logs/
 /liboqs-python/
 /liboqs-python-stateful-sig/
+
+# local semgrep artifacts: scan output and the cloned third-party rule repos
+/static_analysis_semgrep*/
+/.semgrep_cache/

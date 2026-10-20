@@ -2379,7 +2379,7 @@ def verify_kem_based_mac_protection(
             ciphertext=kem_ct,
             use_in_cms=True,
         )
-        logging.info("Shared Secret %s", shared_secret.hex())
+        logging.info("Shared Secret: %d bytes", len(shared_secret))
 
     if shared_secret is None:
         raise ValueError("Either `private_key` or `shared_secret` must be provided.")

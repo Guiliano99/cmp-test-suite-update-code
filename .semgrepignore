@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: Copyright 2026 Siemens AG
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Folder-level exclusions for local semgrep runs (see semgrep.toml and
+# docs/adr/0002-semgrep-local-static-analysis.md).
+#
+# The production code under analysis is resources/ and mock_ca/ only.
+# Everything below is either test fixtures, generated data, vendored
+# upstream code, or local tooling state, and must not produce findings.
+
+# Test fixtures: certificates, keys and payloads are expected to be "unsafe"
+data/
+config/cert/
+client_tests/certs/
+
+# Unit tests are intentionally out of scope for the semgrep scan
+# (they are also excluded from ruff and pylint in this repository).
+unit_tests/
+
+# Vendored code kept "as is" from https://github.com/mjosaarinen/py-acvp-pqc
+pq_logic/fips/
+
+# Vendored liboqs checkouts, if present locally
+liboqs-python/
+liboqs-python-stateful-sig/
+
+# Generated documentation
+doc/
+
+# Scan output of local semgrep runs (raw JSON/SARIF, cloned rule repos)
+static_analysis_semgrep*/
+
+# Local agent/tool state, not project code
+.claude/
+.serena/
+
+# Reports and robot framework artifacts
+reports/
+*.log
+output.xml
+log.html
+report.html

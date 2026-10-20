@@ -1765,4 +1765,6 @@ if __name__ == "__main__":
     root_cert_der = asn1utils.encode_to_der(handler.ca_cert)
     print(f"Root CA certificate (Base64 DER): {base64.b64encode(root_cert_der).decode('ascii')}") # noqa: T201
 
-    app.run(host=args.host, port=args.port, debug=True)
+    # nosemgrep suppresses the flask-debug-enabled rule on this line: developer-only local
+    # test server entry point, never used in deployment.
+    app.run(host=args.host, port=args.port, debug=True)  # nosemgrep

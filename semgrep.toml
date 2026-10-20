@@ -1,0 +1,83 @@
+# SPDX-FileCopyrightText: Copyright 2026 Siemens AG
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# Semgrep configuration for the CMP test suite (LOCAL ONLY - not wired into CI).
+#
+# Why TOML + a runner?
+#   Semgrep does not read TOML, and in semgrep 1.180.0 (OSS, this environment) the
+#   in-config `extends:` key and `exclude-rules:` key are silently inert (verified:
+#   a config whose only content is `extends: [p/flask]` runs 0 rules). The reliable,
+#   verified mechanisms in this version are the CLI flags `--config <ruleset>` and
+#   `--exclude-rule <id>`, plus inline `# nosemgrep` and `.semgrepignore`.
+#   This file is therefore the single source of truth for WHAT is scanned and which
+#   rules are deactivated, and scripts/semgrep_scan.py translates it into those CLI
+#   flags. Run it with:  python scripts/semgrep_scan.py
+#
+# Engine: OSS only. No Pro license is available in the development environment, so
+#   cross-file taint rules are not active. Findings are pattern-level.
+#
+# Scope: production code only - resources/ and mock_ca/ (see .semgrepignore for the
+#   excluded folders: fixtures, generated data, vendored code, tests, tooling state).
+
+[scan]
+# Directories passed to semgrep (relative to the repository root).
+targets = ["resources", "mock_ca"]
+# semgrep must be invoked with --metrics=off (keeps the local scan offline).
+metrics = "off"
+# Registry rulesets, each loaded with its own --config flag (order does not matter).
+rulesets = [
+    "p/security-audit",   # comprehensive vulnerability patterns
+    "p/secrets",          # hardcoded credentials, API keys, tokens
+    "p/python",           # main Python bug/security pack
+    "p/flask",            # mock_ca/ is a Flask app
+]
+# Third-party rule repositories, loaded from a local clone under .semgrep_cache/
+# (populated on first run by scripts/semgrep_scan.py --sync-rules; the cache is
+# git-ignored). The OSS CLI prefixes these rules' ids with the clone path; the
+# runner emits the matching path-prefixed --exclude-rule ids automatically, so
+# the deactivations below also apply to them.
+third_party = [
+    "https://github.com/trailofbits/semgrep-rules",
+    "https://github.com/elttam/semgrep-rules",
+    "https://github.com/apiiro/malicious-code-ruleset",
+]
+
+# Rules deactivated for this codebase. Each entry needs a reason: it is the only
+# record of a decision that was made per-finding (evaluated via the semgrep MCP
+# `semgrep_scan_with_custom_rule` replay plus manual review, October 2026).
+# `id` is matched with the CLI flag --exclude-rule <id>.
+[[exclude]]
+id = "flask-app-route-handler"
+reason = """
+elttam third-party rule: logs every Flask @app.route decorator as an INFO finding
+(14 in mock_ca/ca_handler.py). It is an endpoint inventory, not a vulnerability
+signal for a test-purpose CA that intentionally exposes all of these routes.
+"""
+
+[[exclude]]
+id = "python-obfuscation-methods-masking"
+reason = """
+apiiro third-party rule: a generic 'string-manipulation method repeated 3+ times'
+regex. Both findings (resources/cryptoutils.py:248, :435) were false positives -
+ordinary type-annotated function signatures.
+"""
+
+# Notes on rules that were evaluated and KEPT (no deactivation), so the decision
+# is visible next to the deactivations:
+#
+#   logger-credential-disclosure   -> FIXED IN CODE: 5 log lines printed the hex of
+#     ECDH/MQV/KEM shared secrets; they now log the byte length only (see git log).
+#   hardcoded-password-default-argument -> KEPT (3 findings): "11111" / b"SiemensIT"
+#     are intentional test fixture defaults shared with the unit tests. Not a real
+#     credential; review before any production use of these helpers.
+#   request-with-http -> KEPT (1 finding): mock_ca/client.py:90 defaults to
+#     http://<host>/... ; it is the developer client for a local/EJBCA test CA.
+#   insecure-hash-algorithm-sha1   -> inline `# nosemgrep` at resources/oidutils.py
+#     (SHA1 must remain selectable so legacy CMP peers can be exercised).
+#   crypto-mode-without-authentication -> inline `# nosemgrep` at
+#     resources/cryptoutils.py (AES-CBC is a protocol-under-test input).
+#   debug-enabled -> inline `# nosemgrep` at mock_ca/ca_handler.py (developer-only
+#     local server entry point).
+#   disabled-cert-validation -> FIXED IN CODE: the dead `_unsafe_client()` helper
+#     (verify=False, no references anywhere) was removed.

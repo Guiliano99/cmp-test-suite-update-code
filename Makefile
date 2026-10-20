@@ -15,6 +15,7 @@ help:
 	@echo  '  build-unittest    - Build the unittest docker image'
 	@echo  '  dryrun    - Test whether all CMP tests can be loaded without errors, but it does not execute them'
 	@echo  '  autoformat   - Run ruff on all the source files, to resolve all issues automatically '
+	@echo  '  semgrep      - Run the local-only semgrep scan (scope and rules in semgrep.toml)'
 	@echo  '  verify  - Run a bunch of checks, to see if there are any obvious deficiencies in the code '
 	@echo  '  verifyformat   -  Check formatting only '
 	@echo  '  show-outdated - Show outdated packages (depth 1)'
@@ -93,6 +94,16 @@ docs:
 
 autoformat:
 	ruff check --fix .
+
+semgrep:
+	# Local-only static analysis of the production code (resources/ + mock_ca/).
+	# Scope, rulesets and deactivated rules are defined in semgrep.toml; the
+	# runner translates that into the CLI flags that actually work in this
+	# semgrep version. Not part of CI.
+	python3 scripts/semgrep_scan.py
+
+semgrep-json:
+	python3 scripts/semgrep_scan.py --json
 
 verify:
 	reuse lint

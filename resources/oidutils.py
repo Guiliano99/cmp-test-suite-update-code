@@ -292,7 +292,9 @@ SYMMETRIC_ENCR_ALG_NAME_2_OID = {v: k for k, v in SYMMETRIC_ENCR_ALG_OID_2_NAME.
 # These hash instances are typically used for signing purposes, computing message digests,
 # or for MAC (Message Authentication Code) protection algorithms such as HMAC.
 ALLOWED_HASH_TYPES = {
-    "sha1": hashes.SHA1(),
+    # nosemgrep suppresses the insecure-SHA1 rule on this line: SHA1 is retained so that
+    # legacy CMP peers using it can still be exercised by the compliance tests.
+    "sha1": hashes.SHA1(),  # nosemgrep
     "sha224": hashes.SHA224(),
     "sha256": hashes.SHA256(),
     "sha384": hashes.SHA384(),

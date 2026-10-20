@@ -746,5 +746,5 @@ class GeneralMessageHandler:
             del self.state.shared_secrets[tx_id]
             return True
 
-        logging.warning("The shared secret was not found, for the transaction ID: %s", tx_id)
+        logging.warning("No KEM keying material stored for the transaction ID: %s", tx_id)
         return False
