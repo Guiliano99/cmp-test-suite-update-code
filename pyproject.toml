@@ -40,8 +40,10 @@ pq = [
     # Post-quantum cryptography support
     # Note: Requires system dependencies (libssl-dev, cmake)
     # Install with: uv pip install -e ".[pq]"
-    # The package name in the repo metadata is 'liboqs-python' not 'liboqs-python-stateful-sig'
-    "liboqs-python @ git+https://github.com/Guiliano99/liboqs-python-stateful-sig.git",
+    # The pure-Python wheel compiles the matching OQS C library on first
+    # import (0.16.0.1 -> liboqs 0.16.0). Set OQS_INSTALL_PATH to control
+    # where the C library is built; it defaults to $HOME/_oqs.
+    "liboqs-python==0.16.0.1",
 ]
 
 [dependency-groups]
