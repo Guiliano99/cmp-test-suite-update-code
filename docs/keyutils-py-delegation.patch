@@ -1,0 +1,57 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index c40fe548..2f74461e 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -24,6 +24,9 @@ dependencies = [
+     # required to run the unit test suite (unit_tests/), in parallel across CPU cores.
+     "pytest>=9.1.1,<10.0.0",
+     "pytest-xdist>=3.8.0,<4.0.0",
++    # Standalone key library (first migration slice of the local key logic).
++    # Pinned by commit hash: the ImproveQuality branch has no releases/tags.
++    "keyutils-py @ git+https://github.com/Guiliano99/keyutils-py.git@ed9da3a",
+ ]
+ 
+ [project.optional-dependencies]
+diff --git a/resources/keyutils.py b/resources/keyutils.py
+index 5ef3927e..9ba801c1 100644
+--- a/resources/keyutils.py
++++ b/resources/keyutils.py
+@@ -40,6 +40,8 @@ from pyasn1_alt_modules import rfc4211, rfc5280, rfc5480, rfc5958, rfc6402, rfc6
+ from robot.api.deco import keyword, not_keyword
+ 
+ import pq_logic.combined_factory
++from keyutils_py import generate_key as keyutils_py_generate_key
++from keyutils_py import utils as keyutils_py_utils
+ from pq_logic.keys import serialize_utils
+ from pq_logic.keys.abstract_pq import PQSignaturePrivateKey, PQSignaturePublicKey
+ from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPrivateKey, PQHashStatefulSigPublicKey
+@@ -231,6 +233,9 @@ def generate_key(algorithm: str = "rsa", **params) -> PrivateKey:  # noqa: D417
+     This function supports generating keys for various cryptographic algorithms including RSA, DSA, ECDSA, ECDH,
+     Ed25519, and DH. Depending on the selected algorithm, additional parameters can be provided.
+ 
++    PQ signature, PQ KEM, PQ stateful-hash and hybrid key generation is delegated to the standalone
++    `keyutils-py` package, which is the authoritative source for the supported PQ/hybrid names.
++
+     Post-quantum signature algorithms are not based on hash versions alone but can be specified within the
+     signing functions.
+ 
+@@ -348,7 +353,18 @@ def generate_key(algorithm: str = "rsa", **params) -> PrivateKey:  # noqa: D417
+         )
+ 
+     else:
+-        private_key = pq_logic.combined_factory.CombinedKeyFactory.generate_key(algorithm=algorithm, **params)
++        # Delegation to the standalone keyutils-py package (first migration
++        # slice): PQ signature, PQ KEM, PQ stateful-hash and hybrid key
++        # generation now run inside keyutils-py. The package is the
++        # authoritative source for which names it supports; names outside
++        # its coverage (e.g. "rsa-kem") keep the local factory path.
++        if (
++            keyutils_py_utils.is_hybrid_algorithm(algorithm)
++            or keyutils_py_utils.is_supported_pq_algorithm(algorithm)
++        ):
++            return keyutils_py_generate_key(algorithm, **params)
++
++        return pq_logic.combined_factory.CombinedKeyFactory.generate_key(algorithm=algorithm, **params)
+ 
+     return private_key
+ 
