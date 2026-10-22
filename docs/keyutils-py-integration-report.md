@@ -9,6 +9,7 @@ SPDX-License-Identifier: Apache-2.0
 Host repo: cmp-test-suite (worktree /home/debian/worktrees/keyutils-migration, branch MigrateGenerateKey on top of main 35ac280b)
 Package under test: keyutils-py @ git+https://github.com/Guiliano99/keyutils-py.git@ed9da3a (branch ImproveQuality, commit 2026-10-13)
 Host changes TRIED (delegation later reverted, see verdict): re-pin bitstring 4.4.0 -> 5.0.0, pycryptodome 3.23.0 -> 3.24.1, pq extra -> liboqs-python==0.16.0.1 (OQS C 0.16.0), generate_key PQ/hybrid delegation (thin slice). Current branch state: re-pins only; delegation preserved in docs/keyutils-py-delegation.patch.
+Package-side fixes applied (2026-10-22, keyutils-py branch FixKeyutilsPqIntegration @ b52ef22 on top of ImproveQuality ed9da3a): K2 (FrodoKEM bitstring-5 port) and K6 (pq extra pin) — verified with the package's full test suite (321 tests, OK under OQS C 0.16.0) and pure-Python FrodoKEM round-trips. K3 is INVALIDATED (see below) and K7's SLH-DSA claim is CORRECTED (see below).
 Scope rule honored: NO mock_ca/ changes. Every deficiency below is a keyutils-py-side fix (K1-K6, K9) or an upstream-OQS fact the package should document (K7-K8).
 
 ## Test matrix
@@ -78,7 +79,7 @@ host's pq_logic must import them from the package (reverse the copy direction), 
 re-export under the host's import paths. The host cannot be patched to accept both hierarchies without
 re-creating the duplication this extraction exists to remove.
 
-### K2 (bug on ImproveQuality): FrodoKEM bitstring-5 port is incomplete (3 of 4 sites)
+### K2 (bug on ImproveQuality): FrodoKEM bitstring-5 port is incomplete (3 of 4 sites) — FIXED in package (b52ef22)
 Commit 00d026a "adapt FrodoKEM to bitstring 5" fixed only keyutils_py/fips/frodokem.py:394
 (pack: BitArray(N) -> BitArray.from_zeros(N)). On bitstring 5.0.0 the package copy still breaks at:
 - line 294 `__bytes_to_bit_array`: `BitArray(length=8*len(B))` — length-only constructor
@@ -95,15 +96,23 @@ The host had to fix all four sites to run its own copy (`pq_logic/fips/frodokem.
 six other sites, verified value-identical against the old `ConstBitStream(...).read('intle:16')`
 and the FrodoKEM unit tests). Note the breakage is in the pure-Python FrodoKEM
 backend only; the OQS-backed path does not execute this code.
+FIXED in the package (FixKeyutilsPqIntegration @ b52ef22, same change as the host
+site-by-site): lines 294/360 -> `BitArray.from_zeros`, and the S-matrix parse
+rewritten as `struct.unpack_from('<H', ...)` (the file's existing int-16 idiom,
+`struct` already imported). Verified: pure-Python keygen/encaps/decaps round-trips
+for FrodoKEM-640-AES / 976-SHAKE / 1344-AES produce matching shared secrets; the
+package's full test suite (321 tests) passes under OQS C 0.16.0.
 
-### K3 (API gap): XMSS/XMSSMT name conventions do not cover the host's names
-The host passes e.g. "xmss-shake256-h10-256" (no underscore between name and hash, no underscore in
+### K3 (API gap, INVALIDATED on re-verification 2026-10-22): XMSS/XMSSMT name conventions do not cover the host's names
+Original claim: the host passes e.g. "xmss-shake256-h10-256" (no underscore between name and hash, no underscore in
 the h-N part); the package only accepts the OQS-native "xmss-shake_10_256" / "xmssmt-sha2_20/2_256"
-style. keyutils_py.generate_key("xmss-shake256-h10-256") raises ValueError("Unsupported XMSS
-algorithm"). Host unit tests (unit_tests/tests_pqc_and_hybrids/tests_pqc_stateful_sigs/...) and any RF
-test using host-style names will fail when routed through the package.
-Package-side resolution: normalize both spellings (accept the host's hyphen convention as an alias),
-or document the canonical name set in the package README and expose a mapping helper.
+style. Re-verification against the full host tree (client_tests/, unit_tests/, resources/, pq_logic/) found
+ZERO occurrences of the hyphenated form "xmss-shake256-h10-256" or any "-hN-" style name anywhere in the host.
+The host's actual XMSS/XMSSMT inputs are exactly the package's canonical names: "xmss", "xmss-sha2_10_256",
+"xmss-shake_10_256", "xmss-shake256_*" (prefix match), "xmssmt", "xmssmt-sha2_20/2_256" (prefix match) — all
+accepted by XMSS_ALG_DETAILS / XMSSMT_ALG_DETAILS. No package change is required for K3; the earlier
+reproduction was based on a name the host does not use. (Left as documentation only; do not implement an
+alias layer for it.)
 
 ### K4 (contract): generate_key no longer accepts traditional algorithms or seed=
 keyutils_py.generate_key raises NotImplementedError for rsa/dsa/ec*/ed*/dh (moved to
@@ -118,19 +127,24 @@ bitstring==5.0.0 vs host 4.4.0, pycryptodome>=3.24.1 vs host 3.23.0 (verified vi
 The host re-pinned (worktree commit "Update bitstring to 5.0.0 and pycryptodome to 3.24.1"). Also note
 the cryptography<51 upper bound, which will constrain future host upgrades.
 
-### K6 (dependency): pq extra points at the same unpinned fork the host used
+### K6 (dependency): pq extra points at the same unpinned fork the host used — FIXED in package (b52ef22)
 keyutils-py [pq] = liboqs-python @ git+https://github.com/Guiliano99/liboqs-python-stateful-sig.git
 (unpinned HEAD, builds OQS C 0.15.0). A host running liboqs-python 0.16.0.1 (OQS C 0.16.0) would
-disagree with a package that pulls C 0.15.0 into the same interpreter. Recommend pinning the package
-pq extra to liboqs-python==0.16.0.1 (official, reproducible).
+disagree with a package that pulls C 0.15.0 into the same interpreter. FIXED in the package
+(FixKeyutilsPqIntegration @ b52ef22): the pq extra now pins liboqs-python==0.16.0.1 (official,
+reproducible) with the OQS_INSTALL_PATH build behavior documented in the pyproject comment.
 
-### K7 (upstream-OQS fact, document in package): OQS C 0.16.0 removed SPHINCS+ and renamed others
+### K7 (upstream-OQS fact, document in package; SLH-DSA claim CORRECTED 2026-10-22): OQS C 0.16.0 removed SPHINCS+ and renamed others
 liboqs 0.16.0 release: "SPHINCS+ was removed." Also: old unsalted FrodoKEM -> eFrodoKEM-* (salted
 takes the FrodoKEM-* names; ciphertext sizes change); SLH-DSA names moved to the underscore
 convention (SLH_DSA_PURE_* / SLH_DSA_*_PREHASH_*). The host RF suite references SPHINCS+
 (tests_pq_and_hybrid/pq_sig_tests.robot), so those RF tests cannot pass on any 0.16.0-based
-configuration (MechanismNotSupportedError) — an upstream-OQS effect, not a migration effect. The
-package should state its minimum OQS C version and list the removed/renamed mechanisms.
+configuration (MechanismNotSupportedError) — an upstream-OQS effect, not a migration effect.
+CORRECTION: SLH-DSA itself was NOT removed — OQS C 0.16.0 is compiled with OQS_ENABLE_SIG_SLH_DSA=1
+and the package's SLH-DSA path works under 0.16.0 (all package SLH-DSA tests pass; sign/verify via
+the public sign_data/verify_signature API verified directly). The package should state its minimum
+OQS C version and list the removed/renamed mechanisms (SPHINCS+, FrodoKEM->eFrodoKEM, SLH-DSA
+underscore naming).
 
 ### K8 (reproducibility): the OQS C build location is env-dependent and silently stale
 liboqs-python compiles (or finds) the C library on first import. Precedence: $OQS_INSTALL_PATH first,
@@ -145,8 +159,9 @@ PYOQS_ENABLE_FAULTHANDLER in the README as the supported configuration surface. 
 
 ### K9 (coverage, to verify): stateful-sig name acceptance
 keyutils_py accepts "hss" (default hss_lms_sha256_m32_h5_lmots_sha256_n32_w8) and "levels=" for HSS
-(verified generating). XMSS name aliasing is the open item (K3). LMS name conventions still need to
-be checked against the host's unit-test inputs before sign-off of a stateful-sig migration slice.
+(verified generating). XMSS name aliasing was K3 — now INVALIDATED (the host uses canonical names).
+LMS name conventions still need to be checked against the host's unit-test inputs before sign-off of a
+stateful-sig migration slice.
 
 ## Reproduction commands used (for the keyutils-py maintainers)
     # env
@@ -160,7 +175,7 @@ be checked against the host's unit-test inputs before sign-off of a stateful-sig
       from resources.keyutils import generate_key; k = generate_key('frodokem-976-aes'); \
       ct, ss = k.public_key().encaps(); assert k.decaps(ct) == ss  # decaps hits line 656
       "
-    # K3
+    # K3  (INVALIDATED: this name does not appear anywhere in the host; kept for the record)
     .venv/bin/python -c "import keyutils_py; keyutils_py.generate_key('xmss-shake256-h10-256')"
     # K4
     .venv/bin/python -c "import keyutils_py; keyutils_py.generate_key('rsa')"

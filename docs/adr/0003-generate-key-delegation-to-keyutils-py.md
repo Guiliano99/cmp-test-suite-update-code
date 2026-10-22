@@ -75,7 +75,10 @@ Both mechanisms are package-side design issues (single source of truth for the w
 classes; documented no-OQS contract), not host bugs. The slice is therefore **not safe to
 merge as-is**; the delegation is preserved in
 `docs/keyutils-py-delegation.patch` and re-applied once the package addresses
-`K1`/`K2`/`K3` in the integration report.
+`K1` (class identity) in the integration report. K2 (FrodoKEM bitstring-5) was fixed in the
+package (FixKeyutilsPqIntegration @ b52ef22) and K3 (XMSS name aliasing) was invalidated on
+re-verification (the host uses the package's canonical names), so K1 is the only remaining
+package-side blocker.
 
 Separately, the live `cloudpki` CA was broken during the trial window: every RF suite failed
 in setup because the CA rejected the initial registration with
@@ -88,9 +91,11 @@ once the CA is healthy.
 
 ## Consequences
 
-- The `pq` extra is now a pinned official release, and the FrodoKEM implementation is adapted
-  to bitstring 5 in the host (and the package's own adaptation was incomplete — report K2).
-- OQS C 0.16.0 removed SPHINCS+ (upstream change, report K7); host RF tests that reference
-  SPHINCS+ cannot pass on any 0.16.0-based configuration and need host-side test adaptation.
+- The `pq` extra is now a pinned official release (host and package, b52ef22), and the
+  FrodoKEM implementation is adapted to bitstring 5 in the host and in the package
+  (report K2, fixed in b52ef22).
+- OQS C 0.16.0 removed SPHINCS+ (upstream change, report K7 — SLH-DSA itself is unaffected);
+  host RF tests that reference SPHINCS+ cannot pass on any 0.16.0-based configuration and need
+  host-side test adaptation.
 - Until K1 (class identity) is resolved in the package, no further delegation is possible:
   every call path that `isinstance`s on the host wrapper classes is exposed.
