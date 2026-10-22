@@ -122,10 +122,12 @@ trad + seed= contract, so the host keeps those paths local (thin delegation). Pa
 document the contract split (by-name PQ/hybrid vs by-OID trad vs seed-based) in the README so the
 next migration slices have a stable target contract.
 
-### K5 (dependency conflict): pins are unsatisfiable with the host's previous pins
+### K5 (dependency conflict) — RESOLVED
 bitstring==5.0.0 vs host 4.4.0, pycryptodome>=3.24.1 vs host 3.23.0 (verified via uv lock: conflicts).
-The host re-pinned (worktree commit "Update bitstring to 5.0.0 and pycryptodome to 3.24.1"). Also note
-the cryptography<51 upper bound, which will constrain future host upgrades.
+The host re-pinned (worktree commit "Update bitstring to 5.0.0 and pycryptodome to 3.24.1").
+Re-verified against the current package pyproject: it pins `bitstring==5.0.0` and
+`pycryptodome>=3.24.1,<4.0.0`, so the host (bitstring 5.0.0 / pycryptodome 3.24.1) and the package
+agree — no conflict. The `cryptography<51` upper bound still constrains future host upgrades.
 
 ### K6 (dependency): pq extra points at the same unpinned fork the host used — FIXED in package (b52ef22)
 keyutils-py [pq] = liboqs-python @ git+https://github.com/Guiliano99/liboqs-python-stateful-sig.git
@@ -134,34 +136,40 @@ disagree with a package that pulls C 0.15.0 into the same interpreter. FIXED in 
 (FixKeyutilsPqIntegration @ b52ef22): the pq extra now pins liboqs-python==0.16.0.1 (official,
 reproducible) with the OQS_INSTALL_PATH build behavior documented in the pyproject comment.
 
-### K7 (upstream-OQS fact, document in package; SLH-DSA claim CORRECTED 2026-10-22): OQS C 0.16.0 removed SPHINCS+ and renamed others
+### K7 (upstream-OQS fact; SLH-DSA claim CORRECTED 2026-10-22; DOCUMENTED in package 3a680eb): OQS C 0.16.0 removed SPHINCS+ and renamed others
 liboqs 0.16.0 release: "SPHINCS+ was removed." Also: old unsalted FrodoKEM -> eFrodoKEM-* (salted
-takes the FrodoKEM-* names; ciphertext sizes change); SLH-DSA names moved to the underscore
-convention (SLH_DSA_PURE_* / SLH_DSA_*_PREHASH_*). The host RF suite references SPHINCS+
+takes the FrodoKEM-* names; ciphertext sizes change). The host RF suite references SPHINCS+
 (tests_pq_and_hybrid/pq_sig_tests.robot), so those RF tests cannot pass on any 0.16.0-based
 configuration (MechanismNotSupportedError) — an upstream-OQS effect, not a migration effect.
 CORRECTION: SLH-DSA itself was NOT removed — OQS C 0.16.0 is compiled with OQS_ENABLE_SIG_SLH_DSA=1
 and the package's SLH-DSA path works under 0.16.0 (all package SLH-DSA tests pass; sign/verify via
-the public sign_data/verify_signature API verified directly). The package should state its minimum
-OQS C version and list the removed/renamed mechanisms (SPHINCS+, FrodoKEM->eFrodoKEM, SLH-DSA
-underscore naming).
+the public sign_data/verify_signature API verified directly). The package README now states the
+minimum OQS C version (0.16.0 via liboqs-python 0.16.0.1) and lists the removed/renamed mechanisms
+(package commit 3a680eb).
 
 ### K8 (reproducibility): the OQS C build location is env-dependent and silently stale
-liboqs-python compiles (or finds) the C library on first import. Precedence: $OQS_INSTALL_PATH first,
-then the default $HOME/_oqs, then an auto-build. A stale $HOME/_oqs (this container holds a 0.15.0
-build there) is silently loaded instead of the version matching the wheel — verified: with
-OQS_INSTALL_PATH unset the default path loaded C 0.15.0 while the wheel is 0.16.0.1; the wrapper only
-emits a UserWarning, it does not refuse.
-Package/wrapper-side suggestions: (a) fail (or at least loudly warn per-import) when the loaded C
-version is older than the wheel's expected version; (b) document OQS_INSTALL_PATH / PYOQS_VERSION /
-PYOQS_ENABLE_FAULTHANDLER in the README as the supported configuration surface. Gate-side workaround
-(used in this trial): always set OQS_INSTALL_PATH explicitly and verify oqs.oqs_version().
+liboqs-python 0.16.0.1 locates the C library under $OQS_INSTALL_PATH, else $HOME/_oqs, and
+auto-builds into that directory only if the shared library is missing (verified against the
+installed oqs/oqs.py _load_liboqs). A stale $HOME/_oqs (this container holds a 0.15.0 build there)
+is silently loaded instead of the version matching the wheel — verified: with OQS_INSTALL_PATH
+unset the default path loaded C 0.15.0 while the wheel is 0.16.0.1; the wrapper only emits a
+UserWarning, it does not refuse. PARTIALLY addressed in the package: the README now documents
+OQS_INSTALL_PATH / the $HOME/_oqs default / auto-build behavior and the 0.16.0 minimum (commit
+3a680eb). Still open (upstream liboqs-python, not keyutils-py): (a) fail — or at least loudly warn
+per import — when the loaded C version is older than the wheel's expected version. Gate-side
+workaround (used in this trial): always set OQS_INSTALL_PATH explicitly and verify oqs.oqs_version().
 
-### K9 (coverage, to verify): stateful-sig name acceptance
-keyutils_py accepts "hss" (default hss_lms_sha256_m32_h5_lmots_sha256_n32_w8) and "levels=" for HSS
-(verified generating). XMSS name aliasing was K3 — now INVALIDATED (the host uses canonical names).
-LMS name conventions still need to be checked against the host's unit-test inputs before sign-off of a
-stateful-sig migration slice.
+### K9 (coverage) — CLOSED (verified 2026-10-22): stateful-sig name acceptance
+Re-verified against the host's actual inputs (unit_tests + resources), not guessed names:
+- "hss" and the full "hss_lms_sha256_*_lmots_*" composite names generate (HSSPrivateKey) — the
+  host's HSS tests and resources pass exactly these.
+- "xmss", "xmss-shake_10_256", "xmssmt", "xmssmt-sha2_20/2_256" generate (XMSS/XMSSMT) — matches
+  the host's tests_pqc_stateful_sigs inputs.
+- Bare "lms_sha256_m32_h10" / "lms_shake_*" names are NOT accepted by generate_key (error lists
+  prefixes xmss/xmssmt/hss) — but the host never feeds bare LMS names to generate_key: LMS only
+  appears inside hss_lms_* composite names (accepted) or as key-length parameter strings.
+Conclusion: every stateful-sig name the host actually passes is accepted; no package change
+required for the stateful-sig slice. (K3 XMSS aliasing likewise invalidated.)
 
 ## Reproduction commands used (for the keyutils-py maintainers)
     # env
