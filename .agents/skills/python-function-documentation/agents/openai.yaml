@@ -1,0 +1,4 @@
+interface:
+  display_name: "Python Function Documentation"
+  short_description: "Add Python functions with docs and tests."
+  default_prompt: "Use $python-function-documentation to implement Python changes with proper placement, typing, docs, and tests."
