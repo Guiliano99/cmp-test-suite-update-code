@@ -131,3 +131,7 @@ class PQHashStatefulSigPrivateKey(PQPrivateKey, ABC):
     def hash_alg(self) -> str:
         """Return the hash algorithm used by this private key."""
         return self.public_key().hash_alg
+
+
+# Re-export canonical classes from keyutils-py (single-source)
+from keyutils_py.keys.abstract_stateful_hash_sig import PQHashStatefulSigPublicKey, PQHashStatefulSigPrivateKey

@@ -1355,3 +1355,7 @@ XMSSMT_NOT_APPROVED = [
     "XMSSMT-SHAKE256_60/6_512",
     "XMSSMT-SHAKE256_60/12_512",
 ]
+
+
+# Re-export canonical classes from keyutils-py (single-source)
+from keyutils_py.keys.stateful_sig_keys import XMSSPublicKey, XMSSPrivateKey, XMSSMTPublicKey, XMSSMTPrivateKey, HSSPublicKey, HSSPrivateKey

@@ -989,3 +989,7 @@ class AbstractHybridRawPrivateKey(HybridKEMPrivateKey, ABC):
     @abstractmethod
     def from_private_bytes(cls, data: bytes) -> "AbstractHybridRawPrivateKey":
         """Create a private key from bytes."""
+
+
+# Re-export canonical classes from keyutils-py (single-source)
+from keyutils_py.keys.abstract_wrapper_keys import BaseKey, WrapperPublicKey, WrapperPrivateKey, KEMPublicKey, KEMPrivateKey, PQPublicKey, PQPrivateKey, TradKEMPublicKey, TradKEMPrivateKey, HybridPublicKey, HybridPrivateKey, HybridSigPublicKey, HybridSigPrivateKey, HybridKEMPublicKey, HybridKEMPrivateKey, AbstractCompositePublicKey, AbstractCompositePrivateKey, AbstractHybridRawPublicKey, AbstractHybridRawPrivateKey

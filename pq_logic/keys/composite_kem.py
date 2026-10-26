@@ -257,3 +257,7 @@ class CompositeKEMPrivateKey(HybridKEMPrivateKey, AbstractCompositePrivateKey):
         trad_ss = self._trad_key.decaps(trad_ct)
         combined_ss = self.kem_combiner(mlkem_ss, trad_ss, trad_ct, self.encode_trad_part(), use_in_cms=use_in_cms)
         return combined_ss
+
+
+# Re-export canonical classes from keyutils-py (single-source)
+from keyutils_py.keys.composite_kem import CompositeKEMPublicKey, CompositeKEMPrivateKey

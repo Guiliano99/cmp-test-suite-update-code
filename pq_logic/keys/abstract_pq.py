@@ -290,3 +290,7 @@ class PQKEMPrivateKey(PQPrivateKey, KEMPrivateKey, ABC):
     def seed_size(self) -> int:
         """Return the size of the seed used for key generation."""
         return self._seed_size(self._other_name)
+
+
+# Re-export canonical classes from keyutils-py (single-source)
+from keyutils_py.keys.abstract_pq import PQSignaturePublicKey, PQSignaturePrivateKey, PQKEMPublicKey, PQKEMPrivateKey

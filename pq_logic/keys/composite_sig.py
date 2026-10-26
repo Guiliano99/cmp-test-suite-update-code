@@ -358,3 +358,7 @@ class CompositeSigPrivateKey(AbstractCompositePrivateKey, HybridSigPrivateKey):
     ]:
         """Return the traditional key."""
         return self._trad_key
+
+
+# Re-export canonical classes from keyutils-py (single-source)
+from keyutils_py.keys.composite_sig import CompositeSigPublicKey, CompositeSigPrivateKey

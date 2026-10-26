@@ -321,3 +321,7 @@ class XWingPrivateKey(AbstractHybridRawPrivateKey):
     def pq_key(self) -> MLKEMPrivateKey:
         """Return the ML-KEM private key."""
         return self._pq_key
+
+
+# Re-export canonical classes from keyutils-py (single-source)
+from keyutils_py.keys.xwing import XWingPublicKey, XWingPrivateKey

@@ -561,3 +561,7 @@ class DHKEMPrivateKey(TradKEMPrivateKey):
         return: The name of the curve or x25519/x448.
         """
         return self.public_key().curve_name
+
+
+# Re-export canonical classes from keyutils-py (single-source)
+from keyutils_py.keys.trad_kem_keys import RSAEncapKey, RSADecapKey, DHKEMPublicKey, DHKEMPrivateKey

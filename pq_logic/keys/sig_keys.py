@@ -862,3 +862,7 @@ class FalconPrivateKey(PQSignaturePrivateKey):
         if name not in FALCON_NAMES:
             raise ValueError(f"Invalid `Falcon` signature algorithm name provided.: {name} Supported names: {names}")
         return name, name.capitalize()
+
+
+# Re-export canonical classes from keyutils-py (single-source)
+from keyutils_py.keys.sig_keys import MLDSAPublicKey, MLDSAPrivateKey, SLHDSAPublicKey, SLHDSAPrivateKey, FalconPublicKey, FalconPrivateKey

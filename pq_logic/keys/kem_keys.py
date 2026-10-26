@@ -665,3 +665,7 @@ class FrodoKEMPrivateKey(PQKEMPrivateKey):
         if oqs is not None:
             return super().nist_level
         return _FRODOKEM_NIST_LEVEL[self.name]
+
+
+# Re-export canonical classes from keyutils-py (single-source)
+from keyutils_py.keys.kem_keys import MLKEMPublicKey, MLKEMPrivateKey, McEliecePublicKey, McEliecePrivateKey, Sntrup761PublicKey, Sntrup761PrivateKey, FrodoKEMPublicKey, FrodoKEMPrivateKey

@@ -410,3 +410,7 @@ class ChempatFrodoKEMPrivateKey(ChempatPrivateKey):
     def public_key(self) -> ChempatFrodoKEMPublicKey:
         """Return the corresponding public key class."""
         return ChempatFrodoKEMPublicKey(self._pq_key.public_key(), self._trad_key.public_key())
+
+
+# Re-export canonical classes from keyutils-py (single-source)
+from keyutils_py.keys.chempat_key import ChempatPublicKey, ChempatPrivateKey, ChempatMLKEMPublicKey, ChempatMLKEMPrivateKey, ChempatMcEliecePublicKey, ChempatMcEliecePrivateKey, ChempatSntrup761PublicKey, ChempatSntrup761PrivateKey, ChempatFrodoKEMPublicKey, ChempatFrodoKEMPrivateKey
