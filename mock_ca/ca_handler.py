@@ -21,6 +21,15 @@ from cryptography.x509 import ocsp
 sys.path.append(".")
 from cryptography import x509
 from flask import Flask, Response, request
+from keyutils_py.types import (
+    CompositeSigPrivateKey,
+    ECDHPrivateKey,
+    HybridKEMPrivateKey,
+    PQSignaturePrivateKey,
+    PublicKey,
+    SignKey,
+    VerifyKey,
+)
 from pyasn1_alt_modules import rfc5280, rfc9480, rfc9481
 
 from mock_ca.cert_conf_handler import CertConfHandler
@@ -45,9 +54,6 @@ from pq_logic.hybrid_issuing import (
 )
 from pq_logic.hybrid_sig.cert_binding_for_multi_auth import validate_multi_auth_binding_csr
 from pq_logic.hybrid_sig.sun_lamps_hybrid_scheme_00 import extract_sun_hybrid_alt_sig, sun_cert_template_to_cert
-from pq_logic.keys.abstract_pq import PQSignaturePrivateKey
-from pq_logic.keys.abstract_wrapper_keys import HybridKEMPrivateKey
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey
 from pq_logic.pq_verify_logic import verify_hybrid_pkimessage_protection
 from pq_logic.tmp_oids import id_it_KemCiphertextInfo
 from resources import asn1utils
@@ -117,7 +123,7 @@ from resources.protectionutils import (
     validate_orig_pkimessage,
 )
 from resources.suiteenums import ProtectedType
-from resources.typingutils import ECDHPrivateKey, EnvDataPrivateKey, PublicKey, SignKey, VerifyKey
+from resources.typingutils import EnvDataPrivateKey
 from resources.utils import load_and_decode_pem_file
 from unit_tests.utils_for_test import load_ca_cert_and_key, load_env_data_certs
 

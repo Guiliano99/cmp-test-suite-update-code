@@ -4,7 +4,7 @@
 
 import unittest
 
-from pq_logic.keys.kem_keys import Sntrup761PrivateKey
+from keyutils_py.types import Sntrup761PrivateKey
 from resources.utils import manipulate_first_byte
 
 

@@ -14,6 +14,24 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, paddin
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PublicKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey
+from keyutils_py.types import (
+    CompositeKEMPublicKey,
+    CompositeSigPrivateKey,
+    CompositeSigPublicKey,
+    ECDHPrivateKey,
+    ECDHPublicKey,
+    HybridKEMPublicKey,
+    KEMPublicKey,
+    PQHashStatefulSigPrivateKey,
+    PQHashStatefulSigPublicKey,
+    PQSignaturePrivateKey,
+    PQSignaturePublicKey,
+    PrivateKey,
+    PublicKey,
+    SignKey,
+    Strint,
+    VerifyKey,
+)
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import tag, univ
 from pyasn1.type.base import Asn1Item
@@ -32,11 +50,6 @@ from pyasn1_alt_modules import (
 )
 from robot.api.deco import keyword, not_keyword
 
-from pq_logic.keys.abstract_pq import PQSignaturePrivateKey, PQSignaturePublicKey
-from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPrivateKey, PQHashStatefulSigPublicKey
-from pq_logic.keys.abstract_wrapper_keys import HybridKEMPublicKey, KEMPublicKey
-from pq_logic.keys.composite_kem import CompositeKEMPublicKey
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey, CompositeSigPublicKey
 from pq_logic.pq_utils import get_kem_oid_from_key, is_kem_public_key
 from pq_logic.tmp_oids import COMPOSITE_SIG_PREHASH_OID_2_HASH
 from resources import (
@@ -66,16 +79,7 @@ from resources.oidutils import (
     KM_KA_ALG_NAME_2_OID,
     PQ_SIG_PRE_HASH_NAME_2_OID,
 )
-from resources.typingutils import (
-    ECDHPrivateKey,
-    ECDHPublicKey,
-    PrivateKey,
-    PublicKey,
-    RecipInfo,
-    SignKey,
-    Strint,
-    VerifyKey,
-)
+from resources.typingutils import RecipInfo
 
 _PrivateKeyCast = Union[
     Sequence[Union[PrivateKey, rfc5958.OneAsymmetricKey]],

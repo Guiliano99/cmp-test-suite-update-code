@@ -4,7 +4,7 @@
 
 import unittest
 
-from pq_logic.keys.composite_kem import CompositeKEMPrivateKey, CompositeKEMPublicKey
+from keyutils_py.types import CompositeKEMPrivateKey, CompositeKEMPublicKey
 
 from resources.keyutils import generate_key
 

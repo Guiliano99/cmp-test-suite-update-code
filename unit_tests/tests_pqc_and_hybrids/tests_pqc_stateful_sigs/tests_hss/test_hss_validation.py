@@ -5,7 +5,7 @@
 import unittest
 
 from pq_logic.keys.hss_validation import validate_hss_key, validate_hss_key_levels
-from pq_logic.keys.stateful_sig_keys import HSSPrivateKey
+from keyutils_py.types import HSSPrivateKey
 from resources.exceptions import InvalidKeyData
 
 

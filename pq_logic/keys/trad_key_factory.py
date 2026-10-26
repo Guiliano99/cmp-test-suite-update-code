@@ -14,17 +14,16 @@ from cryptography.hazmat.primitives.asymmetric.ed448 import Ed448PrivateKey
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+from keyutils_py.types import PrivateKey, PublicKey, TradKEMPublicKey, TradPrivateKey
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import tag, univ
 from pyasn1_alt_modules import rfc3279, rfc4211, rfc5480, rfc5915, rfc5958, rfc6664, rfc8017, rfc9480, rfc9481
 from robot.api.deco import not_keyword
 
-from pq_logic.keys.abstract_wrapper_keys import TradKEMPublicKey
 from pq_logic.keys.serialize_utils import ecc_private_key_to_bytes, prepare_ec_private_key, prepare_rsa_private_key
 from resources.asn1utils import try_decode_pyasn1
 from resources.exceptions import BadAlg, BadAsn1Data, InvalidKeyData, MismatchingKey
 from resources.oid_mapping import get_curve_instance, may_return_oid_to_name
-from resources.typingutils import PrivateKey, PublicKey, TradPrivateKey
 
 
 @not_keyword

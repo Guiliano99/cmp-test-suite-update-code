@@ -24,6 +24,17 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509 import ExtensionNotFound, ReasonFlags, ocsp
 from cryptography.x509.oid import AuthorityInformationAccessOID
+from keyutils_py.types import (
+    CompositeSigPublicKey,
+    KEMPublicKey,
+    PQHashStatefulSigPublicKey,
+    PQPublicKey,
+    PQSignaturePublicKey,
+    PublicKey,
+    SignKey,
+    Strint,
+    VerifyKey,
+)
 from pkilint import loader, report
 from pkilint.pkix import certificate, extension, name
 from pkilint.validation import ValidationFindingSeverity
@@ -32,10 +43,6 @@ from pyasn1.type import univ
 from pyasn1_alt_modules import rfc5280, rfc6402, rfc9480
 from robot.api.deco import keyword, not_keyword
 
-from pq_logic.keys.abstract_pq import PQSignaturePublicKey
-from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPublicKey
-from pq_logic.keys.abstract_wrapper_keys import KEMPublicKey, PQPublicKey
-from pq_logic.keys.composite_sig import CompositeSigPublicKey
 from pq_logic.pq_utils import is_kem_public_key
 from resources import (
     asn1utils,
@@ -71,7 +78,6 @@ from resources.oidutils import (
     RSASSA_PSS_OID_2_NAME,
 )
 from resources.suiteenums import KeyUsageStrictness
-from resources.typingutils import SignKey, Strint, VerifyKey
 
 # for these to integrate smoothly into RF, they have to raise exceptions in case of failure, rather than
 # return False
@@ -176,7 +182,7 @@ def validate_certificate_pkilint(data: Union[rfc9480.CMPCertificate, bytes]) -> 
 
 
 @not_keyword
-def verify_cert_signature(cert: rfc9480.CMPCertificate, issuer_pub_key: Optional[typingutils.VerifyKey] = None):
+def verify_cert_signature(cert: rfc9480.CMPCertificate, issuer_pub_key: Optional[VerifyKey] = None):
     """Verify the signature of an X.509 certificate.
 
     Uses the issuer's public key, or the certificate's own public key if it is self-signed.
@@ -290,7 +296,7 @@ def build_chain_from_list(
 
 
 @not_keyword
-def load_public_key_from_der(spki_der: bytes) -> typingutils.PublicKey:
+def load_public_key_from_der(spki_der: bytes) -> PublicKey:
     """Load a public key from DER-encoded SubjectPublicKeyInfo bytes.
 
     Is intended to load either a Post-Quantum (PQ) key or a
@@ -306,7 +312,7 @@ def load_public_key_from_der(spki_der: bytes) -> typingutils.PublicKey:
 
 def load_public_key_from_cert(  # noqa D417 undocumented-param
     cert: rfc9480.CMPCertificate,
-) -> typingutils.PublicKey:
+) -> PublicKey:
     """Load a public key from a `CMPCertificate`.
 
     Supposed to be used to load either a pq Key or `cryptography` key.
@@ -404,7 +410,7 @@ def build_cmp_chain_from_pkimessage(  # noqa D417 undocumented-param
     ee_cert: Optional[rfc9480.CMPCertificate] = None,
     for_issued_cert: bool = False,
     last_cert_is_self_signed: bool = False,
-    cert_number: typingutils.Strint = 0,
+    cert_number: Strint = 0,
 ) -> List[rfc9480.CMPCertificate]:
     """Build the CMP-Protection certificate chain or the certificate chain for 'ip', 'cp', or 'kur' messages.
 
@@ -980,7 +986,7 @@ def verify_cert_chain_openssl(  # noqa D417 undocumented-param
     cert_chain: List[rfc9480.CMPCertificate],
     crl_check: bool = False,
     verbose: bool = True,
-    timeout: typingutils.Strint = 60,
+    timeout: Strint = 60,
     crl_path: Optional[str] = None,
     crl_check_all: bool = False,
 ) -> None:
@@ -1119,7 +1125,7 @@ def certificates_must_be_trusted(  # noqa D417 undocumented-param
     trustanchors: Union[None, str] = "./data/trustanchors",
     allow_os_store: bool = True,
     key_usages: str = "digitalSignature",
-    key_usage_strict: typingutils.Strint = 1,
+    key_usage_strict: Strint = 1,
     verbose: bool = True,
     crl_check: bool = False,
 ):

@@ -15,6 +15,22 @@ from Crypto.Signature import pss
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import dsa, padding, rsa, x448, x25519
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
+from keyutils_py.types import (
+    CompositeSigPrivateKey,
+    CompositeSigPublicKey,
+    ECDHPrivateKey,
+    ECDHPublicKey,
+    ECVerifyKey,
+    KEMPrivateKey,
+    KEMPublicKey,
+    MLDSAPublicKey,
+    PQSignaturePrivateKey,
+    PQSignaturePublicKey,
+    PrivateKey,
+    PublicKey,
+    SignKey,
+    VerifyKey,
+)
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import tag, univ
 from pyasn1.type.tag import Tag, tagClassContext, tagFormatSimple
@@ -33,9 +49,6 @@ from pyasn1_alt_modules import (
 from robot.api.deco import keyword, not_keyword
 
 from pq_logic import pq_verify_logic
-from pq_logic.keys.abstract_pq import PQSignaturePrivateKey, PQSignaturePublicKey
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey, CompositeSigPublicKey
-from pq_logic.keys.sig_keys import MLDSAPublicKey
 from pq_logic.pq_utils import get_kem_oid_from_key
 from pq_logic.tmp_oids import (
     COMPOSITE_SIG_OID_TO_NAME,
@@ -116,18 +129,7 @@ from resources.oidutils import (
     id_KemBasedMac,
 )
 from resources.suiteenums import ProtectedType, ProtectionAlgorithm
-from resources.typingutils import (
-    CertObjOrPath,
-    ECDHPrivateKey,
-    ECDHPublicKey,
-    ECVerifyKey,
-    KEMPrivateKey,
-    KEMPublicKey,
-    PrivateKey,
-    PublicKey,
-    SignKey,
-    VerifyKey,
-)
+from resources.typingutils import CertObjOrPath
 
 
 def _compare_alg_id(

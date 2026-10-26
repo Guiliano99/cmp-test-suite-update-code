@@ -8,7 +8,7 @@ from cryptography import x509
 from pyasn1.codec.der import decoder, encoder
 from pyasn1_alt_modules import rfc5652, rfc5083, rfc9629, rfc5958
 
-from pq_logic.keys.kem_keys import MLKEMPrivateKey
+from keyutils_py.types import MLKEMPrivateKey
 from resources.ca_kga_logic import process_kem_recip_info
 from resources.cryptoutils import decrypt_data_with_alg_id
 from resources.utils import decode_pem_string

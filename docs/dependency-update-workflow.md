@@ -33,8 +33,8 @@ of a pinned package breaks the build (e.g. a package's own pins conflict with th
    defect this workflow prevents).
 5. **Reconcile pins.** Run `uv lock` and read conflicts. If the dependency's own pins conflict
    with the repo's, re-pin on the repo side only if the newer contract is verified to work — and
-   record every host-side adaptation (e.g. the bitstring-5 `BitArray.from_zeros` fix in
-   `pq_logic/fips/frodokem.py`).
+   record every host-side adaptation (e.g. the bitstring-5 `BitArray.from_zeros` fix, which now
+   lives in `keyutils_py/fips/frodokem.py` since the host no longer carries its own FrodoKEM).
 6. **Sync the right environment.** `uv sync` drops optional-extra packages. For the `pq` extra:
    `uv sync --extra pq`. After any sync, verify what is actually installed
    (`uv pip list | grep -i oqs`) and which C library version will load (see step 8).

@@ -7,8 +7,8 @@ import unittest
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from pyasn1_alt_modules import rfc9480
 
-from pq_logic.keys.composite_kem import CompositeKEMPublicKey
-from pq_logic.keys.composite_sig import CompositeSigPublicKey
+from keyutils_py.types import CompositeKEMPublicKey
+from keyutils_py.types import CompositeSigPublicKey
 from resources.asn1_structures import PKIMessageTMP
 from resources.ca_ra_utils import prepare_cert_and_private_key_for_kga
 from resources.certbuildutils import build_certificate, prepare_cert_template

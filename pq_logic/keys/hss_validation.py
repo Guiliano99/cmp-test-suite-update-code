@@ -20,7 +20,8 @@ from __future__ import annotations
 import re
 from typing import List, Sequence, Tuple, Union
 
-from pq_logic.keys.stateful_sig_keys import HSSPrivateKey, HSSPublicKey
+from keyutils_py.types import HSSPrivateKey, HSSPublicKey
+
 from resources.exceptions import InvalidKeyData
 
 # Canonical parameter names derived from the RFC parameter tables.  The lists

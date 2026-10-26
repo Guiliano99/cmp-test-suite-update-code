@@ -8,6 +8,12 @@ Which may change in the future or are replaced be different OIDs or updated for 
 version.
 """
 
+from keyutils_py.oids import (  # noqa: F401  # re-exported, resources.oidutils builds on them
+    CHEMPAT_NAME_2_OID,
+    CHEMPAT_OID_2_NAME,
+    FRODOKEM_NAME_2_OID,
+    FRODOKEM_OID_2_NAME,
+)
 from pyasn1.type import univ
 from pyasn1_alt_modules import rfc5990, rfc9480
 
@@ -81,18 +87,6 @@ MCELIECE_NAME_2_OID = {
     "mceliece-8192128": univ.ObjectIdentifier(f"{id_mceliece}.5"),
 }
 
-id_frodokem = f"{id_kem_test_suite}.3"
-
-FRODOKEM_NAME_2_OID = {
-    "frodokem-640-aes": univ.ObjectIdentifier(f"{id_frodokem}.1"),
-    "frodokem-640-shake": univ.ObjectIdentifier(f"{id_frodokem}.2"),
-    "frodokem-976-aes": univ.ObjectIdentifier(f"{id_frodokem}.3"),
-    "frodokem-976-shake": univ.ObjectIdentifier(f"{id_frodokem}.4"),
-    "frodokem-1344-aes": univ.ObjectIdentifier(f"{id_frodokem}.5"),
-    "frodokem-1344-shake": univ.ObjectIdentifier(f"{id_frodokem}.6"),
-}
-
-FRODOKEM_OID_2_NAME = {y: x for x, y in FRODOKEM_NAME_2_OID.items()}
 MCELIECE_OID_2_NAME = {y: x for x, y in MCELIECE_NAME_2_OID.items()}
 
 id_it_KemCiphertextInfo = rfc9480.id_it + (9999,)
@@ -240,70 +234,6 @@ id_at_deltaCertificateRequestSignature = univ.ObjectIdentifier("2.16.840.1.11402
 id_at_deltaCertificateRequest = univ.ObjectIdentifier("2.16.840.1.114027.80.6.2")
 
 
-id_chempat_x25519_sntrup761 = univ.ObjectIdentifier(f"{id_Chempat}.1")
-id_chempat_x25519_mceliece348864 = univ.ObjectIdentifier(f"{id_Chempat}.2")
-id_chempat_x25519_mceliece460896 = univ.ObjectIdentifier(f"{id_Chempat}.3")
-id_chempat_x25519_mceliece6688128 = univ.ObjectIdentifier(f"{id_Chempat}.4")
-id_chempat_x25519_mceliece6960119 = univ.ObjectIdentifier(f"{id_Chempat}.5")
-id_chempat_x25519_mceliece8192128 = univ.ObjectIdentifier(f"{id_Chempat}.6")
-id_chempat_x448_mceliece348864 = univ.ObjectIdentifier(f"{id_Chempat}.7")
-id_chempat_x448_mceliece460896 = univ.ObjectIdentifier(f"{id_Chempat}.8")
-id_chempat_x448_mceliece6688128 = univ.ObjectIdentifier(f"{id_Chempat}.9")
-id_chempat_x448_mceliece6960119 = univ.ObjectIdentifier(f"{id_Chempat}.10")
-id_chempat_x448_mceliece8192128 = univ.ObjectIdentifier(f"{id_Chempat}.11")
-id_chempat_x25519_ml_kem_768 = univ.ObjectIdentifier(f"{id_Chempat}.12")
-id_chempat_x448_ml_kem_1024 = univ.ObjectIdentifier(f"{id_Chempat}.13")
-id_chempat_p256_ml_kem_768 = univ.ObjectIdentifier(f"{id_Chempat}.14")
-id_Chempat_P384_ML_KEM_1024 = univ.ObjectIdentifier(f"{id_Chempat}.15")
-id_chempat_brainpool_p256_ml_kem_768 = univ.ObjectIdentifier(f"{id_Chempat}.16")
-id_chempat_brainpool_p384_ml_kem_1024 = univ.ObjectIdentifier(f"{id_Chempat}.17")
-
-# newly added in version 03, just specifies FrodoKEM and not aes or shake.
-id_chempat_x25519_frodokem_aes_976 = univ.ObjectIdentifier(f"{id_Chempat}.18")
-id_chempat_x25519_frodokem_shake_976 = univ.ObjectIdentifier(f"{id_Chempat}.19")
-id_chempat_brainpoolP256_frodokem_aes_640 = univ.ObjectIdentifier(f"{id_Chempat}.20")
-id_chempat_brainpoolP256_frodokem_shake_640 = univ.ObjectIdentifier(f"{id_Chempat}.21")
-id_chempat_brainpoolP384_frodokem_aes_976 = univ.ObjectIdentifier(f"{id_Chempat}.22")
-id_chempat_brainpoolP384_frodokem_shake_976 = univ.ObjectIdentifier(f"{id_Chempat}.23")
-id_chempat_brainpoolP512_frodokem_aes_1344 = univ.ObjectIdentifier(f"{id_Chempat}.24")
-id_chempat_brainpoolP512_frodokem_shake_1344 = univ.ObjectIdentifier(f"{id_Chempat}.25")
-
-# not inside the draft, but added for completeness.
-id_chempat_x448_frodokem_aes_1344 = univ.ObjectIdentifier(f"{id_Chempat}.26")
-id_chempat_x448_frodokem_shake_1344 = univ.ObjectIdentifier(f"{id_Chempat}.27")
-
-CHEMPAT_OID_2_NAME = {
-    id_chempat_x25519_sntrup761: "chempat-sntrup761-x25519",
-    id_chempat_x25519_mceliece348864: "chempat-mceliece-348864-x25519",
-    id_chempat_x25519_mceliece460896: "chempat-mceliece-460896-x25519",
-    id_chempat_x25519_mceliece6688128: "chempat-mceliece-6688128-x25519",
-    id_chempat_x25519_mceliece6960119: "chempat-mceliece-6960119-x25519",
-    id_chempat_x25519_mceliece8192128: "chempat-mceliece-8192128-x25519",
-    id_chempat_x448_mceliece348864: "chempat-mceliece-348864-x448",
-    id_chempat_x448_mceliece460896: "chempat-mceliece-460896-x448",
-    id_chempat_x448_mceliece6688128: "chempat-mceliece-6688128-x448",
-    id_chempat_x448_mceliece6960119: "chempat-mceliece-6960119-x448",
-    id_chempat_x448_mceliece8192128: "chempat-mceliece-8192128-x448",
-    id_chempat_x25519_ml_kem_768: "chempat-ml-kem-768-x25519",
-    id_chempat_x448_ml_kem_1024: "chempat-ml-kem-1024-x448",
-    id_chempat_p256_ml_kem_768: "chempat-ml-kem-768-ecdh-secp256r1",
-    id_Chempat_P384_ML_KEM_1024: "chempat-ml-kem-1024-ecdh-secp384r1",
-    id_chempat_brainpool_p256_ml_kem_768: "chempat-ml-kem-768-ecdh-brainpoolP256r1",
-    id_chempat_brainpool_p384_ml_kem_1024: "chempat-ml-kem-1024-ecdh-brainpoolP384r1",
-    id_chempat_x25519_frodokem_aes_976: "chempat-frodokem-976-aes-x25519",
-    id_chempat_x25519_frodokem_shake_976: "chempat-frodokem-976-shake-x25519",
-    id_chempat_brainpoolP256_frodokem_aes_640: "chempat-frodokem-640-aes-ecdh-brainpoolP256r1",
-    id_chempat_brainpoolP256_frodokem_shake_640: "chempat-frodokem-640-shake-ecdh-brainpoolP256r1",
-    id_chempat_brainpoolP384_frodokem_aes_976: "chempat-frodokem-976-aes-ecdh-brainpoolP384r1",
-    id_chempat_brainpoolP384_frodokem_shake_976: "chempat-frodokem-976-shake-ecdh-brainpoolP384r1",
-    id_chempat_brainpoolP512_frodokem_aes_1344: "chempat-frodokem-1344-aes-ecdh-brainpoolP512r1",
-    id_chempat_brainpoolP512_frodokem_shake_1344: "chempat-frodokem-1344-shake-ecdh-brainpoolP512r1",
-    id_chempat_x448_frodokem_aes_1344: "chempat-frodokem-1344-aes-x448",
-    id_chempat_x448_frodokem_shake_1344: "chempat-frodokem-1344-shake-x448",
-}
-
-
-CHEMPAT_NAME_2_OID = {y: x for x, y in CHEMPAT_OID_2_NAME.items()}
 
 ########################
 # Hybrid Signature OIDs

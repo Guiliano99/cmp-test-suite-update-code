@@ -4,7 +4,7 @@
 
 import unittest
 
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey
+from keyutils_py.types import CompositeSigPrivateKey
 from resources.cmputils import build_ir_from_key
 from resources.exceptions import InvalidKeyCombination
 from resources.keyutils import generate_key, prepare_subject_public_key_info

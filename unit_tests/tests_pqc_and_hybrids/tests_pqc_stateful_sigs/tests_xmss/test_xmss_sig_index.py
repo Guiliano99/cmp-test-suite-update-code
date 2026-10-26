@@ -6,7 +6,7 @@ import unittest
 
 from oqs import StatefulSignature
 
-from pq_logic.keys.stateful_sig_keys import XMSSPublicKey, XMSSPrivateKey
+from keyutils_py.types import XMSSPublicKey, XMSSPrivateKey
 from resources.keyutils import load_private_key_from_file
 from unit_tests.utils_for_test import get_all_xmss_xmssmt_keys
 

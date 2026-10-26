@@ -4,9 +4,16 @@
 
 import unittest
 
-from pq_logic.keys.chempat_key import ChempatMLKEMPublicKey, ChempatSntrup761PrivateKey, ChempatMcEliecePublicKey, \
-    ChempatSntrup761PublicKey, ChempatFrodoKEMPublicKey, ChempatMLKEMPrivateKey, ChempatMcEliecePrivateKey, \
-    ChempatFrodoKEMPrivateKey
+from keyutils_py.types import (
+    ChempatMLKEMPublicKey,
+    ChempatSntrup761PrivateKey,
+    ChempatMcEliecePublicKey,
+    ChempatSntrup761PublicKey,
+    ChempatFrodoKEMPublicKey,
+    ChempatMLKEMPrivateKey,
+    ChempatMcEliecePrivateKey,
+    ChempatFrodoKEMPrivateKey,
+)
 from resources.certbuildutils import prepare_cert_template
 from resources.keyutils import generate_key, load_public_key_from_spki
 

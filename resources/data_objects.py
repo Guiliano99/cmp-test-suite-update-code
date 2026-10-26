@@ -11,6 +11,7 @@ from Crypto.Hash import SHAKE128, SHAKE256
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
+from keyutils_py.types import ECDHPrivateKey, ECDHPublicKey
 from pyasn1.type import univ
 from pyasn1_alt_modules import rfc9480, rfc9481
 
@@ -32,7 +33,6 @@ from resources.oidutils import (
     SHA_OID_2_NAME,
     id_KemBasedMac,
 )
-from resources.typingutils import ECDHPrivateKey, ECDHPublicKey
 
 
 @dataclass

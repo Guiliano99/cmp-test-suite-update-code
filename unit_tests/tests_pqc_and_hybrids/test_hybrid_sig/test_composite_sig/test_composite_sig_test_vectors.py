@@ -16,9 +16,9 @@ from cryptography.hazmat.primitives.serialization import load_der_private_key, l
 from pyasn1_alt_modules import rfc9480, rfc5958
 
 from pq_logic.combined_factory import CombinedKeyFactory
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey, CompositeSigPublicKey
+from keyutils_py.types import CompositeSigPrivateKey, CompositeSigPublicKey
 from pq_logic.keys.pq_key_factory import PQKeyFactory
-from pq_logic.keys.sig_keys import MLDSAPrivateKey
+from keyutils_py.types import MLDSAPrivateKey
 from pq_logic.tmp_oids import COMPOSITE_SIG_NAME_TO_OID
 from resources.certutils import parse_certificate
 from resources.oidutils import CURVE_NAMES_TO_INSTANCES

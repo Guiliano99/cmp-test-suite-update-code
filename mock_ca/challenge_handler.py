@@ -11,11 +11,10 @@ from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
+from keyutils_py.types import ECDHPrivateKey, ECDHPublicKey, KEMPublicKey, RSAEncapKey, SignKey
 from pyasn1_alt_modules import rfc9480
 
 from mock_ca.operation_dbs import MockCAOPCertsAndKeys
-from pq_logic.keys.abstract_wrapper_keys import KEMPublicKey
-from pq_logic.keys.trad_kem_keys import RSAEncapKey
 from resources.asn1_structures import PKIMessageTMP
 from resources.ca_ra_utils import (
     build_ip_cmp_message,
@@ -28,7 +27,6 @@ from resources.certbuildutils import build_cert_from_cert_template
 from resources.exceptions import BadCertTemplate, BadRequest
 from resources.keyutils import load_public_key_from_cert_template
 from resources.protectionutils import get_protection_type_from_pkimessage
-from resources.typingutils import ECDHPrivateKey, ECDHPublicKey, SignKey
 
 
 class ChallengeHandler:

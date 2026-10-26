@@ -9,6 +9,7 @@ from typing import List, Optional, Tuple, Union
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
+from keyutils_py.types import PublicKey, SignKey, VerifyKey
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import tag, univ
 from pyasn1_alt_modules import rfc5280, rfc5652, rfc6402, rfc9480
@@ -46,7 +47,6 @@ from resources.convertutils import (
 from resources.copyasn1utils import copy_csr, copy_name, copy_validity
 from resources.exceptions import BadAltPOP, BadAsn1Data, BadCertTemplate
 from resources.oid_mapping import get_hash_from_oid
-from resources.typingutils import PublicKey, SignKey, VerifyKey
 
 
 def _prepare_issuer_and_subject(

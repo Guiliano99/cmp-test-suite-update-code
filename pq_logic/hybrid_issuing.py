@@ -19,6 +19,24 @@ from typing import Any, Optional, Sequence, Tuple, Union
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
+from keyutils_py.types import (
+    CompositeSigPrivateKey,
+    CompositeSigPublicKey,
+    ECDHPrivateKey,
+    ECSignKey,
+    HybridKEMPrivateKey,
+    HybridKEMPublicKey,
+    KEMPublicKey,
+    MLDSAPrivateKey,
+    PQKEMPrivateKey,
+    PQKEMPublicKey,
+    PQSignaturePrivateKey,
+    PQSignaturePublicKey,
+    SignKey,
+    Strint,
+    TradSignKey,
+    TradVerifyKey,
+)
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import tag, univ
 from pyasn1_alt_modules import rfc4211, rfc5280, rfc6402, rfc9480
@@ -33,10 +51,6 @@ from pq_logic.hybrid_sig import (
 )
 from pq_logic.hybrid_sig.certdiscovery import prepare_subject_info_access_syntax_extension
 from pq_logic.hybrid_structures import AltSignatureValueExt
-from pq_logic.keys.abstract_pq import PQKEMPrivateKey, PQKEMPublicKey, PQSignaturePrivateKey, PQSignaturePublicKey
-from pq_logic.keys.abstract_wrapper_keys import HybridKEMPrivateKey, HybridKEMPublicKey, KEMPublicKey
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey, CompositeSigPublicKey
-from pq_logic.keys.sig_keys import MLDSAPrivateKey
 from pq_logic.tmp_oids import (
     COMPOSITE_SIG_OID_TO_NAME,
     id_altSignatureExt,
@@ -77,17 +91,7 @@ from resources.oidutils import (
     id_ce_altSignatureValue,
     id_ce_subjectAltPublicKeyInfo,
 )
-from resources.typingutils import (
-    CACertResponse,
-    CACertResponses,
-    CAResponse,
-    ECDHPrivateKey,
-    ECSignKey,
-    SignKey,
-    Strint,
-    TradSignKey,
-    TradVerifyKey,
-)
+from resources.typingutils import CACertResponse, CACertResponses, CAResponse
 
 
 def build_sun_hybrid_cert_from_request(  # noqa: D417 Missing argument descriptions in the docstring

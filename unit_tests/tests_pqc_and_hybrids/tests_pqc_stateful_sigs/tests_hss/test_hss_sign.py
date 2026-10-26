@@ -5,7 +5,7 @@
 import unittest
 from cryptography.exceptions import InvalidSignature
 
-from pq_logic.keys.stateful_sig_keys import HSSPrivateKey
+from keyutils_py.types import HSSPrivateKey
 
 
 class TestHSSSigning(unittest.TestCase):

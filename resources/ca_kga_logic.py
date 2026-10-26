@@ -16,6 +16,16 @@ from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa, x448, x2
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
+from keyutils_py.types import (
+    CompositeKEMPrivateKey,
+    ECDHPrivateKey,
+    HybridKEMPrivateKey,
+    KEMPrivateKey,
+    PQKEMPrivateKey,
+    PrivateKey,
+    RSADecapKey,
+    Strint,
+)
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import univ
 from pyasn1_alt_modules import (
@@ -32,10 +42,6 @@ from pyasn1_alt_modules import (
 from robot.api.deco import keyword, not_keyword
 
 import pq_logic.combined_factory
-from pq_logic.keys.abstract_pq import PQKEMPrivateKey
-from pq_logic.keys.abstract_wrapper_keys import HybridKEMPrivateKey, KEMPrivateKey
-from pq_logic.keys.composite_kem import CompositeKEMPrivateKey
-from pq_logic.keys.trad_kem_keys import RSADecapKey
 from pq_logic.pq_utils import get_kem_oid_from_key
 from pq_logic.tmp_oids import COMPOSITE_SIG_OID_TO_NAME
 from resources import (
@@ -77,7 +83,7 @@ from resources.oidutils import (
     PROT_SYM_ALG,
 )
 from resources.suiteenums import KeyUsageStrictness
-from resources.typingutils import ECDHPrivateKey, EnvDataPrivateKey, PrivateKey, Strint
+from resources.typingutils import EnvDataPrivateKey
 
 
 @not_keyword

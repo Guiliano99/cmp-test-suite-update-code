@@ -4,7 +4,7 @@
 import os
 import unittest
 
-from pq_logic.keys.kem_keys import FrodoKEMPrivateKey
+from keyutils_py.types import FrodoKEMPrivateKey
 from resources.keyutils import generate_key
 from resources.utils import manipulate_first_byte
 
@@ -13,8 +13,8 @@ class TestFrodoKEM(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.frodokem_names = ["frodokem-640-aes", "frodokem-976-aes", "frodokem-1344-aes",
-                              "frodokem-640-shake", "frodokem-976-shake", "frodokem-1344-shake"]
+        # FrodoKEM-640 is not supported (draft-smyslov-lamps-frodokem-certificates-03 assigns it no OID).
+        cls.frodokem_names = ["frodokem-976-aes", "frodokem-1344-aes", "frodokem-976-shake", "frodokem-1344-shake"]
 
     def test_frodokem_pos(self):
         """
@@ -22,7 +22,7 @@ class TestFrodoKEM(unittest.TestCase):
         WHEN encaps and decaps are called.
         THEN the shared secret should be equal.
         """
-        key1: FrodoKEMPrivateKey = generate_key("frodokem-640-aes")
+        key1: FrodoKEMPrivateKey = generate_key("frodokem-976-aes")
 
         ss_1, ct = key1.public_key().encaps()
         ss_2 = key1.decaps(ct)
@@ -35,7 +35,7 @@ class TestFrodoKEM(unittest.TestCase):
         WHEN encaps and decaps are called and the ciphertext is manipulated,
         THEN should the shared secret not be equal.
         """
-        key: FrodoKEMPrivateKey = generate_key("frodokem-640-aes")
+        key: FrodoKEMPrivateKey = generate_key("frodokem-976-aes")
 
         ss_1, ct = key.public_key().encaps()
         ct_modified = manipulate_first_byte(ct)

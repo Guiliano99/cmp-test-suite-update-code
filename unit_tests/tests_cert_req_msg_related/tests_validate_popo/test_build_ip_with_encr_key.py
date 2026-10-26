@@ -16,7 +16,7 @@ from resources.envdatautils import prepare_enc_key_for_popo, prepare_recipient_i
 from resources.extra_issuing_logic import prepare_enc_key_with_id
 from resources.keyutils import generate_key
 from resources.protectionutils import protect_pkimessage
-from resources.typingutils import PrivateKey
+from keyutils_py.types import PrivateKey
 from unit_tests.utils_for_test import load_ca_cert_and_key, load_env_data_certs
 
 

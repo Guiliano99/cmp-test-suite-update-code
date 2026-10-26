@@ -10,17 +10,15 @@ from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+from keyutils_py.types import ECDHPrivateKey, HybridKEMPrivateKey, PQSignaturePrivateKey, PrivateKey, PublicKey, SignKey
 from pyasn1_alt_modules import rfc9480
 
-from pq_logic.keys.abstract_pq import PQSignaturePrivateKey
-from pq_logic.keys.abstract_wrapper_keys import HybridKEMPrivateKey
 from resources.asn1utils import encode_to_der
 from resources.certutils import build_cert_chain_from_dir, parse_certificate
 from resources.convertutils import ensure_is_sign_key, str_to_bytes
 from resources.exceptions import BadConfig, BadRequest
 from resources.keyutils import load_private_key_from_file
 from resources.oid_mapping import compute_hash
-from resources.typingutils import ECDHPrivateKey, PrivateKey, PublicKey, SignKey
 from resources.utils import (
     is_certificate_and_key_set,
     load_and_decode_pem_file,

@@ -5,7 +5,7 @@
 import unittest
 
 from cryptography.exceptions import InvalidSignature
-from pq_logic.keys.sig_keys import FalconPrivateKey
+from keyutils_py.types import FalconPrivateKey
 from resources.utils import manipulate_first_byte
 
 

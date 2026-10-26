@@ -56,6 +56,7 @@ import logging
 from datetime import datetime
 from typing import Any, List, Optional, Tuple, Union
 
+from keyutils_py.types import Strint
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import base, univ
 from pyasn1.type.base import Asn1Item, Asn1Type
@@ -64,7 +65,6 @@ from robot.api.deco import not_keyword
 
 from resources.asn1_structures import PKIMessageTMP
 from resources.exceptions import BadAsn1Data
-from resources.typingutils import Strint
 
 
 def asn1_must_have_values_set(asn1_obj: base.Asn1Type, queries: str):  # noqa D417 undocumented-param

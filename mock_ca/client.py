@@ -15,7 +15,8 @@ from pyasn1_alt_modules import rfc9480
 
 sys.path.append(".")
 
-from pq_logic.keys.abstract_wrapper_keys import KEMPrivateKey
+from keyutils_py.types import KEMPrivateKey, SignKey
+
 from resources import cmputils, keyutils, protectionutils
 from resources.asn1_structures import PKIMessageTMP
 from resources.certutils import build_cmp_chain_from_pkimessage
@@ -30,7 +31,6 @@ from resources.convertutils import ensure_is_sign_key
 from resources.extra_issuing_logic import get_enc_cert_from_pkimessage
 from resources.keyutils import save_key
 from resources.protectionutils import protect_pkimessage
-from resources.typingutils import SignKey
 from resources.utils import display_pki_status_info, pyasn1_cert_to_pem, write_cmp_certificate_to_pem
 
 

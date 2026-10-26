@@ -4,8 +4,8 @@
 
 import unittest
 
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey
-from pq_logic.keys.sig_keys import MLDSAPrivateKey
+from keyutils_py.types import CompositeSigPrivateKey
+from keyutils_py.types import MLDSAPrivateKey
 from resources.certutils import verify_csr_signature
 from resources.certbuildutils import build_csr
 from resources.exceptions import BadPOP

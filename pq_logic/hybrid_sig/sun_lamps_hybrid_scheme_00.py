@@ -18,6 +18,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import pyasn1
 from cryptography.hazmat.primitives import hashes, serialization
+from keyutils_py.types import CompositeSigPublicKey, HybridPublicKey, PublicKey, SignKey
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import char, tag, univ
 from pyasn1_alt_modules import rfc2986, rfc4211, rfc5280, rfc6402, rfc9480
@@ -26,8 +27,6 @@ from robot.api.deco import keyword, not_keyword
 import resources.prepare_alg_ids
 import resources.protectionutils
 from pq_logic.hybrid_structures import AltSignatureExt, AltSubPubKeyExt, UniformResourceIdentifier
-from pq_logic.keys.abstract_wrapper_keys import HybridPublicKey
-from pq_logic.keys.composite_sig import CompositeSigPublicKey
 from pq_logic.tmp_oids import (
     COMPOSITE_SIG_PREHASH_OID_2_HASH,
     id_altSignatureExt,
@@ -44,7 +43,6 @@ from resources.exceptions import BadAsn1Data
 from resources.oid_mapping import get_hash_from_oid, sha_alg_name_to_oid
 from resources.oidutils import SHA2_NAME_2_OID
 from resources.prepare_alg_ids import prepare_sha_alg_id
-from resources.typingutils import PublicKey, SignKey
 
 
 # to avoid import conflicts will be removed in the future.

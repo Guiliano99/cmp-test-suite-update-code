@@ -6,7 +6,7 @@ import unittest
 import pyhsslms
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption
 
-from pq_logic.keys.stateful_sig_keys import HSSPrivateKey, HSSPublicKey
+from keyutils_py.types import HSSPrivateKey, HSSPublicKey
 from pq_logic.combined_factory import CombinedKeyFactory
 from resources.exceptions import InvalidKeyData
 

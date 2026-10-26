@@ -10,19 +10,30 @@ from typing import Dict, List, Optional, Tuple, Union
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from keyutils_py.types import (
+    ChempatPrivateKey,
+    ChempatPublicKey,
+    CompositeKEMPrivateKey,
+    CompositeSigPrivateKey,
+    DHKEMPrivateKey,
+    ECDHPrivateKey,
+    ECPrivateKey,
+    ECSignKey,
+    HybridPrivateKey,
+    HybridPublicKey,
+    PQPrivateKey,
+    RSADecapKey,
+    Strint,
+    TradKEMPrivateKey,
+    XWingPrivateKey,
+)
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import tag, univ
 from pyasn1_alt_modules import rfc5280, rfc5958
 
-from pq_logic.keys.abstract_wrapper_keys import HybridPrivateKey, HybridPublicKey, PQPrivateKey, TradKEMPrivateKey
-from pq_logic.keys.chempat_key import ChempatPrivateKey, ChempatPublicKey
-from pq_logic.keys.composite_kem import CompositeKEMPrivateKey
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey
 from pq_logic.keys.pq_key_factory import PQKeyFactory
 from pq_logic.keys.serialize_utils import prepare_ec_private_key
-from pq_logic.keys.trad_kem_keys import DHKEMPrivateKey, RSADecapKey
 from pq_logic.keys.trad_key_factory import generate_trad_key
-from pq_logic.keys.xwing import XWingPrivateKey
 from pq_logic.tmp_oids import CHEMPAT_OID_2_NAME
 from resources.exceptions import BadAlg, InvalidKeyCombination, InvalidKeyData, MismatchingKey
 from resources.oid_mapping import KEY_CLASS_MAPPING, may_return_oid_to_name
@@ -32,7 +43,6 @@ from resources.oidutils import (
     XWING_OID_STR,
 )
 from resources.suiteenums import KeySaveType
-from resources.typingutils import ECDHPrivateKey, ECPrivateKey, ECSignKey, Strint
 
 TradPartPrivateKey = Union[ECSignKey, ECDHPrivateKey, RSAPrivateKey, TradKEMPrivateKey]
 
@@ -59,8 +69,6 @@ ALL_CHEMPAT_COMBINATIONS = [
 CHEMPAT_FRODOKEM_COMBINATIONS = [
     {"pq_name": "frodokem-976-aes", "trad_name": "x25519"},
     {"pq_name": "frodokem-976-shake", "trad_name": "x25519"},
-    {"pq_name": "frodokem-640-aes", "trad_name": "ecdh", "curve": "brainpoolp256r1"},
-    {"pq_name": "frodokem-640-shake", "trad_name": "ecdh", "curve": "brainpoolp256r1"},
     {"pq_name": "frodokem-976-aes", "trad_name": "ecdh", "curve": "brainpoolp384r1"},
     {"pq_name": "frodokem-976-shake", "trad_name": "ecdh", "curve": "brainpoolp384r1"},
     {"pq_name": "frodokem-1344-aes", "trad_name": "ecdh", "curve": "brainpoolp512r1"},

@@ -7,6 +7,7 @@
 from datetime import datetime
 from typing import List, Optional, Union
 
+from keyutils_py.types import SignKey, Strint
 from pyasn1.type import tag
 from pyasn1_alt_modules import rfc5280, rfc9480
 from robot.api.deco import keyword
@@ -14,7 +15,6 @@ from robot.api.deco import keyword
 from resources import ca_ra_utils, certutils, cmputils, prepareutils, utils
 from resources.asn1_structures import PKIBodyTMP, PKIMessageTMP
 from resources.convertutils import copy_asn1_certificate
-from resources.typingutils import SignKey, Strint
 
 
 def _prepare_cert_id(

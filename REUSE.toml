@@ -12,7 +12,7 @@ SPDX-License-Identifier = "Apache-2.0"
 [[annotations]]
 path = [
     "config/cert/**", "data/**", "unit_tests/**",
-    "scripts/**", "pq_logic/fips/frodokem.py",
+    "scripts/**",
     "pyrightconfig.json", "VERSION",
     "client_tests/certs/**",
 ]

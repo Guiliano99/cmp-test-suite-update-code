@@ -19,6 +19,7 @@ from typing import List, Optional, Union
 
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
+from keyutils_py.types import CompositeSigPrivateKey, SignKey
 from pyasn1.codec.der import encoder
 from pyasn1.type import constraint, tag, univ
 from pyasn1.type.base import Asn1Item
@@ -37,7 +38,6 @@ from pyasn1_alt_modules import (
 )
 from robot.api.deco import keyword, not_keyword
 
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey
 from resources import convertutils, oid_mapping
 from resources.asn1_structures import KemBMParameterAsn1
 from resources.convertutils import str_to_bytes
@@ -52,7 +52,7 @@ from resources.oidutils import (
     SYMMETRIC_ENCR_ALG_NAME_2_OID,
     id_KemBasedMac,
 )
-from resources.typingutils import OptSecret, SignKey
+from resources.typingutils import OptSecret
 
 
 @keyword(name="Prepare AlgorithmIdentifier")

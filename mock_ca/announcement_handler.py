@@ -6,6 +6,7 @@
 
 from typing import List, Optional, Union
 
+from keyutils_py.types import SignKey
 from pyasn1_alt_modules import rfc9480
 
 from resources.announcement import (
@@ -18,7 +19,6 @@ from resources.ca_ra_utils import build_cmp_krp_message
 from resources.convertutils import ensure_is_sign_key
 from resources.keyutils import generate_key
 from resources.prepareutils import prepare_general_name_from_name
-from resources.typingutils import SignKey
 
 
 class AnnouncementHandler:

@@ -18,6 +18,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, paddin
 from cryptography.hazmat.primitives.keywrap import aes_key_unwrap, aes_key_wrap
 from cryptography.x509 import AuthorityInformationAccess, ExtensionNotFound, UniformResourceIdentifier, extensions
 from cryptography.x509.oid import AuthorityInformationAccessOID, ExtensionOID
+from keyutils_py.types import PrivateKey, PublicKey, SignKey, Strint, TradSignKey
 from pyasn1.type import tag, univ
 from pyasn1_alt_modules import rfc4211, rfc5280, rfc9480, rfc9481
 from robot.api.deco import keyword, not_keyword
@@ -29,7 +30,6 @@ from resources.certutils import _convert_to_crypto_lib_cert
 from resources.convertutils import ensure_is_sign_key, ensure_is_trad_sign_key
 from resources.cryptoutils import compute_aes_cbc
 from resources.oid_mapping import hash_name_to_instance
-from resources.typingutils import PrivateKey, PublicKey, SignKey, Strint, TradSignKey
 
 
 def _build_cert(

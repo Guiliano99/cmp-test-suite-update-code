@@ -13,10 +13,8 @@ from cryptography.hazmat.primitives import padding as aes_padding
 from cryptography.hazmat.primitives.asymmetric import ed448, ed25519, x448, x25519
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from keyutils_py.types import PQPrivateKey, XWingPrivateKey
 from robot.api.deco import not_keyword
-
-from pq_logic.keys.abstract_wrapper_keys import PQPrivateKey
-from pq_logic.keys.xwing import XWingPrivateKey
 
 RawKeyType = Union[
     ed25519.Ed25519PrivateKey,

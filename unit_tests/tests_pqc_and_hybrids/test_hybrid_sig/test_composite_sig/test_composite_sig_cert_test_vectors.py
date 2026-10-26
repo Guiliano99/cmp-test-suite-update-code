@@ -15,12 +15,9 @@ from cryptography.hazmat.primitives.serialization import load_der_private_key, l
 from pyasn1.codec.der import decoder, encoder
 from pyasn1_alt_modules import rfc5915, rfc9480
 
-from pq_logic.keys.composite_sig import (
-    CompositeSigPrivateKey,
-    CompositeSigPublicKey,
-)
+from keyutils_py.types import CompositeSigPrivateKey, CompositeSigPublicKey
 from pq_logic.keys.pq_key_factory import PQKeyFactory
-from pq_logic.keys.sig_keys import MLDSAPrivateKey
+from keyutils_py.types import MLDSAPrivateKey
 from pq_logic.tmp_oids import COMPOSITE_SIG_OID_TO_NAME
 from resources.certutils import parse_certificate
 from resources.exceptions import InvalidKeyData

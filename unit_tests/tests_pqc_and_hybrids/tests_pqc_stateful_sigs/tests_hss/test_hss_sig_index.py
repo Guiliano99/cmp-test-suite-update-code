@@ -4,9 +4,10 @@
 
 import unittest
 
-from pq_logic.keys.stateful_sig_keys import HSSPrivateKey, compute_hss_signature_index
+from keyutils_py.keys.stateful_sig_keys import compute_hss_signature_index
+from keyutils_py.types import HSSPrivateKey
 from resources.keyutils import generate_key
-from resources.typingutils import PrivateKey
+from keyutils_py.types import PrivateKey
 
 
 class TestHSSIndexSignature(unittest.TestCase):

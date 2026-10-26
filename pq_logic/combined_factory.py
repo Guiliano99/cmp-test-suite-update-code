@@ -17,39 +17,45 @@ from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
 from cryptography.hazmat.primitives.serialization import Encoding, load_der_public_key
+from keyutils_py.types import (
+    ChempatPublicKey,
+    CompositeKEMPrivateKey,
+    CompositeKEMPublicKey,
+    CompositeSigPrivateKey,
+    CompositeSigPublicKey,
+    DHKEMPrivateKey,
+    HybridPrivateKey,
+    HybridPublicKey,
+    MLDSAPrivateKey,
+    MLDSAPublicKey,
+    MLKEMPrivateKey,
+    PQKEMPrivateKey,
+    PQPrivateKey,
+    PQPublicKey,
+    PrivateKey,
+    PublicKey,
+    RSADecapKey,
+    RSAEncapKey,
+    TradKEMPrivateKey,
+    TradPrivateKey,
+    WrapperPrivateKey,
+    XWingPrivateKey,
+    XWingPublicKey,
+)
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import univ
 from pyasn1_alt_modules import rfc3370, rfc5280, rfc5915, rfc5958, rfc6664, rfc8017
 
 import pq_logic.keys.pq_stateful_sig_factory
-from pq_logic.keys.abstract_pq import PQKEMPrivateKey
-from pq_logic.keys.abstract_wrapper_keys import (
-    HybridPrivateKey,
-    HybridPublicKey,
-    PQPrivateKey,
-    PQPublicKey,
-    TradKEMPrivateKey,
-    WrapperPrivateKey,
-)
-from pq_logic.keys.chempat_key import ChempatPublicKey
-from pq_logic.keys.composite_kem import CompositeKEMPrivateKey, CompositeKEMPublicKey
-from pq_logic.keys.composite_sig import (
-    CompositeSigPrivateKey,
-    CompositeSigPublicKey,
-)
 from pq_logic.keys.hybrid_key_factory import HybridKeyFactory
-from pq_logic.keys.kem_keys import MLKEMPrivateKey
 from pq_logic.keys.pq_key_factory import PQKeyFactory
 from pq_logic.keys.serialize_utils import prepare_enc_key_pem
-from pq_logic.keys.sig_keys import MLDSAPrivateKey, MLDSAPublicKey
-from pq_logic.keys.trad_kem_keys import DHKEMPrivateKey, RSADecapKey, RSAEncapKey
 from pq_logic.keys.trad_key_factory import (
     generate_trad_key,
     load_trad_public_key,
     parse_trad_key_from_one_asym_key,
     prepare_trad_private_key_one_asym_key,
 )
-from pq_logic.keys.xwing import XWingPrivateKey, XWingPublicKey
 from pq_logic.tmp_oids import (
     CHEMPAT_OID_2_NAME,
     COMPOSITE_KEM_NAME_2_OID,
@@ -69,7 +75,6 @@ from resources.oidutils import (
     XWING_OID_STR,
 )
 from resources.suiteenums import KeySaveType
-from resources.typingutils import PrivateKey, PublicKey, TradPrivateKey
 
 
 def _any_string_in_string(string: str, options: List[str]) -> str:

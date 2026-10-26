@@ -90,7 +90,7 @@ from resources.asn1_structures import CertResponseTMP, CertRepMessageTMP, PKIMes
 from resources.ca_ra_utils import prepare_cert_response, build_ip_cmp_message
 from resources.cmputils import patch_extra_certs
 from resources.envdatautils import prepare_enveloped_data, prepare_signed_data
-from resources.typingutils import PrivateKey
+from keyutils_py.types import PrivateKey
 
 from unit_tests.utils_for_test import prepare_pki_header
 from resources.asn1utils import try_decode_pyasn1

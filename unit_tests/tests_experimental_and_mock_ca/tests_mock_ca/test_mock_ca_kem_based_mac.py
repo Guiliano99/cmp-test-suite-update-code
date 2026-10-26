@@ -9,7 +9,7 @@ from mock_ca.ca_handler import CAHandler
 from mock_ca.db_config_vars import CertConfConfigVars
 from mock_ca.mock_fun import KEMSharedSharedState, KEMSharedSecretList
 
-from pq_logic.keys.abstract_wrapper_keys import KEMPrivateKey
+from keyutils_py.types import KEMPrivateKey
 from resources.asn1_structures import PKIMessageTMP
 from resources.asn1utils import is_bit_set
 from resources.certbuildutils import build_certificate

@@ -6,7 +6,7 @@ import unittest
 
 from cryptography.exceptions import InvalidSignature
 
-from pq_logic.keys.stateful_sig_keys import HSSPrivateKey, XMSSMTPrivateKey, XMSSPrivateKey
+from keyutils_py.types import HSSPrivateKey, XMSSMTPrivateKey, XMSSPrivateKey
 from resources.keyutils import load_private_key_from_file
 from resources.utils import manipulate_pq_stateful_signature_bytes
 from unit_tests.utils_for_test import get_all_xmss_xmssmt_keys

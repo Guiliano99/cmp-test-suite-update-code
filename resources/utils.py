@@ -17,21 +17,28 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import pyasn1
 import requests
+from keyutils_py.keys.stateful_sig_keys import HSS_ALGORITHM_DETAILS
+from keyutils_py.types import (
+    HSSPrivateKey,
+    HybridPrivateKey,
+    PQHashStatefulSigPrivateKey,
+    PrivateKey,
+    PublicKey,
+    Strint,
+    XMSSMTPrivateKey,
+    XMSSPrivateKey,
+)
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import base, char, univ
 from pyasn1_alt_modules import rfc2986, rfc5280, rfc6402, rfc9480
 from robot.api.deco import keyword, not_keyword
 
-from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPrivateKey
-from pq_logic.keys.abstract_wrapper_keys import HybridPrivateKey
-from pq_logic.keys.stateful_sig_keys import HSS_ALGORITHM_DETAILS, HSSPrivateKey, XMSSMTPrivateKey, XMSSPrivateKey
 from resources import asn1utils, certutils, cmputils, keyutils
 from resources.asn1_structures import PKIMessageTMP
 from resources.convertutils import str_to_bytes
 from resources.oidutils import (
     PYASN1_CM_OID_2_NAME,
 )
-from resources.typingutils import PrivateKey, PublicKey, Strint
 
 
 def nonces_must_be_diverse(nonces: List[bytes], minimal_hamming_distance: Strint = 10):

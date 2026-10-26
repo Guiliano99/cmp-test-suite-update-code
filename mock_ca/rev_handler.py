@@ -13,6 +13,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
+from keyutils_py.types import ECDHPublicKey, PublicKey, SignKey
 from pyasn1_alt_modules import rfc9480
 
 from mock_ca.mock_fun import (
@@ -48,7 +49,6 @@ from resources.protectionutils import (
     verify_pkimessage_protection,
 )
 from resources.suiteenums import ProtectedType
-from resources.typingutils import ECDHPublicKey, PublicKey, SignKey
 from resources.utils import display_pki_status_info
 
 

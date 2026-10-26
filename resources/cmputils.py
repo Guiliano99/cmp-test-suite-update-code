@@ -17,6 +17,15 @@ from urllib import parse
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import dh, ec, x448, x25519
+from keyutils_py.types import (
+    CompositeKEMPublicKey,
+    HybridKEMPublicKey,
+    KEMPublicKey,
+    PrivateKey,
+    PublicKey,
+    SignKey,
+    Strint,
+)
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.error import PyAsn1Error
 from pyasn1.type import base, char, constraint, namedtype, tag, univ, useful
@@ -31,8 +40,6 @@ from pyasn1_alt_modules import (
 )
 from robot.api.deco import keyword, not_keyword
 
-from pq_logic.keys.abstract_wrapper_keys import HybridKEMPublicKey, KEMPublicKey
-from pq_logic.keys.composite_kem import CompositeKEMPublicKey
 from pq_logic.pq_utils import get_kem_oid_from_key, is_kem_private_key
 from resources import (
     asn1utils,
@@ -53,15 +60,7 @@ from resources.asn1_structures import CertProfileValueAsn1, KemCiphertextInfoAsn
 from resources.asn1utils import try_decode_pyasn1
 from resources.convertutils import copy_asn1_certificate, str_to_bytes
 from resources.exceptions import BadAsn1Data, BadCertTemplate, BadDataFormat, BadRequest
-from resources.typingutils import (
-    CertObjOrPath,
-    ControlsType,
-    ExtensionsParseType,
-    PrivateKey,
-    PublicKey,
-    SignKey,
-    Strint,
-)
+from resources.typingutils import CertObjOrPath, ControlsType, ExtensionsParseType
 
 # When dealing with post-quantum crypto algorithms, we encounter big numbers, which wouldn't be pretty-printed
 # otherwise. This is just for cosmetic convenience.

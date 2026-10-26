@@ -11,6 +11,7 @@ from typing import Any, List, Optional, Sequence, Set, Tuple, Union
 
 import pyasn1.error
 from cryptography import x509
+from keyutils_py.types import PrivateKey, PublicKey, SignKey, Strint, VerifyKey
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import base, tag, univ, useful
 from pyasn1_alt_modules import rfc4211, rfc5280, rfc5652, rfc6402, rfc6664, rfc8954, rfc9480, rfc9481
@@ -31,7 +32,6 @@ from resources import (
     keyutils,
     prepare_alg_ids,
     prepareutils,
-    typingutils,
     utils,
 )
 from resources.asn1utils import get_all_asn1_named_value_names, get_set_bitstring_names, try_decode_pyasn1
@@ -53,11 +53,6 @@ from resources.typingutils import (
     CRLFullNameType,
     ExtensionsParseType,
     GeneralNamesType,
-    PrivateKey,
-    PublicKey,
-    SignKey,
-    Strint,
-    VerifyKey,
 )
 
 
@@ -349,7 +344,7 @@ def generate_signed_csr(  # noqa D417 undocumented-param
         key = keyutils.generate_key(algorithm="rsa")  # type: ignore
     elif isinstance(key, str):
         key = keyutils.generate_key(algorithm=key, **params)  # type: ignore
-    elif isinstance(key, typingutils.PrivateKey):
+    elif isinstance(key, PrivateKey):
         pass
     else:
         raise ValueError("`key` must be either an algorithm name or a private key")
@@ -390,7 +385,7 @@ def _prepare_extended_key_usage(
 
 @keyword(name="Prepare SubjectKeyIdentifier Extension")
 def prepare_ski_extension(  # noqa D417 undocumented-param
-    key: Union[typingutils.PrivateKey, typingutils.PublicKey],
+    key: Union[PrivateKey, PublicKey],
     critical: bool = True,
     invalid_ski: bool = False,
     add_trailing_data: bool = False,
@@ -1307,13 +1302,13 @@ def _prepare_extensions_for_cert_template(
 
 @keyword(name="Prepare CertTemplate")
 def prepare_cert_template(  # noqa D417 undocumented-param
-    key: Optional[Union[typingutils.PrivateKey, typingutils.PublicKey]] = None,
+    key: Optional[Union[PrivateKey, PublicKey]] = None,
     subject: Optional[Union[str, rfc9480.Name]] = None,
     issuer: Optional[Union[str, rfc9480.Name]] = None,
     include_fields: Optional[str] = None,
     exclude_fields: str = "validity",
-    serial_number: Optional[typingutils.Strint] = None,
-    version: Optional[typingutils.Strint] = None,
+    serial_number: Optional[Strint] = None,
+    version: Optional[Strint] = None,
     validity: Optional[rfc5280.Validity] = None,
     extensions: Optional[ExtensionsParseType] = None,
     for_kga: bool = False,
@@ -2052,7 +2047,7 @@ def build_cert_from_csr(  # noqa D417 undocumented-param
 def prepare_tbs_certificate(
     subject: Union[str, rfc9480.Name],
     signing_key: SignKey,
-    public_key: typingutils.PublicKey,
+    public_key: PublicKey,
     serial_number: Optional[int] = None,
     issuer_cert: Optional[rfc9480.CMPCertificate] = None,
     extensions: Optional[rfc9480.Extensions] = None,

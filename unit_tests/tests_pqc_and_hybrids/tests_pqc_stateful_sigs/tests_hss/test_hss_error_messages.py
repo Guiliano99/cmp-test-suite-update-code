@@ -4,7 +4,7 @@
 
 import unittest
 
-from pq_logic.keys.stateful_sig_keys import build_hss_name_from_codes
+from keyutils_py.keys.stateful_sig_keys import build_hss_name_from_codes
 from resources.exceptions import InvalidKeyData
 
 

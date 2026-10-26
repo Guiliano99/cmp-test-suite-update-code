@@ -4,7 +4,7 @@
 
 import unittest
 
-from pq_logic.keys.stateful_sig_keys import XMSSMTPrivateKey
+from keyutils_py.types import XMSSMTPrivateKey
 from resources.certbuildutils import build_certificate
 from resources.certutils import verify_cert_signature
 from resources.keyutils import generate_key, load_public_key_from_spki

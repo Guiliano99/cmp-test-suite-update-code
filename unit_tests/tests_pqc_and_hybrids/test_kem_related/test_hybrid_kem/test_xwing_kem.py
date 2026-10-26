@@ -4,7 +4,7 @@
 
 import unittest
 
-from pq_logic.keys.xwing import XWingPrivateKey
+from keyutils_py.types import XWingPrivateKey
 
 
 class TestXWINGKEM(unittest.TestCase):

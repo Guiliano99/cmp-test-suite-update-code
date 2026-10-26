@@ -4,7 +4,7 @@
 import os
 import unittest
 
-from pq_logic.keys.kem_keys import MLKEMPrivateKey
+from keyutils_py.types import MLKEMPrivateKey
 from pyasn1.codec.der import decoder, encoder
 from pyasn1_alt_modules import rfc9480
 from resources.certbuildutils import generate_certificate

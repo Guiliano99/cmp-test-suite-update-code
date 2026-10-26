@@ -9,7 +9,7 @@ from pyasn1.codec.der import decoder
 from pyasn1_alt_modules import rfc5958
 
 from pq_logic.combined_factory import CombinedKeyFactory
-from pq_logic.keys.sig_keys import FalconPrivateKey, FalconPublicKey
+from keyutils_py.types import FalconPrivateKey, FalconPublicKey
 
 class TestFalconKeyGen(unittest.TestCase):
 

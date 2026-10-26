@@ -4,7 +4,7 @@
 
 import unittest
 
-from pq_logic.keys.stateful_sig_keys import HSSPublicKey
+from keyutils_py.types import HSSPublicKey
 from resources import utils
 from resources.certutils import parse_certificate, load_public_key_from_cert, verify_cert_signature
 

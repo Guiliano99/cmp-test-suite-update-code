@@ -19,6 +19,23 @@ from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
+from keyutils_py.types import (
+    ECDHPrivateKey,
+    ECDHPublicKey,
+    HSSPublicKey,
+    HybridKEMPrivateKey,
+    HybridKEMPublicKey,
+    HybridPublicKey,
+    KEMPrivateKey,
+    KEMPublicKey,
+    PQHashStatefulSigPublicKey,
+    PQKEMPublicKey,
+    PQPublicKey,
+    PrivateKey,
+    PublicKey,
+    SignKey,
+    Strint,
+)
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import tag, univ
 from pyasn1_alt_modules import rfc4211, rfc5280, rfc5480, rfc5652, rfc5958, rfc6664, rfc9480
@@ -27,17 +44,6 @@ from robot.api.deco import keyword, not_keyword
 from pq_logic import pq_verify_logic
 from pq_logic.combined_factory import CombinedKeyFactory
 from pq_logic.keys import hss_validation
-from pq_logic.keys.abstract_pq import PQKEMPublicKey
-from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPublicKey
-from pq_logic.keys.abstract_wrapper_keys import (
-    HybridKEMPrivateKey,
-    HybridKEMPublicKey,
-    HybridPublicKey,
-    KEMPrivateKey,
-    KEMPublicKey,
-    PQPublicKey,
-)
-from pq_logic.keys.stateful_sig_keys import HSSPublicKey
 from pq_logic.pq_utils import get_kem_oid_from_key, is_kem_public_key
 from resources import (
     ca_kga_logic,
@@ -92,19 +98,7 @@ from resources.oid_mapping import (
 )
 from resources.oidutils import CURVE_OID_2_NAME, id_KemBasedMac
 from resources.suiteenums import InvalidOneAsymKeyType, KeySaveType
-from resources.typingutils import (
-    CAResponse,
-    CertOrCerts,
-    CertRequestType,
-    ECDHPrivateKey,
-    ECDHPublicKey,
-    EnvDataPrivateKey,
-    ExtensionsParseType,
-    PrivateKey,
-    PublicKey,
-    SignKey,
-    Strint,
-)
+from resources.typingutils import CAResponse, CertOrCerts, CertRequestType, EnvDataPrivateKey, ExtensionsParseType
 
 
 def _prepare_rand(

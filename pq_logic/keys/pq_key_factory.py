@@ -9,6 +9,27 @@ import os
 from typing import List, Optional, Tuple, Type, Union
 
 import pyasn1
+from keyutils_py.types import (
+    FalconPrivateKey,
+    FalconPublicKey,
+    FrodoKEMPrivateKey,
+    FrodoKEMPublicKey,
+    McEliecePrivateKey,
+    McEliecePublicKey,
+    MLDSAPrivateKey,
+    MLDSAPublicKey,
+    MLKEMPrivateKey,
+    MLKEMPublicKey,
+    PQKEMPrivateKey,
+    PQKEMPublicKey,
+    PQPrivateKey,
+    PQPublicKey,
+    PQSignaturePrivateKey,
+    SLHDSAPrivateKey,
+    SLHDSAPublicKey,
+    Sntrup761PrivateKey,
+    Sntrup761PublicKey,
+)
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.error import ValueConstraintError
 from pyasn1.type import tag, univ
@@ -23,26 +44,6 @@ from pq_logic.hybrid_structures import (
     MLKEM1024PrivateKeyASN1,
 )
 from pq_logic.keys.abstract_key_factory import AbstractKeyFactory
-from pq_logic.keys.abstract_pq import PQKEMPrivateKey, PQKEMPublicKey, PQSignaturePrivateKey
-from pq_logic.keys.abstract_wrapper_keys import PQPrivateKey, PQPublicKey
-from pq_logic.keys.kem_keys import (
-    FrodoKEMPrivateKey,
-    FrodoKEMPublicKey,
-    McEliecePrivateKey,
-    McEliecePublicKey,
-    MLKEMPrivateKey,
-    MLKEMPublicKey,
-    Sntrup761PrivateKey,
-    Sntrup761PublicKey,
-)
-from pq_logic.keys.sig_keys import (
-    FalconPrivateKey,
-    FalconPublicKey,
-    MLDSAPrivateKey,
-    MLDSAPublicKey,
-    SLHDSAPrivateKey,
-    SLHDSAPublicKey,
-)
 from resources.asn1utils import try_decode_pyasn1
 from resources.exceptions import BadAlg, BadAsn1Data, InvalidKeyData, MismatchingKey
 from resources.oid_mapping import may_return_oid_to_name

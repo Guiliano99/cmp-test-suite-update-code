@@ -6,6 +6,7 @@
 import logging
 from typing import List, Optional, Tuple
 
+from keyutils_py.types import CompositeSigPrivateKey, PrivateKey
 from pyasn1_alt_modules import rfc9480
 
 from mock_ca.db_config_vars import ProtectionHandlerConfig
@@ -24,7 +25,6 @@ from pq_logic.hybrid_sig.sun_lamps_hybrid_scheme_00 import (
     convert_sun_hybrid_cert_to_target_form,
     extract_sun_hybrid_alt_sig,
 )
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey
 from pq_logic.pq_verify_logic import build_sun_hybrid_cert_chain, verify_hybrid_pkimessage_protection
 from pq_logic.tmp_oids import id_ce_deltaCertificateDescriptor
 from resources import certextractutils
@@ -36,7 +36,6 @@ from resources.cmputils import add_general_info_values, find_oid_in_general_info
 from resources.exceptions import BadCertTemplate, BadConfig, BadMessageCheck, CertRevoked
 from resources.protectionutils import protect_hybrid_pkimessage, protect_pkimessage
 from resources.suiteenums import ProtectedType
-from resources.typingutils import PrivateKey
 
 
 class ChameleonHandler:

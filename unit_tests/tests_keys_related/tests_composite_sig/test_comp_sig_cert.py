@@ -6,7 +6,7 @@ import unittest
 
 from cryptography.exceptions import InvalidSignature
 
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey
+from keyutils_py.types import CompositeSigPrivateKey
 from resources.certbuildutils import build_certificate
 from resources.certutils import verify_cert_signature
 from resources.exceptions import InvalidKeyCombination

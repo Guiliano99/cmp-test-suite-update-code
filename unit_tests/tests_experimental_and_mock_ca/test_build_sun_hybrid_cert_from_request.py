@@ -8,8 +8,8 @@ from pq_logic.hybrid_issuing import build_sun_hybrid_cert_from_request
 from pyasn1.type import tag
 from pyasn1_alt_modules import rfc9480
 
-from pq_logic.keys.composite_kem import CompositeKEMPrivateKey
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey
+from keyutils_py.types import CompositeKEMPrivateKey
+from keyutils_py.types import CompositeSigPrivateKey
 from resources.ca_kga_logic import validate_kemri_enveloped_data
 from resources.certbuildutils import build_certificate
 from resources.certutils import parse_certificate

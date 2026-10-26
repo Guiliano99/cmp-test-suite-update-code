@@ -31,6 +31,27 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from keyutils_py.types import (
+    AbstractHybridRawPublicKey,
+    CompositeKEMPrivateKey,
+    CompositeKEMPublicKey,
+    CompositeSigPrivateKey,
+    CompositeSigPublicKey,
+    DHKEMPublicKey,
+    ECDHPrivateKey,
+    ECDHPublicKey,
+    KEMPrivateKey,
+    KEMPublicKey,
+    PQHashStatefulSigPrivateKey,
+    PQHashStatefulSigPublicKey,
+    PQKEMPublicKey,
+    PQSignaturePrivateKey,
+    PQSignaturePublicKey,
+    RSADecapKey,
+    RSAEncapKey,
+    SignKey,
+    VerifyKey,
+)
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import univ
 from pyasn1_alt_modules import rfc3565, rfc8018, rfc9480, rfc9481
@@ -39,19 +60,12 @@ from robot.api.deco import not_keyword
 from tinyec import registry
 from tinyec.ec import Inf, Point
 
-from pq_logic.keys.abstract_pq import PQKEMPublicKey, PQSignaturePrivateKey, PQSignaturePublicKey
-from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPrivateKey, PQHashStatefulSigPublicKey
-from pq_logic.keys.abstract_wrapper_keys import AbstractHybridRawPublicKey, KEMPrivateKey, KEMPublicKey
-from pq_logic.keys.composite_kem import CompositeKEMPrivateKey, CompositeKEMPublicKey
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey, CompositeSigPublicKey
-from pq_logic.keys.trad_kem_keys import DHKEMPublicKey, RSADecapKey, RSAEncapKey
 from resources import convertutils, envdatautils, keyutils, oid_mapping
 from resources.asn1_structures import KemCiphertextInfoAsn1
 from resources.data_objects import FixedSHAKE128, FixedSHAKE256
 from resources.exceptions import BadAlg, BadAsn1Data, InvalidKeyCombination
 from resources.oid_mapping import compute_hash, get_hash_from_oid, hash_name_to_instance
 from resources.oidutils import AES_CBC_OID_2_NAME, AES_GCM_OID_2_NAME, CURVE_2_COFACTORS, KM_KW_ALG
-from resources.typingutils import ECDHPrivateKey, ECDHPublicKey, SignKey, VerifyKey
 
 
 def sign_data(  # noqa D417 undocumented-param

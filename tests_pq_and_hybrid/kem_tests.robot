@@ -206,10 +206,10 @@ CA MUST ISSUE A Valid FrodoKEM Certificate
     [Documentation]    According to the FrodoKEM specification, is a valid IR CMP message send.
     ...                The CA MUST accept the request and response with a encrypted certificate.
     [Tags]    frodoKEM
-    ${response}  ${key}=    Build And Exchange KEM Certificate Request    frodokem-640-aes
+    ${response}  ${key}=    Build And Exchange KEM Certificate Request    frodokem-976-aes
     PKIMessage Body Type Must Be    ${response}    ip
     ${cert}=  Validate EncrCert For KEM    ${response}    ${key}
-    Validate Migration OID In Certificate    ${cert}    frodokem-640-aes
+    Validate Migration OID In Certificate    ${cert}    frodokem-976-aes
 
 CA MUST ISSUE A Valid McEliece Certificate
     [Documentation]    According to the McEliece specification, is a valid IR CMP message send.

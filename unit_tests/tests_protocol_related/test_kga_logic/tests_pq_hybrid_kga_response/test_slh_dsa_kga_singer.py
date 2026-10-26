@@ -7,7 +7,7 @@ from typing import List, Tuple
 
 from pyasn1_alt_modules import rfc9480
 
-from pq_logic.keys.sig_keys import SLHDSAPrivateKey
+from keyutils_py.types import SLHDSAPrivateKey
 from resources.asn1_structures import PKIMessageTMP
 from resources.ca_kga_logic import validate_not_local_key_gen
 from resources.ca_ra_utils import build_kga_cmp_response

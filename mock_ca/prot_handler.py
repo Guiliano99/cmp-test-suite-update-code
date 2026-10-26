@@ -11,12 +11,12 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
+from keyutils_py.types import PQHashStatefulSigPublicKey, SignKey
 from pyasn1_alt_modules import rfc9480, rfc9481
 
 from mock_ca.db_config_vars import ProtectionHandlerConfig, TrustConfig
 from mock_ca.mock_fun import KEMSharedSecretList, PQStatefulSigKeyConfig
 from mock_ca.operation_dbs import StatefulSigState
-from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPublicKey
 from pq_logic.pq_verify_logic import verify_hybrid_pkimessage_protection
 from resources.asn1_structures import PKIMessageTMP
 from resources.ca_ra_utils import get_public_key_from_cert_req_msg
@@ -63,7 +63,6 @@ from resources.protectionutils import (
     verify_pkimessage_protection,
 )
 from resources.suiteenums import ProtectedType
-from resources.typingutils import SignKey
 from resources.utils import get_password_in_size
 from unit_tests.utils_for_test import load_env_data_certs
 

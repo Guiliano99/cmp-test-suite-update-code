@@ -9,7 +9,7 @@ from pyasn1_alt_modules import rfc9480
 
 from mock_ca.ca_handler import CAHandler
 from mock_ca.mock_fun import CertStateEnum
-from pq_logic.keys.abstract_wrapper_keys import KEMPrivateKey
+from keyutils_py.types import KEMPrivateKey
 from resources.asn1_structures import PKIMessageTMP
 from resources.certutils import build_cmp_chain_from_pkimessage
 from resources.cmputils import build_ir_from_key, get_pkistatusinfo, build_cert_conf, get_cmp_message_type, \

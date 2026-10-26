@@ -7,8 +7,8 @@ import unittest
 from pyasn1.codec.der import decoder, encoder
 from pyasn1_alt_modules import rfc4211
 
-from pq_logic.keys.kem_keys import MLKEMPrivateKey
-from pq_logic.keys.xwing import XWingPrivateKey
+from keyutils_py.types import MLKEMPrivateKey
+from keyutils_py.types import XWingPrivateKey
 from resources.certutils import parse_certificate
 from resources.extra_issuing_logic import prepare_enc_key_with_id, prepare_kem_env_data_for_popo
 from resources.keyutils import load_private_key_from_file

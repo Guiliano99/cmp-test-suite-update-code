@@ -17,6 +17,7 @@ from typing import Dict, List, Optional, Tuple, Type, Union
 
 import pyasn1.error
 from cryptography.exceptions import InvalidSignature
+from keyutils_py.types import Strint
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import univ, useful
 from pyasn1_alt_modules import rfc5280, rfc6664, rfc9480, rfc9481
@@ -61,7 +62,6 @@ from resources.oidutils import (
     id_KemBasedMac,
 )
 from resources.suiteenums import ProtectedType
-from resources.typingutils import Strint
 
 
 def check_if_response_contains_private_key(  # noqa D417 undocumented-param

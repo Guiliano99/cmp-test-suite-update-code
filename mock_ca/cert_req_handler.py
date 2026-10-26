@@ -7,6 +7,7 @@
 import logging
 from typing import List, Optional
 
+from keyutils_py.types import HybridKEMPrivateKey, SignKey
 from pyasn1.codec.der import encoder
 from pyasn1_alt_modules import rfc9480, rfc9481
 
@@ -14,7 +15,6 @@ from mock_ca.mock_fun import MockCAState
 from mock_ca.operation_dbs import NonSigningKeyCertsAndKeys, StatefulSigState
 from mock_ca.stfl_validator import STFLPKIMessageValidator
 from pq_logic.hybrid_sig.chameleon_logic import load_chameleon_csr_delta_key_and_sender
-from pq_logic.keys.abstract_wrapper_keys import HybridKEMPrivateKey
 from pq_logic.pq_verify_logic import verify_hybrid_pkimessage_protection
 from resources import keyutils
 from resources.asn1_structures import PKIMessageTMP
@@ -79,7 +79,6 @@ from resources.protectionutils import (
     verify_pkimessage_protection,
 )
 from resources.suiteenums import ProtectedType
-from resources.typingutils import SignKey
 from resources.utils import get_openssl_name_notation
 from unit_tests.utils_for_test import load_env_data_certs
 

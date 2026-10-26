@@ -6,7 +6,7 @@ import unittest
 
 from pyasn1_alt_modules import rfc5280
 
-from pq_logic.tmp_oids import COMPOSITE_KEM_NAME_2_OID, id_chempat_x25519_sntrup761
+from pq_logic.tmp_oids import CHEMPAT_NAME_2_OID, COMPOSITE_KEM_NAME_2_OID
 from resources.ca_ra_utils import get_popo_from_pkimessage, get_cert_template_from_pkimessage
 from resources.cmputils import build_ir_from_key
 from resources.keyutils import generate_key, load_public_key_from_spki
@@ -118,8 +118,7 @@ class TestBuildPKIMessageNonSigKeys(unittest.TestCase):
 
         spki_new["algorithm"] = spki["algorithm"]
         spki_new["subjectPublicKey"] = spki["subjectPublicKey"]
-        self.assertEqual(str(spki["algorithm"]["algorithm"]), str(
-            id_chempat_x25519_sntrup761))
+        self.assertEqual(str(spki["algorithm"]["algorithm"]), str(CHEMPAT_NAME_2_OID["chempat-sntrup761-x25519"]))
         pub_key = load_public_key_from_spki(spki_new)
         self.assertEqual(pub_key, key.public_key())
         popo = get_popo_from_pkimessage(obj)

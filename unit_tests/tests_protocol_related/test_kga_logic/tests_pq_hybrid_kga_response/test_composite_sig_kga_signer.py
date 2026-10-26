@@ -8,7 +8,7 @@ from typing import List, Tuple
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from pyasn1_alt_modules import rfc9480
 
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey
+from keyutils_py.types import CompositeSigPrivateKey
 from resources.asn1_structures import PKIMessageTMP
 from resources.ca_kga_logic import validate_not_local_key_gen
 from resources.ca_ra_utils import build_kga_cmp_response

@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives.serialization import PublicFormat, Encoding
 from pyasn1.codec.der import decoder
 from pyasn1_alt_modules import rfc5280
 
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey
+from keyutils_py.types import CompositeSigPrivateKey
 from resources import keyutils
 
 

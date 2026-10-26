@@ -22,7 +22,7 @@ from resources.envdatautils import (
     perform_sender_ecdh_one_pass_mqv,
 )
 from resources.keyutils import load_private_key_from_file
-from resources.typingutils import ECDHPrivateKey, ECDHPublicKey
+from keyutils_py.types import ECDHPrivateKey, ECDHPublicKey
 from resources.utils import load_and_decode_pem_file
 
 from unit_tests.prepare_ca_response import build_complete_envelope_data_ca_msg

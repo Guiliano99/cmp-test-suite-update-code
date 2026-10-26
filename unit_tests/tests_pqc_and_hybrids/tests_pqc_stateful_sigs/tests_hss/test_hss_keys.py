@@ -4,10 +4,10 @@
 
 import unittest
 
-from pq_logic.keys.stateful_sig_keys import HSSPrivateKey, HSSPublicKey
+from keyutils_py.types import HSSPrivateKey, HSSPublicKey
 from pq_logic.keys.pq_stateful_sig_factory import PQStatefulSigFactory
 from resources.keyutils import generate_key, load_private_key_from_file
-from resources.typingutils import PrivateKey
+from keyutils_py.types import PrivateKey
 
 
 class TestHSSKeys(unittest.TestCase):

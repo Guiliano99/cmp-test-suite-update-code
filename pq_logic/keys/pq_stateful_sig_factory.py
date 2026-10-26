@@ -8,23 +8,24 @@ import importlib.util
 import logging
 from typing import Dict, List, Optional, Type
 
-from pyasn1_alt_modules import rfc5280
-
-from pq_logic.keys.abstract_key_factory import AbstractKeyFactory
-from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPrivateKey, PQHashStatefulSigPublicKey
-from pq_logic.keys.stateful_sig_keys import (
+from keyutils_py.types import (
     HSSPrivateKey,
     HSSPublicKey,
+    PQHashStatefulSigPrivateKey,
+    PQHashStatefulSigPublicKey,
+    PrivateKey,
     XMSSMTPrivateKey,
     XMSSMTPublicKey,
     XMSSPrivateKey,
     XMSSPublicKey,
 )
+from pyasn1_alt_modules import rfc5280
+
+from pq_logic.keys.abstract_key_factory import AbstractKeyFactory
 from resources import utils
 from resources.exceptions import InvalidKeyData, MismatchingKey
 from resources.oid_mapping import may_return_oid_to_name
 from resources.oidutils import PQ_STATEFUL_HASH_SIG_OID_2_NAME
-from resources.typingutils import PrivateKey
 
 if importlib.util.find_spec("oqs") is not None:
     import oqs  # pylint: disable=import-error

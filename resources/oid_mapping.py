@@ -15,13 +15,12 @@ from typing import Optional, Union
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import dsa, ec
+from keyutils_py.types import PQHashStatefulSigPrivateKey, PQSignaturePrivateKey, PrivateKey
 from pyasn1.type import univ
 from pyasn1_alt_modules import rfc9480, rfc9481
 from pyasn1_alt_modules.rfc5480 import id_dsa_with_sha256
 from robot.api.deco import not_keyword
 
-from pq_logic.keys.abstract_pq import PQSignaturePrivateKey
-from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPrivateKey
 from pq_logic.tmp_oids import (
     COMPOSITE_SIG_OID_TO_NAME,
     COMPOSITE_SIG_PREHASH_OID_2_HASH,
@@ -45,7 +44,6 @@ from resources.oidutils import (
     SUPPORTED_MAC_NAME_2_OID,
     TRAD_SIG_NAME_2_OID,
 )
-from resources.typingutils import PrivateKey
 
 KEY_CLASS_MAPPING = {
     "RSAPrivateKey": "rsa",
@@ -217,7 +215,7 @@ def get_alg_oid_from_key_hash(
 
         return PQ_NAME_2_OID[name]
 
-    from pq_logic.keys.composite_sig import CompositeSigPrivateKey
+    from keyutils_py.types import CompositeSigPrivateKey
 
     if isinstance(key, CompositeSigPrivateKey):
         alg_oid = key.get_oid(use_pss=use_rsa_pss)

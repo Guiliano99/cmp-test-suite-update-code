@@ -4,7 +4,7 @@
 
 import unittest
 
-from pq_logic.keys.kem_keys import McEliecePrivateKey
+from keyutils_py.types import McEliecePrivateKey
 from resources.keyutils import generate_key
 from resources.utils import manipulate_first_byte
 

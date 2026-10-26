@@ -8,7 +8,7 @@ import unittest
 from pyasn1_alt_modules import rfc9480
 
 from pq_logic.hybrid_sig.cert_binding_for_multi_auth import prepare_related_cert_extension
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey
+from keyutils_py.types import CompositeSigPrivateKey
 from pq_logic.pq_verify_logic import verify_composite_signature_with_hybrid_cert
 from pq_logic.tmp_oids import id_compSig_mldsa44_rsa2048_pkcs15
 from resources.certbuildutils import generate_certificate

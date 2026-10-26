@@ -7,46 +7,25 @@
 from typing import List, Optional, Union
 
 from cryptography.exceptions import InvalidSignature
+
+# The key related errors are raised inside keyutils-py, so they are shared, not duplicated:
+# `CMPTestSuiteError` *is* `KeyUtilsError`, which makes `except CMPTestSuiteError` also catch
+# everything the package raises, and the shared classes carry the same `failinfo`.
+# These names are re-exported, so importing them here is intentional.
+from keyutils_py.exceptions import (  # noqa: F401  # pylint: disable=unused-import
+    BadAlg,
+    BadAsn1Data,
+    BadDataFormat,
+    BadSigAlgID,
+    BadSigAlgIDParams,
+    InvalidKeyCombination,
+    InvalidKeyData,
+    MismatchingKey,
+)
+from keyutils_py.exceptions import KeyUtilsError as CMPTestSuiteError
 from pyasn1.type import univ
 
 from resources.asn1_structures import PKIMessageTMP
-
-
-class CMPTestSuiteError(Exception):
-    """Base class for CMP Test Suite errors."""
-
-    failinfo: str = "systemFailure"
-    error_details: List[str]
-    bit_num: int = 26
-
-    def __init__(
-        self, message: str, error_details: Optional[Union[List[str], str]] = None, failinfo: Optional[str] = None
-    ):
-        """Initialize the exception with the message.
-
-        :param message: The message to display.
-        :param error_details: Additional details about the error.
-        """
-        self.message = message
-        self._failinfo = failinfo or self.failinfo
-        self.error_details = []
-        if error_details is not None:
-            if isinstance(error_details, str):
-                self.error_details = [error_details]
-
-        self.error_details += error_details if error_details is not None else []
-        super().__init__(message)
-
-    def get_failinfo(self) -> str:
-        """Return the failinfo."""
-        return self._failinfo
-
-    def get_error_details(self) -> List[str]:
-        """Return the error details."""
-        if isinstance(self.error_details, str):
-            return [self.error_details]
-
-        return self.error_details
 
 
 class BadConfig(CMPTestSuiteError):
@@ -56,17 +35,6 @@ class BadConfig(CMPTestSuiteError):
 #########################
 # CMP Test Suite Errors
 ##########################
-
-
-class BadSigAlgID(CMPTestSuiteError):
-    """Raised when the algorithm identifier and the signing key do not match."""
-
-    failinfo = "badDataFormat"
-    bit_num = 0
-
-
-class BadSigAlgIDParams(BadSigAlgID):
-    """Raised when the algorithm identifier parameters are invalid."""
 
 
 class UnknownOID(CMPTestSuiteError):
@@ -114,20 +82,6 @@ class LwCMPViolation(CMPTestSuiteError):
 #########################
 # CMP Protocol Errors
 ##########################
-
-
-class BadAlg(CMPTestSuiteError):
-    """Raised when the algorithm is not supported or not allowed to be used."""
-
-    failinfo = "badAlg"
-    bit_num = 0
-
-
-class InvalidKeyCombination(BadAlg):
-    """Raised when a Hybrid key combination is invalid.
-
-    As an example, a key combination for Chempat or Composite keys is invalid.
-    """
 
 
 class BadMessageCheck(CMPTestSuiteError):
@@ -182,62 +136,6 @@ class BadCertId(CMPTestSuiteError):
 
     failinfo = "badCertId"
     bit_num = 4
-
-
-class BadDataFormat(CMPTestSuiteError):
-    """Raised when the ASN.1 data cannot be decoded."""
-
-    failinfo = "badDataFormat"
-    bit_num = 5
-
-    def __init__(
-        self, message: str, failinfo: Optional[str] = None, error_details: Optional[Union[List[str], str]] = None
-    ):
-        """Initialize the exception with the message.
-
-        :param message: The message to display.
-        """
-        self.message = message
-        super().__init__(f"Bad data format: {message}", failinfo=failinfo, error_details=error_details)
-
-
-class InvalidKeyData(BadDataFormat):
-    """Raised when the key cannot be loaded or decoded."""
-
-
-class MismatchingKey(InvalidKeyData):
-    """Raised when the loaded public key does not match the private key."""
-
-
-# This Exception is not in the protocol but would be more accurate.
-class BadAsn1Data(CMPTestSuiteError):
-    """Raised when the ASN.1 data has a remainder or ASN.1 data is incorrectly populated."""
-
-    failinfo = "badDataFormat"
-    bit_num = 5
-
-    def __init__(
-        self,
-        message: str,
-        remainder: Optional[bytes] = None,
-        overwrite: bool = False,
-        error_details: Optional[Union[List[str], str]] = None,
-        *,
-        failinfo: str = "badDataFormat",
-    ):
-        """Initialize the exception with the message.
-
-        :param message: The message to display or just the structure name.
-        :param remainder: The remainder of the ASN.1 data.
-        :param overwrite: Raise the exception with the message only.
-        """
-        self.message = message
-
-        if overwrite:
-            super().__init__(message=message, error_details=error_details, failinfo=failinfo)
-        else:
-            r = "" if remainder is None else remainder.hex()
-            super().__init__(f"Decoding the `{message}` structure had a remainder: {r}.", error_details=error_details)
 
 
 class WrongAuthority(CMPTestSuiteError):

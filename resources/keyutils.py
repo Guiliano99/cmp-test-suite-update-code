@@ -34,6 +34,33 @@ from cryptography.hazmat.primitives.asymmetric.ed448 import Ed448PublicKey
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+from keyutils_py.keys.stateful_sig_keys import compute_hss_signature_index
+from keyutils_py.types import (
+    AbstractCompositePrivateKey,
+    CompositeSigPrivateKey,
+    HSSPrivateKey,
+    HSSPublicKey,
+    MLDSAPrivateKey,
+    MLKEMPrivateKey,
+    PQHashStatefulSigPrivateKey,
+    PQHashStatefulSigPublicKey,
+    PQSignaturePrivateKey,
+    PQSignaturePublicKey,
+    PrivateKey,
+    PublicKey,
+    RSAEncapKey,
+    SignKey,
+    SLHDSAPrivateKey,
+    TradPrivateKey,
+    TradSignKey,
+    TradVerifyKey,
+    VerifyKey,
+    XMSSMTPrivateKey,
+    XMSSMTPublicKey,
+    XMSSPrivateKey,
+    XMSSPublicKey,
+    XWingPrivateKey,
+)
 from pyasn1.codec.der import decoder
 from pyasn1.type import tag, univ
 from pyasn1_alt_modules import rfc4211, rfc5280, rfc5480, rfc5958, rfc6402, rfc6664, rfc9480
@@ -41,26 +68,9 @@ from robot.api.deco import keyword, not_keyword
 
 import pq_logic.combined_factory
 from pq_logic.keys import serialize_utils
-from pq_logic.keys.abstract_pq import PQSignaturePrivateKey, PQSignaturePublicKey
-from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPrivateKey, PQHashStatefulSigPublicKey
-from pq_logic.keys.abstract_wrapper_keys import AbstractCompositePrivateKey
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey
-from pq_logic.keys.kem_keys import MLKEMPrivateKey
 from pq_logic.keys.key_pyasn1_utils import load_enc_key
-from pq_logic.keys.sig_keys import MLDSAPrivateKey, SLHDSAPrivateKey
-from pq_logic.keys.stateful_sig_keys import (
-    HSSPrivateKey,
-    HSSPublicKey,
-    XMSSMTPrivateKey,
-    XMSSMTPublicKey,
-    XMSSPrivateKey,
-    XMSSPublicKey,
-    compute_hss_signature_index,
-)
-from pq_logic.keys.trad_kem_keys import RSAEncapKey
-from pq_logic.keys.xwing import XWingPrivateKey
 from pq_logic.tmp_oids import COMPOSITE_SIG_OID_TO_NAME, id_rsa_kem_spki
-from resources import asn1utils, certutils, oid_mapping, prepare_alg_ids, typingutils, utils
+from resources import asn1utils, certutils, oid_mapping, prepare_alg_ids, utils
 from resources.convertutils import str_to_bytes, subject_public_key_info_from_pubkey
 from resources.exceptions import BadAlg, BadAsn1Data, BadCertTemplate, BadSigAlgID, InvalidKeyCombination, UnknownOID
 from resources.oid_mapping import (
@@ -82,7 +92,6 @@ from resources.oidutils import (
     TRAD_STR_OID_TO_KEY_NAME,
 )
 from resources.suiteenums import KeySaveType
-from resources.typingutils import PrivateKey, PublicKey, SignKey, TradPrivateKey, TradSignKey, TradVerifyKey, VerifyKey
 
 
 def save_key(  # noqa: D417 undocumented-params
@@ -262,7 +271,7 @@ def generate_key(algorithm: str = "rsa", **params) -> PrivateKey:  # noqa: D417 
         - "ml-kem-512", "ml-kem-768", "ml-kem-1024"
         - "sntrup761"
         - "mceliece-348864", "mceliece-460896", "mceliece-6688128", "mceliece-6960119"
-        - "frdokem-640-aes", "frodokem-640-shake", "frodokem-976-aes",
+        - "frodokem-976-aes",
         "frodokem-976-shake", "frodokem-1344-aes", "frodokem-1344-shake"
 
     Hybrid algorithms:
@@ -830,7 +839,7 @@ def private_key_to_private_numbers(private_key: PrivateKey) -> bytes:
 def generate_different_public_key(  # noqa D417 undocumented-param
     key_source: Union[rfc9480.CMPCertificate, rfc6402.CertificationRequest, PrivateKey, PublicKey],
     algorithm: Optional[str] = None,
-) -> typingutils.PublicKey:
+) -> PublicKey:
     """Generate a new public key using the specified algorithm, ensuring it differs from the certificate's public key.
 
     Used to ensure the revocation request sends a different public key but for the same type.
@@ -1198,7 +1207,7 @@ def _prepare_spki_for_kga(
     spki["subjectPublicKey"] = univ.BitString("")
 
     if key is not None:
-        if isinstance(key, typingutils.PrivateKey):
+        if isinstance(key, PrivateKey):
             key = key.public_key()
 
     if key_name and key_name in ["rsa", "dsa", "ecc", "rsa-kem"]:

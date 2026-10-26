@@ -7,12 +7,12 @@
 import logging
 from typing import List, Optional
 
+from keyutils_py.types import PQHashStatefulSigPublicKey
 from pyasn1_alt_modules import rfc6402, rfc9480
 
 from mock_ca.mock_fun import PQStatefulSigKeyConfig
 from mock_ca.operation_dbs import StatefulSigKeyState, StatefulSigState
 from pq_logic.hybrid_sig.chameleon_logic import get_delta_request_signature
-from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPublicKey
 from resources.asn1_structures import PKIMessageTMP
 from resources.ca_ra_utils import get_cert_template_from_pkimessage, get_popo_from_pkimessage
 from resources.certutils import load_public_key_from_cert

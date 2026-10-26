@@ -8,10 +8,10 @@ from typing import Tuple, Union
 from cryptography.hazmat.primitives import serialization
 
 from pq_logic.combined_factory import CombinedKeyFactory
-from pq_logic.keys.abstract_wrapper_keys import PQPrivateKey
-from pq_logic.keys.kem_keys import MLKEMPrivateKey
-from pq_logic.keys.sig_keys import MLDSAPrivateKey, SLHDSAPrivateKey
-from pq_logic.keys.xwing import XWingPrivateKey
+from keyutils_py.types import PQPrivateKey
+from keyutils_py.types import MLKEMPrivateKey
+from keyutils_py.types import MLDSAPrivateKey, SLHDSAPrivateKey
+from keyutils_py.types import XWingPrivateKey
 from resources.keyutils import generate_key
 from resources.suiteenums import KeySaveType
 

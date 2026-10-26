@@ -8,8 +8,9 @@ from abc import ABC
 from dataclasses import dataclass, field, fields
 from typing import Optional, Union
 
+from keyutils_py.types import SignKey
+
 from resources.data_objects import KARICertsAndKeys
-from resources.typingutils import SignKey
 
 
 @dataclass

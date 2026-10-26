@@ -4,7 +4,7 @@
 
 import unittest
 
-from pq_logic.keys.stateful_sig_keys import XMSSMTPrivateKey, XMSSPrivateKey, HSSPrivateKey
+from keyutils_py.types import XMSSMTPrivateKey, XMSSPrivateKey, HSSPrivateKey
 from resources.keyutils import modify_pq_stateful_sig_private_key, load_private_key_from_file
 from unit_tests.utils_for_test import get_all_xmss_xmssmt_keys
 

@@ -148,18 +148,6 @@ Invalid CHEMPAT-FRODOKEM-976-SHAKE-X25519 Key Size    chempat-frodokem-976-shake
 Valid CHEMPAT-FRODOKEM-976-SHAKE-X25519 Request    chempat-frodokem-976-shake-x25519    False
      [Tags]    positive  chempat  frodokem  x25519
 
-Invalid CHEMPAT-FRODOKEM-640-AES-ECDH-BRAINPOOLP256R1 Key Size    chempat-frodokem-640-aes-ecdh-brainpoolP256r1    True
-     [Tags]    negative  chempat  frodokem  ecdh  brainpoolP256r1
-
-Valid CHEMPAT-FRODOKEM-640-AES-ECDH-BRAINPOOLP256R1 Request    chempat-frodokem-640-aes-ecdh-brainpoolP256r1    False
-     [Tags]    positive  chempat  frodokem  ecdh  brainpoolP256r1
-
-Invalid CHEMPAT-FRODOKEM-640-SHAKE-ECDH-BRAINPOOLP256R1 Key Size    chempat-frodokem-640-shake-ecdh-brainpoolP256r1    True
-     [Tags]    negative  chempat  frodokem  ecdh  brainpoolP256r1
-
-Valid CHEMPAT-FRODOKEM-640-SHAKE-ECDH-BRAINPOOLP256R1 Request    chempat-frodokem-640-shake-ecdh-brainpoolP256r1    False
-     [Tags]    positive  chempat  frodokem  ecdh  brainpoolP256r1
-
 Invalid CHEMPAT-FRODOKEM-976-AES-ECDH-BRAINPOOLP384R1 Key Size    chempat-frodokem-976-aes-ecdh-brainpoolP384r1    True
      [Tags]    negative  chempat  frodokem  ecdh  brainpoolP384r1
 

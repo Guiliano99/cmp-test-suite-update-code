@@ -26,7 +26,7 @@ from pyasn1_alt_modules import rfc2459, rfc5280, rfc5652, rfc6402, rfc8018, rfc9
 from robot.api.deco import not_keyword
 
 from pq_logic.hybrid_sig.sun_lamps_hybrid_scheme_00 import prepare_sun_hybrid_csr_attributes
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey
+from keyutils_py.types import CompositeSigPrivateKey
 from pq_logic.keys.pq_stateful_sig_factory import PQStatefulSigFactory
 from pq_logic.tmp_oids import FRODOKEM_NAME_2_OID
 from resources import certutils, cmputils, utils
@@ -48,7 +48,7 @@ from resources.exceptions import BadAsn1Data, MismatchingKey
 from resources.keyutils import generate_key, load_private_key_from_file, save_key
 from resources.oid_mapping import may_return_oid_to_name
 from resources.prepare_alg_ids import prepare_pbkdf2_alg_id
-from resources.typingutils import PrivateKey, SignKey
+from keyutils_py.types import PrivateKey, SignKey
 from resources.utils import (
     get_openssl_name_notation,
     load_and_decode_pem_file,

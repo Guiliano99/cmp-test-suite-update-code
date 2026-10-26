@@ -13,13 +13,13 @@ from typing import Optional, Union
 
 import pyasn1.error
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from keyutils_py.types import ECDHPrivateKey, ECDHPublicKey, KEMPrivateKey, KEMPublicKey, PrivateKey, Strint
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import tag, univ
 from pyasn1.type.base import Asn1Type
 from pyasn1_alt_modules import rfc4211, rfc5652, rfc9480, rfc9629
 from robot.api.deco import keyword, not_keyword
 
-from pq_logic.keys.abstract_wrapper_keys import KEMPrivateKey, KEMPublicKey
 from pq_logic.pq_utils import is_kem_private_key, is_kem_public_key
 from resources import (
     asn1utils,
@@ -38,7 +38,7 @@ from resources.asn1_structures import ChallengeASN1, PKIMessageTMP
 from resources.convertutils import str_to_bytes
 from resources.cryptoutils import compute_aes_cbc, perform_ecdh
 from resources.exceptions import BadAsn1Data, BadRequest, InvalidKeyCombination
-from resources.typingutils import ECDHPrivateKey, ECDHPublicKey, EnvDataPrivateKey, PrivateKey, Strint
+from resources.typingutils import EnvDataPrivateKey
 
 
 @keyword(name="Prepare PKMAC POPO")

@@ -9,7 +9,7 @@ from pyasn1.codec.der import decoder
 from pyasn1_alt_modules import rfc5958
 
 from pq_logic.combined_factory import CombinedKeyFactory
-from pq_logic.keys.kem_keys import FrodoKEMPrivateKey, FrodoKEMPublicKey
+from keyutils_py.types import FrodoKEMPrivateKey, FrodoKEMPublicKey
 
 class TestFrodoKEMKeyGen(unittest.TestCase):
 
@@ -20,7 +20,7 @@ class TestFrodoKEMKeyGen(unittest.TestCase):
         WHEN a key is generated from the seed and loaded from the `OneAsymmetricKey` structure.
         THEN the key should be generated successfully.
         """
-        private_key = FrodoKEMPrivateKey(alg_name="frodokem-640-aes")
+        private_key = FrodoKEMPrivateKey(alg_name="frodokem-976-aes")
 
         private_bytes = private_key.private_bytes(
             encoding=serialization.Encoding.DER,
@@ -33,12 +33,12 @@ class TestFrodoKEMKeyGen(unittest.TestCase):
 
         _ = FrodoKEMPrivateKey.from_private_bytes(
             data=one_asym_key["privateKey"].asOctets(),
-            name="frodokem-640-aes",
+            name="frodokem-976-aes",
         )
 
         out = one_asym_key["publicKey"].asOctets()
         self.assertEqual(out, private_key.public_key().public_bytes_raw())
-        pub_key = FrodoKEMPublicKey.from_public_bytes(data=out, name="frodokem-640-aes")
+        pub_key = FrodoKEMPublicKey.from_public_bytes(data=out, name="frodokem-976-aes")
         self.assertEqual(pub_key.public_bytes_raw(), private_key.public_key().public_bytes_raw())
 
         key2 = CombinedKeyFactory.load_private_key_from_one_asym_key(private_bytes)

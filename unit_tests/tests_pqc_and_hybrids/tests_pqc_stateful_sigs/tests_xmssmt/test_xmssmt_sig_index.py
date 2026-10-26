@@ -6,7 +6,7 @@ import unittest
 
 from oqs import StatefulSignature
 
-from pq_logic.keys.stateful_sig_keys import XMSSMTPublicKey
+from keyutils_py.types import XMSSMTPublicKey
 
 
 class TestXMSSMTIndexSignature(unittest.TestCase):

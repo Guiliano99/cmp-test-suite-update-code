@@ -8,8 +8,8 @@ from cryptography.hazmat.primitives.serialization import PrivateFormat, Encoding
 
 
 from pq_logic.combined_factory import CombinedKeyFactory
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey
-from pq_logic.keys.sig_keys import MLDSAPrivateKey
+from keyutils_py.types import CompositeSigPrivateKey
+from keyutils_py.types import MLDSAPrivateKey
 from resources import keyutils
 from resources.utils import manipulate_first_byte
 

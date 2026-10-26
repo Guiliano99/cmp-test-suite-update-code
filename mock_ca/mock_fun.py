@@ -12,11 +12,11 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 from cryptography import x509
 from cryptography.x509 import CertificateRevocationList, ExtensionNotFound, ocsp
+from keyutils_py.types import ECDHPrivateKey, HybridPublicKey, KEMPublicKey, PrivateKey, PublicKey, SignKey
 from pyasn1.codec.der import encoder
 from pyasn1_alt_modules import rfc5280, rfc9480
 
 from mock_ca.operation_dbs import SunHybridState
-from pq_logic.keys.abstract_wrapper_keys import HybridPublicKey, KEMPublicKey
 from resources import ca_ra_utils, certutils, keyutils
 from resources.asn1_structures import PKIMessageTMP
 from resources.certutils import load_public_key_from_cert
@@ -36,7 +36,6 @@ from resources.exceptions import (
 from resources.oid_mapping import compute_hash
 from resources.oidutils import id_KemBasedMac
 from resources.protectionutils import verify_kem_based_mac_protection
-from resources.typingutils import ECDHPrivateKey, PrivateKey, PublicKey, SignKey
 from unit_tests.utils_for_test import compare_pyasn1_objects, convert_to_crypto_lib_cert
 
 

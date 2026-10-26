@@ -6,7 +6,7 @@ import unittest
 
 from pyasn1.type import univ
 
-from pq_logic.keys.composite_sig import CompositeSigPrivateKey, CompositeSigPublicKey
+from keyutils_py.types import CompositeSigPrivateKey, CompositeSigPublicKey
 from resources.keyutils import generate_key
 
 EXPECTED_PHM_HEX = (

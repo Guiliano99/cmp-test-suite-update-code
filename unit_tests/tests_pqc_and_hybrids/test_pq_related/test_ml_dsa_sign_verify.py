@@ -5,7 +5,7 @@ import os
 import unittest
 
 from cryptography.exceptions import InvalidSignature
-from pq_logic.keys.sig_keys import MLDSAPrivateKey
+from keyutils_py.types import MLDSAPrivateKey
 from pq_logic.keys.pq_key_factory import PQKeyFactory
 from resources.oid_mapping import compute_hash
 from resources.utils import manipulate_first_byte

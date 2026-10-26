@@ -9,7 +9,7 @@ from pyasn1.codec.der import decoder
 from pyasn1_alt_modules import rfc5958
 
 from pq_logic.combined_factory import CombinedKeyFactory
-from pq_logic.keys.kem_keys import MLKEMPrivateKey, MLKEMPublicKey
+from keyutils_py.types import MLKEMPrivateKey, MLKEMPublicKey
 
 
 class TestMLKEMKeyGen(unittest.TestCase):

@@ -22,6 +22,7 @@ from cryptography import x509
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.serialization import pkcs7
+from keyutils_py.types import SignKey, Strint
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import univ
 from pyasn1_alt_modules import rfc5280, rfc5652, rfc6402, rfc9480
@@ -44,7 +45,6 @@ from resources.asn1utils import get_set_bitstring_names, try_decode_pyasn1
 from resources.convertutils import ensure_is_verify_key, pyasn1_time_obj_to_py_datetime
 from resources.exceptions import BadAsn1Data, BadCertTemplate, BadPOP, BadTime
 from resources.oid_mapping import get_hash_from_oid, may_return_oid_to_name
-from resources.typingutils import SignKey, Strint
 
 
 def _prepare_related_data_to_sign(attributes: RequesterCertificate) -> bytes:

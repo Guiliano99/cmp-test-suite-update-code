@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from keyutils_py.types import SignKey
 from pyasn1.codec.der import encoder
 from pyasn1.type import univ
 from pyasn1.type.base import Asn1Type
@@ -52,7 +53,7 @@ from resources.oidutils import (
 )
 from resources.prepare_alg_ids import get_all_supported_ecc_alg_ids, prepare_alg_id
 from resources.protectionutils import get_protection_type_from_pkimessage
-from resources.typingutils import EnvDataPrivateKey, SignKey
+from resources.typingutils import EnvDataPrivateKey
 from resources.utils import get_openssl_name_notation
 from unit_tests.utils_for_test import compare_pyasn1_objects, try_decode_pyasn1
 

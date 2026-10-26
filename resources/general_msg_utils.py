@@ -19,12 +19,12 @@ import os
 from typing import List, Optional, Sequence, Set, Tuple, Union
 
 import pyasn1.error
+from keyutils_py.types import ECDHPrivateKey, HybridKEMPublicKey, KEMPrivateKey, KEMPublicKey, Strint
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import char, tag, univ, useful
 from pyasn1_alt_modules import rfc4210, rfc4211, rfc5280, rfc5480, rfc5652, rfc6664, rfc9480, rfc9481
 from robot.api.deco import keyword, not_keyword
 
-from pq_logic.keys.abstract_wrapper_keys import HybridKEMPublicKey, KEMPrivateKey, KEMPublicKey
 from pq_logic.pq_utils import get_kem_oid_from_key
 from pq_logic.tmp_oids import id_it_KemCiphertextInfo
 from resources import (
@@ -63,7 +63,7 @@ from resources.oidutils import (
     SYMMETRIC_ENCR_ALG_OID_2_NAME,
 )
 from resources.suiteenums import GeneralInfoOID
-from resources.typingutils import ECDHPrivateKey, EnvDataPublicKey, Strint
+from resources.typingutils import EnvDataPublicKey
 from unit_tests.utils_for_test import try_encode_pyasn1
 
 # TODO for the future, change references to new RFC.

@@ -8,11 +8,11 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Type
 
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat, PublicFormat
+from keyutils_py.types import PrivateKey, PublicKey
 from pyasn1.codec.der import decoder
 from pyasn1_alt_modules import rfc5280, rfc5958
 
 from resources.exceptions import InvalidKeyData, MismatchingKey
-from resources.typingutils import PrivateKey, PublicKey
 
 
 class AbstractKeyFactory(ABC):

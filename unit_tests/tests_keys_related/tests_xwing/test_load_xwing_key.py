@@ -5,7 +5,7 @@
 import unittest
 
 from pq_logic.combined_factory import CombinedKeyFactory
-from pq_logic.keys.xwing import XWingPrivateKey
+from keyutils_py.types import XWingPrivateKey
 from pyasn1.codec.der import decoder
 from pyasn1_alt_modules import rfc5280, rfc5958
 from resources.utils import load_and_decode_pem_file

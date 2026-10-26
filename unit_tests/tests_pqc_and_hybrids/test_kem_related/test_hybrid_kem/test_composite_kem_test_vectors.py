@@ -11,10 +11,10 @@ from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448P
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
 from cryptography.hazmat.primitives.serialization import load_der_private_key, load_der_public_key
 
-from pq_logic.keys.composite_kem import CompositeKEMPrivateKey, CompositeKEMPublicKey
-from pq_logic.keys.kem_keys import MLKEMPrivateKey
+from keyutils_py.types import CompositeKEMPrivateKey, CompositeKEMPublicKey
+from keyutils_py.types import MLKEMPrivateKey
 from pq_logic.keys.pq_key_factory import PQKeyFactory
-from pq_logic.keys.trad_kem_keys import DHKEMPrivateKey, RSADecapKey, RSAEncapKey
+from keyutils_py.types import DHKEMPrivateKey, RSADecapKey, RSAEncapKey
 from resources.certutils import parse_certificate
 from resources.exceptions import InvalidKeyData
 from resources.oidutils import CURVE_NAMES_TO_INSTANCES

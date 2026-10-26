@@ -8,8 +8,8 @@ from typing import Union, Tuple
 from pyasn1.type import tag
 from pyasn1_alt_modules import rfc9480
 
-from pq_logic.keys.abstract_wrapper_keys import KEMPrivateKey, HybridKEMPrivateKey
-from resources.typingutils import ECDHPrivateKey
+from keyutils_py.types import KEMPrivateKey, HybridKEMPrivateKey
+from keyutils_py.types import ECDHPrivateKey
 from resources.ca_kga_logic import validate_enveloped_data
 from resources.ca_ra_utils import prepare_encr_cert_from_request
 from resources.certbuildutils import build_cert_from_cert_template
