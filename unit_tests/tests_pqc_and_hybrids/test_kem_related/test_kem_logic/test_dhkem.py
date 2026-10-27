@@ -9,7 +9,7 @@ from binascii import unhexlify
 
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
-from pq_logic.kem_mechanism import DHKEMRFC9180
+from keyutils_py.keys.kem_mechanism import DHKEMRFC9180
 
 
 class TestDHKEMRFC9180(unittest.TestCase):

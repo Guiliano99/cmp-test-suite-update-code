@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives import serialization
 from pyasn1.codec.der import decoder
 from pyasn1_alt_modules import rfc5958
 
-from pq_logic.combined_factory import CombinedKeyFactory
+from keyutils_py.factories import CombinedKeyFactory
 from keyutils_py.types import FalconPrivateKey, FalconPublicKey
 
 class TestFalconKeyGen(unittest.TestCase):

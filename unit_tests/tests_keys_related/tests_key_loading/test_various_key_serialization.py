@@ -7,13 +7,13 @@ from typing import Tuple, Union
 
 from cryptography.hazmat.primitives import serialization
 
-from pq_logic.combined_factory import CombinedKeyFactory
+from keyutils_py.factories import CombinedKeyFactory
 from keyutils_py.types import PQPrivateKey
 from keyutils_py.types import MLKEMPrivateKey
 from keyutils_py.types import MLDSAPrivateKey, SLHDSAPrivateKey
 from keyutils_py.types import XWingPrivateKey
 from resources.keyutils import generate_key
-from resources.suiteenums import KeySaveType
+from keyutils_py.enums import KeySaveType
 
 _SEED_KEY_TYPE = Union[
     MLKEMPrivateKey,

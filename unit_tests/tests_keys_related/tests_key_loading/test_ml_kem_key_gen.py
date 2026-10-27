@@ -8,8 +8,9 @@ from cryptography.hazmat.primitives import serialization
 from pyasn1.codec.der import decoder
 from pyasn1_alt_modules import rfc5958
 
-from pq_logic.combined_factory import CombinedKeyFactory
+from keyutils_py.data_objects import MLKEM512PrivateKeyASN1
 from keyutils_py.types import MLKEMPrivateKey, MLKEMPublicKey
+from keyutils_py.factories import CombinedKeyFactory
 
 
 class TestMLKEMKeyGen(unittest.TestCase):
@@ -86,12 +87,10 @@ class TestMLKEMKeyGen(unittest.TestCase):
         one_asym_key, rest = decoder.decode(private_bytes, asn1Spec=rfc5958.OneAsymmetricKey())
         self.assertEqual(rest, b"")
 
-        priv_key2 = MLKEMPrivateKey.from_private_bytes(
-            data=one_asym_key["privateKey"].asOctets(),
-            name="ml-kem-512",
-        )
-
-        self.assertEqual(priv_key2._export_private_key(), seed)
+        # The `privateKey` holds the standardised `Choice`; a key created from a seed is stored as the seed.
+        choice, rest = decoder.decode(one_asym_key["privateKey"].asOctets(), asn1Spec=MLKEM512PrivateKeyASN1())
+        self.assertEqual(rest, b"")
+        self.assertEqual(choice["seed"].asOctets(), seed)
 
         out = one_asym_key["publicKey"].asOctets()
         self.assertEqual(out, private_key.public_key().public_bytes_raw())

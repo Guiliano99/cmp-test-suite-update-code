@@ -16,6 +16,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa, x448, x2
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
+from keyutils_py.factories import CombinedKeyFactory
 from keyutils_py.types import (
     CompositeKEMPrivateKey,
     ECDHPrivateKey,
@@ -41,7 +42,6 @@ from pyasn1_alt_modules import (
 )
 from robot.api.deco import keyword, not_keyword
 
-import pq_logic.combined_factory
 from pq_logic.pq_utils import get_kem_oid_from_key
 from pq_logic.tmp_oids import COMPOSITE_SIG_OID_TO_NAME
 from resources import (
@@ -1540,12 +1540,12 @@ def validate_asymmetric_key_package(
             f"But Got: {int(one_asym_key['version'])}"
         )
 
-    private_key = pq_logic.combined_factory.CombinedKeyFactory.load_private_key_from_one_asym_key(
+    private_key = CombinedKeyFactory.load_private_key_from_one_asym_key(
         one_asym_key, must_be_version_2=True
     )
 
     if key_save_type is not None:
-        pq_logic.combined_factory.CombinedKeyFactory.validate_key_export_type(
+        CombinedKeyFactory.validate_key_export_type(
             private_key=private_key,  # type: ignore
             private_key_bytes=one_asym_key["privateKey"].asOctets(),
             key_save_type=key_save_type,

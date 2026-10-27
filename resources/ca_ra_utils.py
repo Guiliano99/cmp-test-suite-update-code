@@ -13,13 +13,16 @@ import pyasn1.error
 from cryptography import x509
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ec, padding, x448, x25519
-from cryptography.hazmat.primitives.asymmetric.dh import DHPublicKey
-from cryptography.hazmat.primitives.asymmetric.dsa import DSAPublicKey
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey, X448PublicKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
+from keyutils_py.enums import KeySaveType
+from keyutils_py.factories import CombinedKeyFactory
+from keyutils_py.keys import hss_validation
 from keyutils_py.types import (
+    DHPublicKey,
+    DSAPublicKey,
     ECDHPrivateKey,
     ECDHPublicKey,
     HSSPublicKey,
@@ -42,8 +45,6 @@ from pyasn1_alt_modules import rfc4211, rfc5280, rfc5480, rfc5652, rfc5958, rfc6
 from robot.api.deco import keyword, not_keyword
 
 from pq_logic import pq_verify_logic
-from pq_logic.combined_factory import CombinedKeyFactory
-from pq_logic.keys import hss_validation
 from pq_logic.pq_utils import get_kem_oid_from_key, is_kem_public_key
 from resources import (
     ca_kga_logic,
@@ -97,7 +98,7 @@ from resources.oid_mapping import (
     sha_alg_name_to_oid,
 )
 from resources.oidutils import CURVE_OID_2_NAME, id_KemBasedMac
-from resources.suiteenums import InvalidOneAsymKeyType, KeySaveType
+from resources.suiteenums import InvalidOneAsymKeyType
 from resources.typingutils import CAResponse, CertOrCerts, CertRequestType, EnvDataPrivateKey, ExtensionsParseType
 
 

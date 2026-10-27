@@ -9,7 +9,7 @@ from typing import Tuple
 
 from cryptography.hazmat.primitives import serialization
 
-from pq_logic.kem_mechanism import RSAKem
+from keyutils_py.keys.kem_mechanism import RSAKem
 
 from resources.cryptoutils import compute_ansi_x9_63_kdf
 from resources.keyutils import generate_key, load_private_key_from_file

@@ -442,7 +442,7 @@ def is_nist_approved_hss(alg: str) -> bool:
 def _generate_xmss_test_cases() -> List[TestCase]:
     """Generate test cases for XMSS algorithms."""
     test_cases = []
-    from pq_logic.keys.pq_stateful_sig_factory import PQStatefulSigFactory
+    from keyutils_py.factories import PQStatefulSigFactory
 
     algorithms = PQStatefulSigFactory.get_algorithms_by_family()["xmss"]
 
@@ -475,7 +475,7 @@ def _generate_xmss_test_cases() -> List[TestCase]:
 def _generate_xmssmt_test_cases() -> List[TestCase]:
     """Generate test cases for XMSSMT algorithms."""
     test_cases = []
-    from pq_logic.keys.pq_stateful_sig_factory import PQStatefulSigFactory
+    from keyutils_py.factories import PQStatefulSigFactory
 
     algorithms = PQStatefulSigFactory.get_algorithms_by_family()["xmssmt"]
     for body_name in ALL_BODY_NAMES:
@@ -544,7 +544,7 @@ def _generate_hss_approved_test_cases(alg: str, body_name: str, tag: str) -> Lis
 def _generate_hss_test_cases() -> List[TestCase]:
     """Generate test cases for HSS algorithms."""
     test_cases = []
-    from pq_logic.keys.pq_stateful_sig_factory import PQStatefulSigFactory
+    from keyutils_py.factories import PQStatefulSigFactory
 
     algorithms = PQStatefulSigFactory.get_algorithms_by_family()["hss"]
     for body_name in ALL_BODY_NAMES:

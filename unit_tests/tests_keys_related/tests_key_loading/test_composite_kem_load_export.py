@@ -6,7 +6,7 @@ import unittest
 
 from cryptography.hazmat.primitives import serialization
 
-from pq_logic.combined_factory import CombinedKeyFactory
+from keyutils_py.factories import CombinedKeyFactory
 from resources.keyutils import generate_key
 
 

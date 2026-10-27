@@ -6,7 +6,7 @@
 import unittest
 
 from keyutils_py.types import ChempatMLKEMPrivateKey, ChempatMcEliecePrivateKey, ChempatFrodoKEMPrivateKey
-from pq_logic.keys.hybrid_key_factory import HybridKeyFactory
+from keyutils_py.factories import HybridKeyFactory
 from resources.keyutils import generate_key
 
 

@@ -22,7 +22,7 @@ from Crypto.PublicKey import RSA
 from Crypto.Signature import pss
 from cryptography.hazmat.primitives import hashes, hmac, serialization
 from cryptography.hazmat.primitives import padding as aes_padding
-from cryptography.hazmat.primitives.asymmetric import dsa, ec, ed448, ed25519, padding, rsa, x448, x25519
+from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, padding, rsa, x448, x25519
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey, EllipticCurvePublicKey
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey
@@ -38,6 +38,8 @@ from keyutils_py.types import (
     CompositeSigPrivateKey,
     CompositeSigPublicKey,
     DHKEMPublicKey,
+    DSAPrivateKey,
+    DSAPublicKey,
     ECDHPrivateKey,
     ECDHPublicKey,
     KEMPrivateKey,
@@ -118,7 +120,7 @@ def sign_data(  # noqa D417 undocumented-param
             ec.EllipticCurvePrivateKey,
             ed25519.Ed25519PrivateKey,
             ed448.Ed448PrivateKey,
-            dsa.DSAPrivateKey,
+            DSAPrivateKey,
         ),
     ):
         return _sign_traditional_key(data, key, hash_alg, use_rsa_pss)
@@ -143,7 +145,7 @@ def _sign_traditional_key(
         ec.EllipticCurvePrivateKey,
         ed25519.Ed25519PrivateKey,
         ed448.Ed448PrivateKey,
-        dsa.DSAPrivateKey,
+        DSAPrivateKey,
     ],
     hash_alg: Optional[hashes.HashAlgorithm],
     use_pss: bool,
@@ -161,7 +163,7 @@ def _sign_traditional_key(
         return key.sign(data, padding.PKCS1v15(), hash_alg)
     if isinstance(key, ec.EllipticCurvePrivateKey):
         return key.sign(data, ec.ECDSA(hash_alg))
-    if isinstance(key, dsa.DSAPrivateKey):
+    if isinstance(key, DSAPrivateKey):
         return key.sign(data, hash_alg)
 
     raise ValueError(f"Unsupported standalone key type: {type(key).__name__}.")
@@ -707,7 +709,7 @@ def _verify_trad_signature(
         ec.EllipticCurvePublicKey,
         ed25519.Ed25519PublicKey,
         ed448.Ed448PublicKey,
-        dsa.DSAPublicKey,
+        DSAPublicKey,
     ],
     signature: bytes,
     data: bytes,
@@ -735,7 +737,7 @@ def _verify_trad_signature(
             public_key.verify(signature, data, padding=padding.PKCS1v15(), algorithm=hash_alg)
     elif isinstance(public_key, ec.EllipticCurvePublicKey):
         public_key.verify(signature, data, ec.ECDSA(hash_alg))
-    elif isinstance(public_key, dsa.DSAPublicKey):
+    elif isinstance(public_key, DSAPublicKey):
         public_key.verify(signature, data, hash_alg)
 
     elif isinstance(public_key, (x25519.X25519PublicKey, x448.X448PublicKey)):

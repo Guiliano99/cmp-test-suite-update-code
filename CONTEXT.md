@@ -29,14 +29,12 @@ the deterministic `seed=` path.
 _Avoid_: "classic keys"
 
 **Post-Quantum Key Generation**:
-Key creation for algorithms from the post-quantum space (PQ signatures, PQ KEMs, post-quantum
-stateful-hash signatures, hybrid keys). It is delegated to `keyutils-py` in the first migration
-slice.
+Key creation for every key type (traditional, PQ signatures, PQ KEMs, post-quantum
+stateful-hash signatures, hybrid keys). It is done by `keyutils-py`; `Generate Key` is its keyword.
 _Avoid_: "PQC keys" (ambiguous: it does not say where the key is generated)
 
 **Key Wrapper**:
-The class family in `pq_logic/keys` that wraps a raw cryptographic key with CMP-specific
-behaviour (serialization, SPKI, protection, signing). The standalone `keyutils-py` package
-carries a near-identical but separate wrapper family; a key created by one is not an instance of
-the other's classes, which host `isinstance` dispatch cannot accept.
+The class family of `keyutils-py` that wraps a raw cryptographic key (serialization, SPKI,
+signing, KEM operations). The suite has no wrapper classes of its own; it imports every key type
+from `keyutils_py.types`, so a key from any source is an instance of the same classes.
 _Avoid_: "the key object" (does not say which family)

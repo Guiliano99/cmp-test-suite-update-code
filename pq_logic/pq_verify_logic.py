@@ -14,6 +14,7 @@ import logging
 from typing import Iterable, List, Optional, Sequence, Tuple, Union
 
 from cryptography.exceptions import InvalidSignature
+from keyutils_py.factories import PQKeyFactory
 from keyutils_py.types import CompositeSigPublicKey, PQSignaturePublicKey, VerifyKey
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import constraint, tag, univ
@@ -27,7 +28,6 @@ from pq_logic.hybrid_sig import (
     chameleon_logic,
     sun_lamps_hybrid_scheme_00,
 )
-from pq_logic.keys.pq_key_factory import PQKeyFactory
 from pq_logic.tmp_oids import (
     COMPOSITE_SIG_OID_TO_NAME,
     id_altSubPubKeyExt,

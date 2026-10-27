@@ -21,7 +21,8 @@ import time
 from multiprocessing import Pool, cpu_count, get_context
 from typing import Iterable, Sequence, Tuple
 
-from pq_logic.combined_factory import CombinedKeyFactory
+from keyutils_py.factories import CombinedKeyFactory
+
 from resources.ca_ra_utils import (
     is_nist_approved_xmss,
     is_nist_approved_xmssmt,

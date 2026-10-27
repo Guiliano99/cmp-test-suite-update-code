@@ -4,7 +4,7 @@
 
 import unittest
 
-from pq_logic.combined_factory import CombinedKeyFactory
+from keyutils_py.factories import CombinedKeyFactory
 from resources.exceptions import InvalidKeyData
 from resources.keyutils import generate_key, prepare_one_asymmetric_key
 

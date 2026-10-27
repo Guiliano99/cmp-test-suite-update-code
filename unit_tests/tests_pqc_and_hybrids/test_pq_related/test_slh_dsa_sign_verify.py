@@ -7,7 +7,7 @@ import unittest
 
 from cryptography.exceptions import InvalidSignature
 
-from pq_logic.keys.pq_key_factory import PQKeyFactory
+from keyutils_py.factories import PQKeyFactory
 from resources.cryptoutils import sign_data, verify_signature
 from resources.utils import manipulate_first_byte
 

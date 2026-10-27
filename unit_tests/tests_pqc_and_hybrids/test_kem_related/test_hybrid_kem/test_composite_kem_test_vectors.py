@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives.serialization import load_der_private_key, l
 
 from keyutils_py.types import CompositeKEMPrivateKey, CompositeKEMPublicKey
 from keyutils_py.types import MLKEMPrivateKey
-from pq_logic.keys.pq_key_factory import PQKeyFactory
+from keyutils_py.factories import PQKeyFactory
 from keyutils_py.types import DHKEMPrivateKey, RSADecapKey, RSAEncapKey
 from resources.certutils import parse_certificate
 from resources.exceptions import InvalidKeyData

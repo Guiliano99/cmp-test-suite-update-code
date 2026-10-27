@@ -5,7 +5,7 @@
 import unittest
 
 from keyutils_py.types import HSSPrivateKey, HSSPublicKey
-from pq_logic.keys.pq_stateful_sig_factory import PQStatefulSigFactory
+from keyutils_py.factories import PQStatefulSigFactory
 from resources.keyutils import generate_key, load_private_key_from_file
 from keyutils_py.types import PrivateKey
 

@@ -6,7 +6,7 @@ import unittest
 
 from cryptography.hazmat.primitives import serialization
 
-from pq_logic.keys.trad_key_factory import prepare_invalid_trad_private_key
+from keyutils_py.factories import TradKeyFactory
 from resources.keyutils import generate_key
 
 
@@ -19,7 +19,7 @@ class TestPrepareInvalidTradPrivateKey(unittest.TestCase):
         THEN the key should be prepared correctly and the loading should raise an exception.
         """
         key = generate_key("rsa")
-        der_data = prepare_invalid_trad_private_key(key, invalid_key=True)
+        der_data = TradKeyFactory.prepare_invalid_trad_private_key(key, invalid_key=True)
         with self.assertRaises(ValueError):
             serialization.load_der_private_key(der_data, password=None)
 
@@ -30,7 +30,7 @@ class TestPrepareInvalidTradPrivateKey(unittest.TestCase):
         THEN the key should be prepared correctly and the loading should raise an exception.
         """
         key = generate_key("ecc")
-        der_data = prepare_invalid_trad_private_key(key, invalid_key=True)
+        der_data = TradKeyFactory.prepare_invalid_trad_private_key(key, invalid_key=True)
         with self.assertRaises(BaseException):
             # pyo3_runtime.PanicException: Is a `Rust` exception and derives from `BaseException`.
             serialization.load_der_private_key(der_data, password=None)

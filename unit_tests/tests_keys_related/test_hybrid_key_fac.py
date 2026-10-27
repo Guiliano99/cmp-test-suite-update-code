@@ -5,7 +5,7 @@
 import unittest
 
 from keyutils_py.types import ChempatMLKEMPrivateKey, ChempatSntrup761PrivateKey, ChempatMcEliecePrivateKey
-from pq_logic.keys.hybrid_key_factory import HybridKeyFactory
+from keyutils_py.factories import HybridKeyFactory
 from keyutils_py.types import RSADecapKey, DHKEMPrivateKey
 from resources.keyutils import generate_key
 from cryptography.hazmat.primitives.asymmetric import x25519

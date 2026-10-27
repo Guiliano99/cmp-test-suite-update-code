@@ -14,8 +14,9 @@ import logging
 from typing import Optional, Union
 
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import dsa, ec
-from keyutils_py.types import PQHashStatefulSigPrivateKey, PQSignaturePrivateKey, PrivateKey
+from cryptography.hazmat.primitives.asymmetric import ec
+from keyutils_py.oids import KEY_CLASS_MAPPING
+from keyutils_py.types import DSAPrivateKey, PQHashStatefulSigPrivateKey, PQSignaturePrivateKey, PrivateKey
 from pyasn1.type import univ
 from pyasn1_alt_modules import rfc9480, rfc9481
 from pyasn1_alt_modules.rfc5480 import id_dsa_with_sha256
@@ -44,25 +45,6 @@ from resources.oidutils import (
     SUPPORTED_MAC_NAME_2_OID,
     TRAD_SIG_NAME_2_OID,
 )
-
-KEY_CLASS_MAPPING = {
-    "RSAPrivateKey": "rsa",
-    "RSAPublicKey": "rsa",
-    "EllipticCurvePrivateKey": "ecdsa",
-    "EllipticCurvePublicKey": "ecdsa",
-    "ECPrivateKey": "ecdsa",
-    "ECPublicKey": "ecdsa",
-    "DSAPrivateKey": "dsa",
-    "DSAPublicKey": "dsa",
-    "Ed25519PrivateKey": "ed25519",
-    "Ed25519PublicKey": "ed25519",
-    "Ed448PrivateKey": "ed448",
-    "Ed448PublicKey": "ed448",
-    "X25519PrivateKey": "x25519",
-    "X25519PublicKey": "x25519",
-    "X448PrivateKey": "x448",
-    "X448PublicKey": "x448",
-}
 
 extra_data = {
     "rsa-sha256-pss": rfc9481.id_RSASSA_PSS,
@@ -198,7 +180,7 @@ def get_alg_oid_from_key_hash(
     :param use_rsa_pss: Flag to use RSA-PSS padding. Default is False.
     :return: The OID of the signature algorithm.
     """
-    if isinstance(key, dsa.DSAPrivateKey):
+    if isinstance(key, DSAPrivateKey):
         logging.info("Remember to only use with Negative Testing!")
         if hash_alg == "sha256":
             return id_dsa_with_sha256

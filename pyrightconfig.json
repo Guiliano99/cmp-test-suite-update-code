@@ -2,9 +2,6 @@
   "include": ["./resources", "./pq_logic", "./mock_ca"],
   "exclude": [
     "./unit_tests",
-  "./pq_logic/hybrid_structures.py",
-    "./pq_logic/fips/*.py",
-    "./pq_logic/keys/abstract_pq.py",
-    "./pq_logic/keys/*.py"
+    "./pq_logic/hybrid_structures.py"
   ]
 }

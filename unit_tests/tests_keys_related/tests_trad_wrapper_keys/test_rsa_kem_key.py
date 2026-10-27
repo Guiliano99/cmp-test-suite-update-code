@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from pyasn1.codec.der import decoder
 from pyasn1_alt_modules import rfc5280
 
-from pq_logic.combined_factory import CombinedKeyFactory
+from keyutils_py.factories import CombinedKeyFactory
 from keyutils_py.types import RSADecapKey
 from resources.keyutils import load_private_key_from_file, save_key
 

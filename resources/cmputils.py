@@ -16,9 +16,10 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 from urllib import parse
 
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import dh, ec, x448, x25519
+from cryptography.hazmat.primitives.asymmetric import ec, x448, x25519
 from keyutils_py.types import (
     CompositeKEMPublicKey,
+    DHPrivateKey,
     HybridKEMPublicKey,
     KEMPublicKey,
     PrivateKey,
@@ -2201,7 +2202,7 @@ def prepare_cert_req_msg(  # noqa D417 undocumented-param
         popo = prepare_popo_challenge_for_non_signing_key(use_encr_cert=use_encr_cert, use_key_enc=True)
         cert_request_msg["popo"] = popo
 
-    elif not isinstance(private_key, (x448.X448PrivateKey, x25519.X25519PrivateKey, dh.DHPrivateKey)):
+    elif not isinstance(private_key, (x448.X448PrivateKey, x25519.X25519PrivateKey, DHPrivateKey)):
         popo = prepare_signature_popo(
             signing_key=private_key,  # type: ignore
             cert_request=cert_request,

@@ -13,11 +13,12 @@ import pyasn1.error
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pss
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric import dsa, padding, rsa, x448, x25519
+from cryptography.hazmat.primitives.asymmetric import padding, rsa, x448, x25519
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from keyutils_py.types import (
     CompositeSigPrivateKey,
     CompositeSigPublicKey,
+    DSAPrivateKey,
     ECDHPrivateKey,
     ECDHPublicKey,
     ECVerifyKey,
@@ -751,7 +752,7 @@ def _compute_pkimessage_protection(
     data = prepare_protected_part(pki_message)
     sign_key = ensure_is_sign_key(private_key)
 
-    if protection_type_oid == rfc5480.id_dsa_with_sha256 and isinstance(sign_key, dsa.DSAPrivateKey):
+    if protection_type_oid == rfc5480.id_dsa_with_sha256 and isinstance(sign_key, DSAPrivateKey):
         return cryptoutils.sign_data(data=data, key=sign_key, hash_alg="sha256")  # type: ignore
 
     if sign_key is not None:

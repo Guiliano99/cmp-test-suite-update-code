@@ -15,9 +15,9 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey,
 from cryptography.hazmat.primitives.serialization import load_der_private_key, load_der_public_key
 from pyasn1_alt_modules import rfc9480, rfc5958
 
-from pq_logic.combined_factory import CombinedKeyFactory
+from keyutils_py.factories import CombinedKeyFactory
 from keyutils_py.types import CompositeSigPrivateKey, CompositeSigPublicKey
-from pq_logic.keys.pq_key_factory import PQKeyFactory
+from keyutils_py.factories import PQKeyFactory
 from keyutils_py.types import MLDSAPrivateKey
 from pq_logic.tmp_oids import COMPOSITE_SIG_NAME_TO_OID
 from resources.certutils import parse_certificate

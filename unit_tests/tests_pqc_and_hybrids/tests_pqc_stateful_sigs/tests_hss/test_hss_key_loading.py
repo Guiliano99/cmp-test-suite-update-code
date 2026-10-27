@@ -7,7 +7,7 @@ import pyhsslms
 from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat, NoEncryption
 
 from keyutils_py.types import HSSPrivateKey, HSSPublicKey
-from pq_logic.combined_factory import CombinedKeyFactory
+from keyutils_py.factories import CombinedKeyFactory
 from resources.exceptions import InvalidKeyData
 
 

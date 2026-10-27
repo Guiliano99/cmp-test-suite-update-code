@@ -27,7 +27,7 @@ from robot.api.deco import not_keyword
 
 from pq_logic.hybrid_sig.sun_lamps_hybrid_scheme_00 import prepare_sun_hybrid_csr_attributes
 from keyutils_py.types import CompositeSigPrivateKey
-from pq_logic.keys.pq_stateful_sig_factory import PQStatefulSigFactory
+from keyutils_py.factories import PQStatefulSigFactory
 from pq_logic.tmp_oids import FRODOKEM_NAME_2_OID
 from resources import certutils, cmputils, utils
 from resources.asn1_structures import PKIMessageTMP

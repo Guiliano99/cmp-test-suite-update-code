@@ -9,8 +9,8 @@ from cryptography.hazmat.primitives.serialization import Encoding, PrivateFormat
 from pyasn1.codec.der import encoder, decoder
 from pyasn1_alt_modules import rfc5915, rfc5958
 
-from pq_logic.keys.trad_key_factory import parse_trad_key_from_one_asym_key
-from pq_logic.keys.serialize_utils import prepare_ec_private_key
+from keyutils_py.factories import TradKeyFactory
+from keyutils_py.keys.serialize_utils import prepare_ec_private_key
 from resources.keyutils import generate_key, prepare_one_asymmetric_key
 
 
@@ -43,7 +43,7 @@ class TestLoadECPrivateKey(unittest.TestCase):
         private_key_info, _ = decoder.decode(encoded_key, asn1Spec=rfc5958.OneAsymmetricKey())
         inner_der = private_key_info['privateKey'].asOctets()
         ec_private_key, _ = decoder.decode(inner_der, asn1Spec=rfc5915.ECPrivateKey())
-        ec_private_key = parse_trad_key_from_one_asym_key(one_asym_key=private_key_info, must_be_version_2=False)
+        ec_private_key = TradKeyFactory.parse_trad_key_from_one_asym_key(one_asym_key=private_key_info, must_be_version_2=False)
 
         self.assertEqual(ec_private_key.public_key(), private_key.public_key())
         self.assertEqual(ec_private_key.private_numbers(), private_key.private_numbers())
@@ -59,6 +59,6 @@ class TestLoadECPrivateKey(unittest.TestCase):
             private_key,
             version="v2"
         )
-        loaded_key = parse_trad_key_from_one_asym_key(one_asym_key)
+        loaded_key = TradKeyFactory.parse_trad_key_from_one_asym_key(one_asym_key)
         self.assertEqual(loaded_key.public_key(), private_key.public_key())
         self.assertEqual(loaded_key.private_numbers(), private_key.private_numbers())

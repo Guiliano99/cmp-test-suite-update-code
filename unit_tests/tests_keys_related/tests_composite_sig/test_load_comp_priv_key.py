@@ -7,7 +7,7 @@ import unittest
 from cryptography.hazmat.primitives.serialization import PrivateFormat, Encoding
 
 
-from pq_logic.combined_factory import CombinedKeyFactory
+from keyutils_py.factories import CombinedKeyFactory
 from keyutils_py.types import CompositeSigPrivateKey
 from keyutils_py.types import MLDSAPrivateKey
 from resources import keyutils

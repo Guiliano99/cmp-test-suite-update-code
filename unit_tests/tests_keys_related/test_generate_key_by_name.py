@@ -5,7 +5,7 @@
 import unittest
 
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
-from pq_logic.combined_factory import CombinedKeyFactory
+from keyutils_py.factories import CombinedKeyFactory
 from resources.exceptions import InvalidKeyCombination
 
 

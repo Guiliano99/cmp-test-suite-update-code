@@ -16,7 +16,7 @@ from pyasn1.codec.der import decoder, encoder
 from pyasn1_alt_modules import rfc5915, rfc9480
 
 from keyutils_py.types import CompositeSigPrivateKey, CompositeSigPublicKey
-from pq_logic.keys.pq_key_factory import PQKeyFactory
+from keyutils_py.factories import PQKeyFactory
 from keyutils_py.types import MLDSAPrivateKey
 from pq_logic.tmp_oids import COMPOSITE_SIG_OID_TO_NAME
 from resources.certutils import parse_certificate

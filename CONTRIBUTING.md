@@ -91,7 +91,7 @@ RF will pass a parameter as a string unless you convert it to an integer, i.e., 
 `${2}` is passed as `2` (number). For convenience, we allow both notations and encourage the use of the string notation,
 such that the test cases are more readable.
 
-On a source code level, see `typingutils.Strint`, which stands for "stringified integer".
+On a source code level, see `keyutils_py.types.Strint`, which stands for "stringified integer".
 
 ## Mask internal-use Python functions
 By default, RF will expose all Python functions as keywords for the test suite. You can suppress that with the
