@@ -1540,9 +1540,7 @@ def validate_asymmetric_key_package(
             f"But Got: {int(one_asym_key['version'])}"
         )
 
-    private_key = CombinedKeyFactory.load_private_key_from_one_asym_key(
-        one_asym_key, must_be_version_2=True
-    )
+    private_key = CombinedKeyFactory.load_private_key_from_one_asym_key(one_asym_key, must_be_version_2=True)
 
     if key_save_type is not None:
         CombinedKeyFactory.validate_key_export_type(

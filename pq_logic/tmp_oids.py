@@ -234,7 +234,6 @@ id_at_deltaCertificateRequestSignature = univ.ObjectIdentifier("2.16.840.1.11402
 id_at_deltaCertificateRequest = univ.ObjectIdentifier("2.16.840.1.114027.80.6.2")
 
 
-
 ########################
 # Hybrid Signature OIDs
 ########################
