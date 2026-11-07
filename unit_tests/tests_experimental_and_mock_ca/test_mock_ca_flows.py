@@ -11,6 +11,7 @@ from cryptography import x509
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509 import ocsp
+from mock_ca import rev_handler
 from mock_ca.ca_handler import CAHandler, create_app
 from mock_ca.client import build_example_rsa_mac_request
 
@@ -21,6 +22,7 @@ from resources.cmputils import (
     build_cmp_revoke_request,
     build_ir_from_key,
     build_p10cr_from_key,
+    display_pki_status_info,
     get_cert_from_pkimessage,
     get_pkistatusinfo,
     parse_pkimessage,
@@ -35,24 +37,26 @@ from resources.exceptions import (
 )
 from resources.keyutils import generate_key
 from resources.protectionutils import protect_pkimessage
-from resources.cmputils import display_pki_status_info
 
 _SENDER = "CN=Mock CA Flow Tester"
 
 # Today's behaviour, right or wrong. Columns: the exception, the failinfo the client gets (set by name, not by
-# `bit_num`), the `bit_num` the class declares, then the response body when the stage raises it, for the stages
-# protection, issuing, p10cr, rr and certConf.
+# `bit_num`), the `bit_num` the class declares, then the response body when a call inside the stage raises it, for
+# the stages protection, issuing, p10cr, rr and certConf. A (body, failinfo) cell overrides the row's failinfo.
+# The patched calls sit inside each stage's own except chain, so an exception the stage does not catch reaches the
+# generic chain of the request handler, as a real failure would.
 _ERROR_TABLE = [
     # BUG-15: systemFailure is bit 25, bit 26 is duplicateCertReq. The client gets bit 25.
-    (CMPTestSuiteError, "systemFailure", 26, "error", "error", "error", "error", "error"),
-    (BadRequest, "badRequest", 2, "error", "error", "error", "error", "error"),
-    (BadMessageCheck, "badMessageCheck", 1, "error", "error", "error", "rp", "error"),
-    (BadKeyUsage, "notAuthorized", 23, "error", "error", "error", "rp", "error"),
+    (CMPTestSuiteError, "systemFailure", 26, "error", "ip", "cp", "rp", "error"),
+    (BadRequest, "badRequest", 2, "error", "ip", "cp", "rp", "error"),
+    (BadMessageCheck, "badMessageCheck", 1, "error", "ip", "cp", "rp", "error"),
+    (BadKeyUsage, "notAuthorized", 23, "error", "ip", "cp", "rp", "error"),
     # BUG-15: badDataFormat is bit 5. The client gets bit 5.
-    (BadSigAlgID, "badDataFormat", 0, "error", "error", "error", "error", "error"),
+    (BadSigAlgID, "badDataFormat", 0, "error", "ip", "cp", "rp", "error"),
     (BodyRelevantError, "badCertTemplate", 24, "ip", "ip", "cp", "rp", "error"),
-    (InvalidSignature, "badMessageCheck", None, "error", "error", "error", "error", "error"),
-    (ValueError, "systemFailure", None, "error", "error", "error", "error", "error"),
+    (InvalidSignature, "badMessageCheck", None, "error", "error", "error", "rp", "error"),
+    # The revocation handler reports every ValueError as badMessageCheck.
+    (ValueError, "systemFailure", None, "error", "error", "error", ("rp", "badMessageCheck"), "error"),
 ]
 
 
@@ -225,15 +229,16 @@ class TestMockCAFlows(unittest.TestCase):
         ir = _mac_protect(build_ir_from_key(generate_key("ecc"), common_name=_SENDER, sender=_SENDER, for_mac=True))
         stages = {
             "protection": (self.ca_handler, "verify_protection", "/ir", ir),
-            "issuing": (self.ca_handler.cert_req_handler, "process_cert_request", "/ir", ir),
-            "p10cr": (self.ca_handler.cert_req_handler, "process_cert_request", "/p10cr", self._build_p10cr()),
-            "rr": (self.ca_handler, "process_rr", "/rr", self._build_rr(key, cert)),
+            "issuing": (self.ca_handler.cert_req_handler, "process_ir", "/ir", ir),
+            "p10cr": (self.ca_handler.cert_req_handler, "process_p10cr", "/p10cr", self._build_p10cr()),
+            "rr": (rev_handler, "validate_rr_crl_entry_details_reason", "/rr", self._build_rr(key, cert)),
             "certConf": (self.ca_handler, "process_cert_conf", "/certConf", self._build_cert_conf(response, cert)),
         }
 
-        for exception_class, failinfo, bit_num, *body_names in _ERROR_TABLE:
+        for exception_class, row_failinfo, bit_num, *cells in _ERROR_TABLE:
             self.assertEqual(getattr(exception_class, "bit_num", None), bit_num, exception_class)
-            for (stage, (target, method, path, request)), body_name in zip(stages.items(), body_names, strict=True):
+            for (stage, (target, method, path, request)), cell in zip(stages.items(), cells, strict=True):
+                body_name, failinfo = cell if isinstance(cell, tuple) else (cell, row_failinfo)
                 with self.subTest(stage=stage, exception=exception_class.__name__):
                     if exception_class is BodyRelevantError:
                         exception = BodyRelevantError("Lower layer", failinfo=failinfo, pki_message=request)
