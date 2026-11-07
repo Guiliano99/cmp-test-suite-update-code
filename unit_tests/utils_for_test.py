@@ -31,7 +31,7 @@ from keyutils_py.factories import PQStatefulSigFactory
 from pq_logic.tmp_oids import FRODOKEM_NAME_2_OID
 from resources import certutils, cmputils, utils
 from resources.asn1_structures import PKIMessageTMP
-from resources.asn1utils import try_decode_pyasn1, encode_to_der
+from resources.asn1utils import try_decode_pyasn1, encode_to_der, try_encode_pyasn1
 from resources.certbuildutils import build_certificate, build_csr, prepare_extensions, \
     prepare_basic_constraints_extension, prepare_ski_extension, prepare_authority_key_identifier_extension, \
     prepare_key_usage_extension, sign_csr
@@ -91,20 +91,6 @@ def build_pkimessage(body_type="p10cr", **params):
         return cmputils.build_cr_from_key(**params)
 
     raise NotImplementedError("Only used for building the `p10cr` PKIBody.")
-
-
-def try_encode_pyasn1(data, exclude_pretty_print: bool = False) -> bytes:
-    """Try to encode a pyasn1 object and raise a BadAsn1Data exception if it fails.
-
-    :param data: The pyasn1 object to encode.
-    :param exclude_pretty_print: If True, the exception message will not include the pretty-printed data.
-    :return: The encoded data.
-    """
-    try:
-        return encoder.encode(data)
-    except Exception:
-        data = data.prettyPrint() if not exclude_pretty_print else str(type(data))
-        raise BadAsn1Data(f"Error encoding data: \n{data}", overwrite=True)
 
 
 def de_and_encode_pkimessage(pki_message: PKIMessageTMP) -> PKIMessageTMP:

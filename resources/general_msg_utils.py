@@ -28,6 +28,7 @@ from robot.api.deco import keyword, not_keyword
 from pq_logic.pq_utils import get_kem_oid_from_key
 from pq_logic.tmp_oids import id_it_KemCiphertextInfo
 from resources import (
+    asn1utils,
     ca_ra_utils,
     cert_linters_utils,
     certextractutils,
@@ -64,7 +65,6 @@ from resources.oidutils import (
 )
 from resources.suiteenums import GeneralInfoOID
 from resources.typingutils import EnvDataPublicKey
-from unit_tests.utils_for_test import try_encode_pyasn1
 
 # TODO for the future, change references to new RFC.
 # currently uses the Draft version for messages not mentioned in RFC9483.
@@ -1895,7 +1895,7 @@ def build_cmp_general_response(  # noqa D417 undocumented-param
     pki_message = cmputils.prepare_pki_message(exclude_fields=exclude_fields, **kwargs)
     pki_message["body"] = pki_body
 
-    der_data = try_encode_pyasn1(pki_message)
+    der_data = asn1utils.try_encode_pyasn1(pki_message)
 
     decoded_pki_message, rest = decoder.decode(der_data, asn1Spec=PKIMessageTMP())
 

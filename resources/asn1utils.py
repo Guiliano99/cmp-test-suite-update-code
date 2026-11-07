@@ -759,3 +759,17 @@ def try_decode_pyasn1(
             f"Error decoding data for {type(asn1_spec)}.{remainder}",
             overwrite=True,
         )
+
+
+def try_encode_pyasn1(data, exclude_pretty_print: bool = False) -> bytes:
+    """Try to encode a pyasn1 object and raise a BadAsn1Data exception if it fails.
+
+    :param data: The pyasn1 object to encode.
+    :param exclude_pretty_print: If True, the exception message will not include the pretty-printed data.
+    :return: The encoded data.
+    """
+    try:
+        return encoder.encode(data)
+    except Exception:
+        data = data.prettyPrint() if not exclude_pretty_print else str(type(data))
+        raise BadAsn1Data(f"Error encoding data: \n{data}", overwrite=True)
