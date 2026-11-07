@@ -36,7 +36,6 @@ from resources import (
     certbuildutils,
     certextractutils,
     certutils,
-    cmputils,
     cryptoutils,
     oid_mapping,
     utils,
@@ -227,7 +226,7 @@ def validate_related_cert_extension(  # noqa: D417 Missing argument descriptions
 
     hash_alg = _get_hash_alg(hash_alg, cert_a)
 
-    cert_hash = cmputils.calculate_cert_hash(cert=related_cert, hash_alg=hash_alg)
+    cert_hash = certutils.calculate_cert_hash(cert=related_cert, hash_alg=hash_alg)
 
     if cert_hash != signature:
         logging.debug("The certificate serial number: %d", int(related_cert["tbsCertificate"]["serialNumber"]))
@@ -270,7 +269,7 @@ def get_related_cert_from_list(  # noqa: D417 Missing argument descriptions in t
         raise ValueError("The Certificate did not contain the RelatedCertificate extension.")
 
     for cert in certs:
-        cert_hash = cmputils.calculate_cert_hash(cert=cert, hash_alg=hash_alg)
+        cert_hash = certutils.calculate_cert_hash(cert=cert, hash_alg=hash_alg)
         if cert_hash == signature:
             return cert
     raise ValueError("No related certificate found.")
@@ -696,7 +695,7 @@ def prepare_related_cert_extension(  # noqa: D417 Missing argument descriptions 
     logging.warning(
         "The RelatedCertificate extension for serial number: %d", int(cert_a["tbsCertificate"]["serialNumber"])
     )
-    cert_hash = cmputils.calculate_cert_hash(cert=cert_a, hash_alg=hash_alg)
+    cert_hash = certutils.calculate_cert_hash(cert=cert_a, hash_alg=hash_alg)
     extension = rfc5280.Extension()
     extension["extnID"] = id_relatedCert
     # This extension SHOULD NOT be marked critical.

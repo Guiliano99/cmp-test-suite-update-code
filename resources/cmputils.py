@@ -2969,57 +2969,6 @@ def build_ccr_from_csr(  # noqa D417 undocumented-param
     )
 
 
-def calculate_cert_hash(  # noqa D417 undocumented-param
-    cert: rfc9480.CMPCertificate, hash_alg: Optional[str] = None, different_hash: bool = False
-) -> bytes:
-    """Calculate a cryptographic hash for a `certConf` PKIMessage.
-
-    Arguments:
-    ---------
-        - `cert`: The certificate object for which the hash is calculated.
-        - `hash_alg`: An optional string specifying the hash algorithm to use (e.g., "sha256"). \
-        If not provided, the algorithm is inferred from the certificate's signature.
-        - `different_hash`: Whether to use a hash algorithm different from the one specified in the certificate's \
-        signature. Defaults to `False`.
-
-    Returns:
-    -------
-        - The calculated certificate hash as `bytes`.
-
-    Raises:
-    ------
-        - `ValueError`: If no hash algorithm can be determined from the certificate and none is provided. \
-        (The certificate was signed as an example by "ed25519" private key.)
-
-    Examples:
-    --------
-    | ${cert_hash}= | Calculate Cert Hash | cert=${certificate} |
-    | ${cert_hash}= | Calculate Cert Hash | cert=${certificate} | hash_alg=sha256 |
-    | ${cert_hash}= | Calculate Cert Hash | cert=${certificate} | different_hash=True |
-
-    """
-    sig_algorithm = cert["signatureAlgorithm"]["algorithm"]
-    if different_hash:
-        hash_alg = oid_mapping.get_hash_from_oid(sig_algorithm, only_hash=True)
-        if hash_alg == "sha256":
-            hash_alg = "sha512"
-        else:
-            hash_alg = "sha256"
-
-    if hash_alg is None:
-        hash_alg = oid_mapping.get_hash_from_oid(sig_algorithm, only_hash=True)
-
-    if hash_alg is None:
-        raise ValueError(
-            "The certificate was signed with a key, which does not use "
-            "a hash algorithm for signing, and none was provided."
-        )
-
-    der_cert = asn1utils.encode_to_der(cert)
-    hash_value = oid_mapping.compute_hash(hash_alg, der_cert)
-    return hash_value
-
-
 @keyword(name="Prepare CertStatus")
 def prepare_certstatus(  # noqa D417 undocumented-param
     cert_hash: Optional[bytes] = None,
@@ -3361,7 +3310,7 @@ def _process_single_cert_conf_cert(
     # To remove the ASN.1 tagging. # codespell: ignore
     cert = copy_asn1_certificate(cert=tmp_cert)
     digest_alg = _may_set_hash_alg(cert, hash_alg, ca_cert)
-    cert_hash = cert_hash or calculate_cert_hash(cert, digest_alg)
+    cert_hash = cert_hash or certutils.calculate_cert_hash(cert, digest_alg)
 
     # Only include hashAlg field in CertStatus when allowed:
     # - By default, include it only for pvno=3.
@@ -3642,7 +3591,7 @@ def build_cert_conf(  # noqa D417 undocumented-param
         cert = convertutils.copy_asn1_certificate(cert)
 
     if cert_hash is None and cert_status is None and cert is not None:
-        cert_hash = calculate_cert_hash(cert, hash_alg)
+        cert_hash = certutils.calculate_cert_hash(cert, hash_alg)
 
     if cert_status is None:
         cert_status = prepare_certstatus(
