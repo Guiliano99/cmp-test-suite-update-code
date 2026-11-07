@@ -17,7 +17,7 @@ from pyasn1.type import univ
 from pyasn1_alt_modules import rfc4211, rfc5280, rfc5652, rfc6402, rfc9480
 from robot.api.deco import keyword, not_keyword
 
-from resources import certextractutils, certutils, convertutils, copyasn1utils, keyutils, suiteenums, utils
+from resources import certextractutils, convertutils, copyasn1utils, keyutils, suiteenums, utils
 from resources.oid_mapping import may_return_oid_by_name, may_return_oid_to_name
 
 
@@ -143,7 +143,7 @@ def _compare_public_key_template_and_cert(
 
     if cert_template["publicKey"]["subjectPublicKey"] != univ.BitString(""):
         spki_template_der = encoder.encode(spki_template)
-        public_key_cert = certutils.load_public_key_from_cert(issued_cert)
+        public_key_cert = keyutils.load_public_key_from_spki(issued_cert["tbsCertificate"]["subjectPublicKeyInfo"])
         public_key_cert_der: bytes = public_key_cert.public_bytes(
             encoding=Encoding.DER, format=PublicFormat.SubjectPublicKeyInfo
         )
