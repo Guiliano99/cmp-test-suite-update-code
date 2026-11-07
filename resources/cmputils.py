@@ -8,7 +8,6 @@
 import glob
 import logging
 import os
-import sys
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 from urllib import parse
@@ -64,10 +63,6 @@ from resources.exceptions import BadAsn1Data, BadCertTemplate, BadDataFormat, Ba
 from resources.oid_mapping import get_digest_hash_alg_from_alg_id, may_return_oid_to_name
 from resources.oidutils import PQ_STATEFUL_HASH_SIG_OID_2_NAME
 from resources.typingutils import CertObjOrPath, ControlsType, ExtensionsParseType
-
-# When dealing with post-quantum crypto algorithms, we encounter big numbers, which wouldn't be pretty-printed
-# otherwise. This is just for cosmetic convenience.
-sys.set_int_max_str_digits(0)
 
 # from pyasn1 import debug
 # debug.setLogger(debug.Debug('all'))

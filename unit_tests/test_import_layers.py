@@ -4,6 +4,8 @@
 
 import ast
 import pathlib
+import subprocess
+import sys
 import unittest
 
 _ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -163,6 +165,17 @@ class TestImportLayers(unittest.TestCase):
             if target.split(".")[0] == "unit_tests"
         ]
         self.assertEqual(found, [])
+
+    def test_lowest_module_lifts_the_int_string_limit(self):
+        """
+        GIVEN a fresh interpreter that imports only a bottom-layer module.
+        WHEN reading the int-to-string digit limit,
+        THEN it is 0, so PQ keys and signatures can be pretty-printed without importing cmputils first.
+        """
+        code = "import sys, resources.exceptions; print(sys.get_int_max_str_digits())"
+        result = subprocess.run([sys.executable, "-c", code], cwd=_ROOT, capture_output=True, text=True, check=True)
+        # liboqs-python may print a banner first.
+        self.assertEqual(result.stdout.splitlines()[-1], "0")
 
 
 if __name__ == "__main__":
