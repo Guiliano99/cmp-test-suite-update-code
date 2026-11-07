@@ -47,7 +47,6 @@ from pq_logic.pq_utils import is_kem_public_key
 from resources import (
     asn1utils,
     certextractutils,
-    cmputils,
     compareutils,
     convertutils,
     cryptoutils,
@@ -57,7 +56,6 @@ from resources import (
     typingutils,
     utils,
 )
-from resources.asn1_structures import PKIMessageTMP
 from resources.convertutils import ensure_is_kem_pub_key, ensure_is_verify_key
 from resources.exceptions import (
     BadAsn1Data,
@@ -402,75 +400,6 @@ def check_is_cert_signer(cert: rfc9480.CMPCertificate, poss_issuer: rfc9480.CMPC
     except (ValueError, InvalidSignature, BadSigAlgID) as err:
         logging.info("%s", err)
     return False
-
-
-@keyword(name="Build CMP Chain From PKIMessage")
-def build_cmp_chain_from_pkimessage(  # noqa D417 undocumented-param
-    pki_message: PKIMessageTMP,
-    ee_cert: Optional[rfc9480.CMPCertificate] = None,
-    for_issued_cert: bool = False,
-    last_cert_is_self_signed: bool = False,
-    cert_number: Strint = 0,
-) -> List[rfc9480.CMPCertificate]:
-    """Build the CMP-Protection certificate chain or the certificate chain for 'ip', 'cp', or 'kur' messages.
-
-    Arguments:
-    ---------
-        - `pki_message`: The PKIMessage structure containing the `extraCerts` field, which holds
-        the list of certificates that may form the complete chain.
-        - `ee_cert`: The end-entity (EE) CMP certificate from which the chain will be built.
-        If not provided, the first certificate in the `extraCerts` field of the `pki_message` is used.
-        - `for_issued_cert`: If `True`, extracts the newly issued certificate from 'ip', 'cp', or 'kur' messages
-        and validates the chain. Defaults to `False`.
-        - `last_cert_is_self_signed`: If `True`, requires the last certificate in the chain to be self-signed. \
-        Defaults to `False`.
-        - `cert_number`: The index of the newly issued certificate to extract from `PKIMessage` to build the chain for.
-
-    Note:
-    ----
-        - Does not check, if the status is "accepted" or "grantedWithMods".
-        - Does not check, if `caPubs` is allowed to be present.
-
-    Returns:
-    -------
-        - A list of `pyasn1` `CMPCertificate` objects representing the complete certificate chain,
-        starting from the EE certificate and ending with the root certificate.
-
-    Raises:
-    ------
-        - `ValueError`: If the `extraCerts` field is missing in the `pki_message`.
-        - `ValueError`: If the last certificate is required to be self-signed, but was not.
-
-
-    Examples:
-    --------
-    | ${cert_chain}= | Build CMP Chain From PKIMessage | ${pki_message} | ee_cert=${ee_cert} \
-    | for_ca_msg=True |
-    | ${cert_chain}= | Build CMP Chain From PKIMessage | ${pki_message} | ee_cert=${ee_cert} |
-    | ${cert_chain}= | Build CMP Chain From PKIMessage | ${pki_message} | for_ca_msg=True |
-
-    """
-    if not pki_message["extraCerts"].isValue:
-        raise ValueError("The `extraCerts` field has no value inside the PKIMessage.")
-
-    cert_list = []
-    cert_list.extend(pki_message["extraCerts"])
-
-    if for_issued_cert:
-        asn1cert = cmputils.get_cert_from_pkimessage(pki_message, cert_number=cert_number)
-        ca_pubs = pki_message["body"][pki_message["body"].getName()]["caPubs"]
-        if ca_pubs.isValue:
-            cert_list.extend(ca_pubs)
-
-        return build_chain_from_list(asn1cert, cert_list, must_be_self_signed=False)
-
-    if ee_cert is None:
-        ee_cert = pki_message["extraCerts"][0]
-
-    if not isinstance(ee_cert, rfc9480.CMPCertificate):
-        raise ValueError("The `ee_cert` is not a valid CMPCertificate object.")
-
-    return build_chain_from_list(ee_cert=ee_cert, certs=cert_list, must_be_self_signed=last_cert_is_self_signed)
 
 
 def build_cert_chain_from_dir(  # noqa D417 undocumented-param

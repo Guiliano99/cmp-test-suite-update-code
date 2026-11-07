@@ -6,7 +6,7 @@ import unittest
 from typing import List
 
 from pyasn1_alt_modules import rfc9480
-from resources.certutils import build_cmp_chain_from_pkimessage
+from resources.cmputils import build_cmp_chain_from_pkimessage
 from resources.cmputils import prepare_extra_certs
 
 from unit_tests.prepare_ca_response import build_ca_pki_message

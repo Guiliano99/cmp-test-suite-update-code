@@ -1219,7 +1219,7 @@ def _verify_ra_verified(
     except ValueError as err:
         raise NotAuthorized("RA certificate does not have the `digitalSignature` KeyUsage bit set.") from err
 
-    cert_chain = certutils.build_cmp_chain_from_pkimessage(
+    cert_chain = cmputils.build_cmp_chain_from_pkimessage(
         pki_message,
         ee_cert=may_ra_cert,
     )

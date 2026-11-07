@@ -489,7 +489,7 @@ def _check_cmp_protection_for_extra_certs(pki_message: PKIMessageTMP, allow_self
     else:
         protectionutils.verify_pkimessage_protection(pki_message)
         cmp_prot_cert = pki_message["extraCerts"][0]
-        cmp_prot_chain = certutils.build_cmp_chain_from_pkimessage(pki_message=pki_message, ee_cert=cmp_prot_cert)
+        cmp_prot_chain = cmputils.build_cmp_chain_from_pkimessage(pki_message=pki_message, ee_cert=cmp_prot_cert)
         is_ordered = check_single_chain_is_ordered(
             extra_certs=pki_message["extraCerts"], cert_chain=cmp_prot_chain, check_for_issued=False
         )
@@ -547,7 +547,7 @@ def validate_extra_certs(  # noqa D417 undocumented-param
             )
 
         issued_cert = cmputils.get_cert_from_pkimessage(pki_message, cert_number=cert_number)
-        ee_cert_chain = certutils.build_cmp_chain_from_pkimessage(pki_message=pki_message, ee_cert=issued_cert)
+        ee_cert_chain = cmputils.build_cmp_chain_from_pkimessage(pki_message=pki_message, ee_cert=issued_cert)
 
         if len(ee_cert_chain) == 1:
             raise ValueError("The Certificate chain was not inside the `PKIMessage`.")

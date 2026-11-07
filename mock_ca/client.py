@@ -19,9 +19,9 @@ from keyutils_py.types import KEMPrivateKey, SignKey
 
 from resources import cmputils, keyutils, protectionutils
 from resources.asn1_structures import PKIMessageTMP
-from resources.certutils import build_cmp_chain_from_pkimessage
 from resources.cmputils import (
     build_cert_conf_from_resp,
+    build_cmp_chain_from_pkimessage,
     build_cmp_revoke_request,
     display_pki_status_info,
     get_cmp_message_type,

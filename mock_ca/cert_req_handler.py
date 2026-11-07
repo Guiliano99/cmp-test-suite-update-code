@@ -30,7 +30,6 @@ from resources.ca_ra_utils import (
 )
 from resources.certbuildutils import prepare_extensions
 from resources.certutils import (
-    build_cmp_chain_from_pkimessage,
     check_is_cert_signer,
     validate_key_usage,
 )
@@ -46,6 +45,7 @@ from resources.checkutils import (
     validate_wrong_integrity,
 )
 from resources.cmputils import (
+    build_cmp_chain_from_pkimessage,
     build_cmp_error_message,
     find_oid_in_general_info,
     get_cmp_message_type,

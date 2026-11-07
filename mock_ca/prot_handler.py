@@ -23,7 +23,6 @@ from resources.ca_ra_utils import get_public_key_from_cert_req_msg
 from resources.certbuildutils import validate_private_key_usage_period
 from resources.certutils import (
     build_cert_chain_from_dir,
-    build_cmp_chain_from_pkimessage,
     cert_in_list,
     certificates_are_trustanchors,
     certificates_must_be_trusted,
@@ -36,7 +35,7 @@ from resources.checkutils import (
     check_if_response_contains_private_key,
     validate_wrong_integrity,
 )
-from resources.cmputils import get_cmp_message_type, patch_sender, patch_senderkid
+from resources.cmputils import build_cmp_chain_from_pkimessage, get_cmp_message_type, patch_sender, patch_senderkid
 from resources.cryptoutils import perform_ecdh
 from resources.data_objects import KARICertsAndKeys
 from resources.exceptions import (

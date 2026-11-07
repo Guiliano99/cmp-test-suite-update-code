@@ -6,7 +6,7 @@ import unittest
 from pq_logic.pq_verify_logic import build_migration_cert_chain
 from resources.ca_ra_utils import build_ip_cmp_message
 from resources.certbuildutils import build_certificate
-from resources.certutils import build_cmp_chain_from_pkimessage
+from resources.cmputils import build_cmp_chain_from_pkimessage
 from resources.cmputils import prepare_cert_req_msg, build_ir_from_key
 from resources.keyutils import generate_key
 from unit_tests.utils_for_test import compare_pyasn1_objects

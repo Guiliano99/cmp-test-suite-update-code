@@ -11,7 +11,7 @@ from mock_ca.ca_handler import CAHandler
 from mock_ca.mock_fun import CertStateEnum
 from keyutils_py.types import KEMPrivateKey
 from resources.asn1_structures import PKIMessageTMP
-from resources.certutils import build_cmp_chain_from_pkimessage
+from resources.cmputils import build_cmp_chain_from_pkimessage
 from resources.cmputils import build_ir_from_key, get_pkistatusinfo, build_cert_conf, get_cmp_message_type, \
     patch_extra_certs, build_cmp_revoke_request, build_key_update_request
 from resources.convertutils import ensure_is_kem_priv_key
