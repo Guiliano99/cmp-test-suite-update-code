@@ -523,6 +523,8 @@ class BadRandomState:
 def load_ca_cert_and_key() -> Tuple[rfc9480.CMPCertificate, Ed25519PrivateKey]:
     """Load a valid Root CA key and certificate for testing."""
     root_key = load_private_key_from_file("data/keys/private-key-ed25519.pem")
+    if not isinstance(root_key, Ed25519PrivateKey):
+        raise TypeError(f"The Root CA key is not an `Ed25519PrivateKey`. Got: {type(root_key)}")
     root_cert = parse_certificate(load_and_decode_pem_file("data/unittest/root_cert_ed25519.pem"))
     return root_cert, root_key
 

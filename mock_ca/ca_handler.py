@@ -1751,8 +1751,8 @@ def create_app(ca_handler: CAHandler) -> Flask:
     :param ca_handler: The handler that serves the requests.
     :return: The registered app, also usable in-process with `app.test_client()`.
     """
-    # ponytail: the routes live on the module-level app, so one call per process;
-    # move them to a Blueprint if a fresh app per call is ever needed.
+    # The routes live on the module-level app, so this can be called once per process.
+    # Move them to a Blueprint if a fresh app per call is ever needed.
     global handler, state  # pylint: disable=global-statement
     handler = ca_handler
     state = ca_handler.state
