@@ -13,7 +13,8 @@ SPDX-License-Identifier = "Apache-2.0"
 path = [
     "config/cert/**", "data/**", "unit_tests/**",
     "scripts/**",
-    "pyrightconfig.json", "VERSION",
+    "pyrightconfig.json", "VERSION", "uv.lock",
+    "docs/dependency-update-workflow.md", "docs/keyutils-py-delegation.patch",
     "client_tests/certs/**",
 ]
 precedence = "override"

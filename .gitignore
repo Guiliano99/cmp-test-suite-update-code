@@ -197,3 +197,6 @@ data/EJBCA/*.tar.gz
 /data/cert_logs/
 /liboqs-python/
 /liboqs-python-stateful-sig/
+
+# Written by resources/keywords.resource during test runs
+data/trustanchors/issued_cert_root.pem
