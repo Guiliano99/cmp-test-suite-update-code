@@ -60,15 +60,7 @@ from pyasn1.type import tag, univ
 from pyasn1_alt_modules import rfc4211, rfc5280, rfc5958, rfc6402, rfc9480
 from robot.api.deco import keyword, not_keyword
 
-from resources import certutils
-from resources.exceptions import BadAlg, BadCertTemplate, BadSigAlgID
-from resources.oid_mapping import (
-    get_digest_hash_alg_from_alg_id,
-    may_return_oid_to_name,
-)
-from resources.oidutils import (
-    PQ_STATEFUL_HASH_SIG_OID_2_NAME,
-)
+from resources.exceptions import BadAlg, BadCertTemplate
 
 
 @keyword(name="Get PublicKey From CertTemplate")
@@ -362,56 +354,6 @@ def prepare_one_asymmetric_key(  # noqa: D417 undocumented-params
         version=version,
         alg_id=one_asym_key["privateKeyAlgorithm"],
     )
-
-
-@keyword(name="Get Digest Alg For CMP")
-def get_digest_alg_for_cmp(  # noqa D417 undocumented-param
-    alg_id: rfc9480.AlgorithmIdentifier, cert_or_pub_key: Optional[Union[rfc9480.CMPCertificate, PublicKey]] = None
-) -> str:
-    """Get the hash algorithm for the SignedData or the certificate confirmation computation.
-
-    Note:
-    ----
-    - For stateful hash signatures (e.g., XMSS, HSS), the public key or certificate must be provided
-      to determine the hash algorithm.
-    - For other signature algorithms, the hash algorithm is extracted directly from the AlgorithmIdentifier.
-
-    Arguments:
-    ---------
-    - `alg_id`: The AlgorithmIdentifier for the signing.
-    - `cert_or_pub_key`: Optional certificate or public key to determine the hash algorithm if needed.
-
-    Raises:
-    ------
-    - `ValueError`: If the public key or certificate is required but not provided for stateful hash signatures.
-    - `BadSigAlgID`: If the provided public key is not a stateful hash signature public key when required.
-
-    Examples:
-    --------
-    | ${hash_alg}= | Get Digest Alg For CMP | ${alg_id} | ${certificate} |
-    | ${hash_alg}= | Get Digest Alg For CMP | ${alg_id} | ${public_key} |
-
-    """
-    oid = alg_id["algorithm"]
-    if oid in PQ_STATEFUL_HASH_SIG_OID_2_NAME:
-        if cert_or_pub_key is None:
-            raise ValueError("For stateful hash signatures, the public key or certificate must be provided.")
-        if isinstance(cert_or_pub_key, rfc9480.CMPCertificate):
-            pub_key = certutils.load_public_key_from_cert(cert_or_pub_key)
-        else:
-            pub_key = cert_or_pub_key
-
-        if not isinstance(pub_key, PQHashStatefulSigPublicKey):
-            msg = (
-                "Provided public key is not a stateful hash signature public key, despite the OID."
-                f"Public key type: {type(pub_key).__name__}: {may_return_oid_to_name(oid)}"
-            )
-
-            raise BadSigAlgID(msg)
-
-        return pub_key.hash_alg
-
-    return get_digest_hash_alg_from_alg_id(alg_id)
 
 
 @keyword(name="Get PQ Stateful Sig Index From Sig")

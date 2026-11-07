@@ -3154,7 +3154,7 @@ def _process_cert_hash_alg(
         # is ensured with the flag `only_hash=False`
         tmp_hash_alg = get_hash_from_oid(entry["hashAlg"]["algorithm"], only_hash=False)
     else:
-        tmp_hash_alg = keyutils.get_digest_alg_for_cmp(issued_cert["tbsCertificate"]["signature"], ca_cert)
+        tmp_hash_alg = cmputils.get_digest_alg_for_cmp(issued_cert["tbsCertificate"]["signature"], ca_cert)
 
     if tmp_hash_alg != hash_alg and hash_alg is not None:
         logging.warning("The provided hash algorithm does not match the one in the CertConf message.")

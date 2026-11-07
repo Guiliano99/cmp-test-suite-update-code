@@ -1162,7 +1162,7 @@ def _validate_signature_and_algorithm_in_signed_data(
     signature = data["signature"]
     digest_econtent = data["digest_eContent"]
 
-    hash_alg = keyutils.get_digest_alg_for_cmp(data["signatureAlgorithm"], kga_certificate)
+    hash_alg = cmputils.get_digest_alg_for_cmp(data["signatureAlgorithm"], kga_certificate)
 
     digest = compute_hash(hash_alg, asym_key_package_bytes)
     if digest_econtent != digest:
