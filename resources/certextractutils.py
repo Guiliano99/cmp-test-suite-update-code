@@ -15,7 +15,7 @@ from typing import Optional, Union
 
 from pyasn1.codec.der import decoder
 from pyasn1.type import base, univ
-from pyasn1_alt_modules import rfc5280, rfc5652, rfc6402, rfc9480
+from pyasn1_alt_modules import rfc4211, rfc5280, rfc5652, rfc6402, rfc9480
 from robot.api.deco import not_keyword
 
 from resources import asn1utils
@@ -346,3 +346,25 @@ def get_issuing_distribution_point(
     )
     idp_pyasn1: rfc5280.IssuingDistributionPoint
     return idp_pyasn1
+
+
+@not_keyword
+def contains_extension(
+    asn1object: Union[rfc9480.CMPCertificate, rfc4211.CertTemplate], oid: univ.ObjectIdentifier
+) -> bool:
+    """Check whether a `pyasn1` CertTemplate or CMPCertificate object contains an extension.
+
+    :param asn1object: The object to check.
+    :param oid: The `pyasn1` oid to check for.
+    :return: `True` if inside the object else `False`
+    """
+    if isinstance(asn1object, rfc4211.CertTemplate):
+        extensions = asn1object["extensions"]
+    else:
+        extensions = asn1object["tbsCertificate"]["extensions"]
+
+    ext: rfc5280.Extension
+    for ext in extensions:
+        if ext["extnID"] == oid:
+            return True
+    return False

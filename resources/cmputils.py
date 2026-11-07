@@ -4220,28 +4220,6 @@ def get_common_name_from_str(name: str) -> Union[None, str]:
     return common_name
 
 
-@not_keyword
-def contains_extension(
-    asn1object: Union[rfc9480.CMPCertificate, rfc4211.CertTemplate], oid: univ.ObjectIdentifier
-) -> bool:
-    """Check whether a `pyasn1` CertTemplate or CMPCertificate object contains an extension.
-
-    :param asn1object: The object to check.
-    :param oid: The `pyasn1` oid to check for.
-    :return: `True` if inside the object else `False`
-    """
-    if isinstance(asn1object, rfc4211.CertTemplate):
-        extensions = asn1object["extensions"]
-    else:
-        extensions = asn1object["tbsCertificate"]["extensions"]
-
-    ext: rfc5280.Extension
-    for ext in extensions:
-        if ext["extnID"] == oid:
-            return True
-    return False
-
-
 @keyword(name="Patch extraCerts")
 def patch_extra_certs(  # noqa D417 undocumented-param
     pki_message: PKIMessageTMP,

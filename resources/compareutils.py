@@ -17,7 +17,7 @@ from pyasn1.type import univ
 from pyasn1_alt_modules import rfc4211, rfc5280, rfc6402, rfc9480
 from robot.api.deco import keyword, not_keyword
 
-from resources import certextractutils, certutils, cmputils, convertutils, copyasn1utils, keyutils, suiteenums, utils
+from resources import certextractutils, certutils, convertutils, copyasn1utils, keyutils, suiteenums, utils
 from resources.oid_mapping import may_return_oid_by_name, may_return_oid_to_name
 
 
@@ -177,7 +177,7 @@ def _compare_extensions_subject_template_and_cert(
         return True
 
     for extension in cert_template["extensions"]:
-        if not cmputils.contains_extension(issued_cert, extension["extnID"]):
+        if not certextractutils.contains_extension(issued_cert, extension["extnID"]):
             logging.info("The issued certificate did not contain the extension: %s", extension.prettyPrint())
             return False
 
