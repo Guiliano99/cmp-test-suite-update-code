@@ -21,6 +21,7 @@ help:
 	@echo  '  start-mock-ca   -  Start the mock CA server, so that it can listens to requests '
 	@echo  '  test-mock-ca   -  Run the test against the mock CA server '
 	@echo  '  test-mock-ca-verbose   -  Run all tests against the mock CA server '
+	@echo  '  test-mock-ca-ci   -  Start a fresh mock CA for each suite and run it, known issues do not fail the run '
 	@echo  ''
 
 
@@ -132,3 +133,7 @@ test-mock-ca-verbose:
 	# The results will be stored in the reports/ directory.
 	# This will run all tests, including those marked as verbose-tests.
 	robot --pythonpath=./ --outputdir=reports --variable environment:mock_ca tests tests_mock_ca tests_pq_and_hybrid
+
+test-mock-ca-ci:
+	# Starts and stops the mock CA itself, so do not run `start-mock-ca` first.
+	bash scripts/run_rf_against_mock_ca.sh

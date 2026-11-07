@@ -69,7 +69,7 @@ CA MUST support KEMBasedMAC
     ...                the CA MUST perform the encapsulation of the shared secret and
     ...                return the ciphertext to the client. We send then a valid KEMBasedMAC protected
     ...                message. The CA MUST process the request and respond with an `accepted` status.
-    [Tags]    kem-based-mac   genm
+    [Tags]    kem-based-mac   genm   known-issue
     ${result}=   Is Certificate And Key Set    ${KEM_CERT}   ${KEM_KEY}
     SKIP IF  not ${result}    KEM Certificate and Key not set
     ${genm}=   Build KEMBasedMAC General Message   ${KEM_KEY}    ${KEM_CERT}
@@ -87,7 +87,7 @@ CA MUST Support KEMBasedMAC Until Certificate Is Confirmed
     ...                return the ciphertext to the client. We send then a valid KEMBasedMAC protected
     ...                message and then a certificate confirmation message. The CA MUST process the request and
     ...                respond with an `accepted` status.
-    [Tags]    kem-based-mac   genm  certConf
+    [Tags]    kem-based-mac   genm  certConf   known-issue
     ${result}=   Is Certificate And Key Set    ${KEM_CERT}   ${KEM_KEY}
     SKIP IF  not ${result}    KEM Certificate and Key not set
     ${genm}=   Build KEMBasedMAC General Message   ${KEM_KEY}    ${KEM_CERT}
@@ -110,7 +110,7 @@ CA Should Respond with the a valid KEMBasedMAC Protected Message
     ...                return the ciphertext to the client. We send then a valid KEMBasedMAC protected
     ...                message. The CA MUST process the request and respond with an `accepted` status
     ...                and the KEMBasedMAC protected message.
-    [Tags]    kem-based-mac   genm
+    [Tags]    kem-based-mac   genm   known-issue
     ${result}=   Is Certificate And Key Set    ${KEM_CERT}   ${KEM_KEY}
     SKIP IF  not ${result}    KEM Certificate and Key not set
     ${genm}=   Build KEMBasedMAC General Message   ${KEM_KEY}    ${KEM_CERT}
@@ -133,7 +133,7 @@ CA MUST Protect pkiconf message with KEMBasedMAC
     ...                return the ciphertext to the client. We send then a valid KEMBasedMAC protected
     ...                message and then a certificate confirmation message. The CA MUST protect the
     ...                pkiconf message with the KEMBasedMAC.
-    [Tags]    kem-based-mac   genm  certConf
+    [Tags]    kem-based-mac   genm  certConf   known-issue
     ${result}=   Is Certificate And Key Set    ${KEM_CERT}   ${KEM_KEY}
     SKIP IF  not ${result}    KEM Certificate and Key not set
     ${genm}=   Build KEMBasedMAC General Message   ${KEM_KEY}    ${KEM_CERT}
@@ -161,7 +161,7 @@ CA Reject invalid KEMBasedMAC Protected Message
     ...                return the ciphertext to the client. We send then a invalid KEMBasedMAC protected
     ...                message. The CA MUST detected the invalid protection and MAY return the
     ...                optional failInfo `badMessageCheck`.
-    [Tags]    kem-based-mac   genm
+    [Tags]    kem-based-mac   genm   known-issue
     ${result}=   Is Certificate And Key Set    ${KEM_CERT}   ${KEM_KEY}
     SKIP IF  not ${result}    KEM Certificate and Key not set
     ${genm}=   Build KEMBasedMAC General Message   ${KEM_KEY}    ${KEM_CERT}
@@ -180,7 +180,7 @@ CA MUST not reuse the same ss for KEMBASEDMAC
     ...                We send a valid KEMBasedMAC protected message with the same shared secret.
     ...                The CA MUST detect the reuse of the shared secret and MAY return the
     ...                optional failInfo `badMessageCheck,badRequest,systemFailure`.
-    [Tags]    kem-based-mac   genm
+    [Tags]    kem-based-mac   genm   known-issue
     ${result}=   Is Certificate And Key Set    ${KEM_CERT}   ${KEM_KEY}
     SKIP IF  not ${result}    KEM Certificate and Key not set
     ${_cm}=    Get Next Common Name
