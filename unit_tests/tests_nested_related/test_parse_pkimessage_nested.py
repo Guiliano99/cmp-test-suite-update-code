@@ -8,7 +8,6 @@ from resources.asn1_structures import PKIMessageTMP
 from resources.cmputils import build_ir_from_key, build_nested_pkimessage, parse_pkimessage
 from resources.keyutils import load_private_key_from_file
 from unit_tests.utils_for_test import try_encode_pyasn1
-from resources.asn1utils import try_decode_pyasn1
 
 
 class TestParsePKIMessage(unittest.TestCase):
@@ -38,9 +37,8 @@ class TestParsePKIMessage(unittest.TestCase):
             exclude_fields=None,
         )
         der_data = try_encode_pyasn1(nested)
-        nested, rest = try_decode_pyasn1(der_data, PKIMessageTMP(), for_nested=True)
+        nested = parse_pkimessage(der_data)
         nested: PKIMessageTMP
-        self.assertEqual(rest, b"")
         self.assertEqual(len(nested["body"]["nested"]), 1)
         self.assertEqual(nested["body"]["nested"][0]["body"].getName(), "ir")
         der_data = try_encode_pyasn1(nested["body"]["nested"][0])

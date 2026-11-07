@@ -63,7 +63,6 @@ from pyasn1.type.base import Asn1Item, Asn1Type
 from pyasn1.type.univ import BitString
 from robot.api.deco import not_keyword
 
-from resources.asn1_structures import PKIMessageTMP
 from resources.exceptions import BadAsn1Data
 
 
@@ -734,18 +733,15 @@ def encode_to_der(  # noqa D417 undocumented-param
 
 @not_keyword
 def try_decode_pyasn1(
-    data: Union[bytes, univ.Any, univ.OctetString], asn1_spec: Asn1Type, for_nested: bool = False, verbose: bool = False
+    data: Union[bytes, univ.Any, univ.OctetString], asn1_spec: Asn1Type, verbose: bool = False
 ) -> Tuple[Asn1Item, bytes]:
     """Try to decode a DER-encoded data using the provided ASN.1 specification.
 
     :param data: The DER-encoded data to decode.
     :param asn1_spec: The PyASN1 specification to use for decoding.
-    :param for_nested: If True, the function will return the decoded data and not the rest of the data.
     :param verbose: If `True`, the remainder of the data will be included in the error message.
     :return: The decoded PyASN1 object.
     """
-    from resources.cmputils import parse_pkimessage  # pylint: disable=import-outside-toplevel
-
     if isinstance(data, univ.Any):
         der_data = data.asOctets()
     elif isinstance(data, univ.OctetString):
@@ -756,10 +752,6 @@ def try_decode_pyasn1(
         raise TypeError(f"Expected bytes, got {type(data)}")
 
     try:
-        if for_nested:
-            out = parse_pkimessage(der_data)
-            _, rest = decoder.decode(der_data, PKIMessageTMP())
-            return out, rest
         return decoder.decode(der_data, asn1_spec)
     except Exception:  # pylint: disable=broad-except
         remainder = f"Remainder: {der_data.hex()}" if verbose else ""
