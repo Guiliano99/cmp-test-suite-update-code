@@ -1814,7 +1814,7 @@ def check_recip_enc_key(
                     "the `issuerAndSerialNumber` choice must be used."
                 )
 
-            validate_issuer_and_serial_number_field(rid["issuerAndSerialNumber"], cmp_cert)
+            compareutils.validate_issuer_and_serial_number_field(rid["issuerAndSerialNumber"], cmp_cert)
 
     enc_key = recip_enc_key["encryptedKey"].asOctets()
     return enc_key
@@ -1857,33 +1857,7 @@ def validate_originator_in_kari(kari_structure: rfc5652.KeyAgreeRecipientInfo, c
                 "If the CMP protection certificate does not contain a `subjectKeyIdentifier` extension, "
                 "the `issuerAndSerialNumber` choice must be used."
             )
-        validate_issuer_and_serial_number_field(originator["issuerAndSerialNumber"], cmp_cert)
-
-
-@not_keyword
-def validate_issuer_and_serial_number_field(structure: rfc5652.IssuerAndSerialNumber, cert: rfc9480.CMPCertificate):
-    """Validate that the `IssuerAndSerialNumber` structure matches the issuer and serial number of a CMP certificate.
-
-    :param structure: The `IssuerAndSerialNumber` structure to validate.
-    :param cert: The CMP protection certificate.
-    :raises ValueError: If the `issuer` or `serialNumber` fields do not match the CMP certificate.
-    """
-    if not compareutils.compare_pyasn1_names(structure["issuer"], cert["tbsCertificate"]["issuer"], "without_tag"):
-        cert_name = utils.get_openssl_name_notation(cert["tbsCertificate"]["issuer"])
-        structure_name = utils.get_openssl_name_notation(structure["issuer"])
-        logging.info("IssuerAndSerialNumber: %s", structure_name)
-        logging.info("CMP protection certificate: %s", cert_name)
-        raise ValueError(
-            "The issuer inside the `IssuerAndSerialNumber` structure was different from the provided certificate!"
-        )
-
-    if int(structure["serialNumber"]) != int(cert["tbsCertificate"]["serialNumber"]):
-        logging.info("IssuerAndSerialNumber: %s", int(structure["serialNumber"]))
-        logging.info("CMP protection certificate: %s", int(cert["tbsCertificate"]["serialNumber"]))
-
-        raise ValueError(
-            "The serialNumber inside the `IssuerAndSerialNumber` structure was different from the provided certificate!"
-        )
+        compareutils.validate_issuer_and_serial_number_field(originator["issuerAndSerialNumber"], cmp_cert)
 
 
 @not_keyword
@@ -2000,7 +1974,7 @@ def _check_recipient_identifier(
             )
     else:
         if not for_pop:
-            validate_issuer_and_serial_number_field(rid["issuerAndSerialNumber"], cmp_cert)
+            compareutils.validate_issuer_and_serial_number_field(rid["issuerAndSerialNumber"], cmp_cert)
 
 
 @not_keyword
@@ -2024,7 +1998,7 @@ def validate_recip_identifier(server_cert: rfc9480.CMPCertificate, rid: rfc9629.
                 "the recipient identifier in the `RecipientEncryptedKey`."
             )
     else:
-        validate_issuer_and_serial_number_field(rid["issuerAndSerialNumber"], server_cert)
+        compareutils.validate_issuer_and_serial_number_field(rid["issuerAndSerialNumber"], server_cert)
 
 
 def _validate_kem_and_kemct(

@@ -32,10 +32,10 @@ from robot.api.deco import keyword, not_keyword
 from pq_logic.hybrid_structures import RelatedCertificate, RequesterCertificate
 from pq_logic.tmp_oids import id_aa_relatedCertRequest, id_relatedCert
 from resources import (
-    ca_kga_logic,
     certbuildutils,
     certextractutils,
     certutils,
+    compareutils,
     cryptoutils,
     oid_mapping,
     utils,
@@ -492,7 +492,7 @@ def validate_related_cert_pop(  # noqa: D417 Missing argument descriptions in th
 
     cert_chain = certutils.load_certificate_from_uri(location_info, load_chain=load_chain)
     cert_a = cert_chain[0]
-    ca_kga_logic.validate_issuer_and_serial_number_field(attributes["certID"], cert_a)
+    compareutils.validate_issuer_and_serial_number_field(attributes["certID"], cert_a)
 
     _verify_related_cert_pop(cert_a=cert_a, attributes=attributes, hash_alg=hash_alg)
 

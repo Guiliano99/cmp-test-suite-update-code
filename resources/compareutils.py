@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from keyutils_py.types import PrivateKey, PublicKey
 from pyasn1.codec.der import encoder
 from pyasn1.type import univ
-from pyasn1_alt_modules import rfc4211, rfc5280, rfc6402, rfc9480
+from pyasn1_alt_modules import rfc4211, rfc5280, rfc5652, rfc6402, rfc9480
 from robot.api.deco import keyword, not_keyword
 
 from resources import certextractutils, certutils, convertutils, copyasn1utils, keyutils, suiteenums, utils
@@ -682,3 +682,29 @@ def validate_certificate_public_key(  # noqa D417 # undocumented-param
     spki = None if not isinstance(key, rfc5280.SubjectPublicKeyInfo) else key
 
     _verify_spki_alg_id(public_key=public_key, cert=cert, spki=spki, key_name=key_name)
+
+
+@not_keyword
+def validate_issuer_and_serial_number_field(structure: rfc5652.IssuerAndSerialNumber, cert: rfc9480.CMPCertificate):
+    """Validate that the `IssuerAndSerialNumber` structure matches the issuer and serial number of a CMP certificate.
+
+    :param structure: The `IssuerAndSerialNumber` structure to validate.
+    :param cert: The CMP protection certificate.
+    :raises ValueError: If the `issuer` or `serialNumber` fields do not match the CMP certificate.
+    """
+    if not compare_pyasn1_names(structure["issuer"], cert["tbsCertificate"]["issuer"], "without_tag"):
+        cert_name = utils.get_openssl_name_notation(cert["tbsCertificate"]["issuer"])
+        structure_name = utils.get_openssl_name_notation(structure["issuer"])
+        logging.info("IssuerAndSerialNumber: %s", structure_name)
+        logging.info("CMP protection certificate: %s", cert_name)
+        raise ValueError(
+            "The issuer inside the `IssuerAndSerialNumber` structure was different from the provided certificate!"
+        )
+
+    if int(structure["serialNumber"]) != int(cert["tbsCertificate"]["serialNumber"]):
+        logging.info("IssuerAndSerialNumber: %s", int(structure["serialNumber"]))
+        logging.info("CMP protection certificate: %s", int(cert["tbsCertificate"]["serialNumber"]))
+
+        raise ValueError(
+            "The serialNumber inside the `IssuerAndSerialNumber` structure was different from the provided certificate!"
+        )
