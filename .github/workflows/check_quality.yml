@@ -140,6 +140,22 @@ jobs:
       - name: Unit tests
         run:  python3 -m pytest unit_tests -n auto
 
+  rf_dry_run:
+    needs: [prepare_env, ruff_lint, license_check, rf_style_check, spelling_check]
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ needs.prepare_env.outputs.image_url }}
+      env:
+        OQS_INSTALL_PATH: "/root/_oqs"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      # The image drops make when it removes build-essential.
+      - name: Install make
+        run: apt-get update && apt-get install -y --no-install-recommends make
+      - name: RobotFramework dry run
+        run: make dryrun env=mock_ca
+
   type_check:
     needs: prepare_env
     runs-on: ubuntu-24.04
