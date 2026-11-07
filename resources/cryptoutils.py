@@ -56,15 +56,15 @@ from keyutils_py.types import (
     VerifyKey,
 )
 from pyasn1.codec.der import decoder, encoder
-from pyasn1.type import univ
-from pyasn1_alt_modules import rfc3565, rfc4055, rfc5990, rfc8017, rfc8018, rfc9480, rfc9481
+from pyasn1.type import tag, univ
+from pyasn1_alt_modules import rfc3565, rfc4055, rfc5753, rfc5990, rfc8017, rfc8018, rfc9480, rfc9481
 from pyasn1_alt_modules.rfc5084 import GCMParameters
 from robot.api.deco import keyword, not_keyword
 from tinyec import registry
 from tinyec.ec import Inf, Point
 
 from pq_logic.tmp_oids import COMPOSITE_SIG_OID_TO_NAME
-from resources import convertutils, envdatautils, keyutils, oid_mapping
+from resources import convertutils, keyutils, oid_mapping
 from resources.asn1_structures import KemCiphertextInfoAsn1
 from resources.data_objects import FixedSHAKE128, FixedSHAKE256
 from resources.exceptions import BadAlg, BadAsn1Data, BadDataFormat, BadSigAlgIDParams, InvalidKeyCombination
@@ -76,6 +76,8 @@ from resources.oidutils import (
     ECDSA_OID_2_NAME,
     HKDF_OID_2_NAME,
     HMAC_OID_2_NAME,
+    KEY_WRAP_NAME_2_OID,
+    KEY_WRAP_OID_2_NAME,
     KM_KW_ALG,
     PQ_OID_2_NAME,
     PQ_SIG_OID_2_NAME,
@@ -948,7 +950,7 @@ def derive_shared_secret_ec(
     # As of RFC 5753 Section 7.2
     # (For example, for AES-256 it would be 00 00 01 00.)
     # Must be bit-length.
-    ecc_cms_info = envdatautils.prepare_ecc_cms_shared_info(
+    ecc_cms_info = prepare_ecc_cms_shared_info(
         key_wrap_oid=key_wrap_oid,
         supp_pub_info=length,
         ukm=ukm,
@@ -989,7 +991,7 @@ def perform_static_dh(
     # As of RFC 5753 Section 7.2
     # (For example, for AES-256 it would be 00 00 01 00.)
     # must be bit-length.
-    ecc_cms_info = envdatautils.prepare_ecc_cms_shared_info(
+    ecc_cms_info = prepare_ecc_cms_shared_info(
         key_wrap_oid=key_wrap_oid,
         supp_pub_info=length,
         ukm=ukm,
@@ -1526,3 +1528,61 @@ def verify_signature_with_alg_id(  # noqa: D417 Missing argument descriptions in
         verify_signature(public_key=public_key, signature=signature, data=data, hash_alg=hash_alg)
     else:
         raise BadAlg(f"Unsupported public key type: {type(public_key).__name__}.")
+
+
+@not_keyword
+def get_aes_keywrap_length(alg_name: str) -> int:
+    """Retrieve the AES key length in bits for the specified key wrap algorithm.
+
+    :param alg_name: The name of the key wrap algorithm (e.g., "aes128-wrap", "aes192-wrap", "aes256-wrap").
+    :return: The key length in bits corresponding to the specified algorithm.
+    :raises ValueError: If the algorithm name is not recognized.
+    """
+    if alg_name not in KEY_WRAP_NAME_2_OID:
+        raise ValueError(f"Unrecognized algorithm name: {alg_name}")
+
+    if "128" in alg_name:
+        return 16
+    if "192" in alg_name:
+        return 24
+    if "256" in alg_name:
+        return 32
+
+    raise ValueError(f"Unable to determine key length for algorithm: {alg_name}")
+
+
+@not_keyword
+def prepare_ecc_cms_shared_info(
+    key_wrap_oid: univ.ObjectIdentifier,
+    supp_pub_info: Optional[int] = 256,
+    ukm: Optional[bytes] = None,
+) -> rfc5753.ECC_CMS_SharedInfo:
+    """Create an `ECC_CMS_SharedInfo` structure.
+
+    The `ECC_CMS_SharedInfo` provides additional shared information needed
+    for key derivation in ECC-based key agreement. This function prepares
+    this structure with the specified key wrap algorithm and other parameters.
+
+    :param key_wrap_oid: OID for the key wrap algorithm.
+    :param supp_pub_info: Length of the key to derive in bits. Defaults to `256` (for AES-256).
+    :param ukm: Optional entity user information. Used to ensure a
+    unique key.
+    :return: An `ECC_CMS_SharedInfo` structure containing the shared info.
+    """
+    ecc_cms_info = rfc5753.ECC_CMS_SharedInfo()
+    ecc_cms_info["keyInfo"]["algorithm"] = key_wrap_oid
+
+    if supp_pub_info is None:
+        supp_pub_info = get_aes_keywrap_length(KEY_WRAP_OID_2_NAME[key_wrap_oid])
+
+    if ukm is not None:
+        ecc_cms_info["entityUInfo"] = univ.OctetString(ukm).subtype(
+            explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0)
+        )
+
+    supp_pub_info_bytes = supp_pub_info.to_bytes(4, byteorder="big")
+    ecc_cms_info["suppPubInfo"] = univ.OctetString(supp_pub_info_bytes).subtype(
+        explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 2)
+    )
+
+    return ecc_cms_info

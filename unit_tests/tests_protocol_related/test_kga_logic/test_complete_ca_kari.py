@@ -15,9 +15,8 @@ from resources.ca_kga_logic import (
 )
 from resources.certextractutils import get_field_from_certificate
 from resources.certutils import parse_certificate
-from resources.cryptoutils import compute_ansi_x9_63_kdf, perform_ecdh
+from resources.cryptoutils import compute_ansi_x9_63_kdf, perform_ecdh, prepare_ecc_cms_shared_info
 from resources.envdatautils import (
-    prepare_ecc_cms_shared_info,
     prepare_key_agreement_recipient_info,
     perform_sender_ecdh_one_pass_mqv,
 )

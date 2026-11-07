@@ -74,7 +74,6 @@ from resources.oidutils import (
     ECMQV_NAME_2_OID,
     HKDF_NAME_2_OID,
     KEY_WRAP_NAME_2_OID,
-    KEY_WRAP_OID_2_NAME,
     KM_KA_ALG_NAME_2_OID,
     PQ_SIG_PRE_HASH_NAME_2_OID,
 )
@@ -85,27 +84,6 @@ _PrivateKeyCast = Union[
     PrivateKey,
     rfc5958.OneAsymmetricKey,
 ]
-
-
-@not_keyword
-def get_aes_keywrap_length(alg_name: str) -> int:
-    """Retrieve the AES key length in bits for the specified key wrap algorithm.
-
-    :param alg_name: The name of the key wrap algorithm (e.g., "aes128-wrap", "aes192-wrap", "aes256-wrap").
-    :return: The key length in bits corresponding to the specified algorithm.
-    :raises ValueError: If the algorithm name is not recognized.
-    """
-    if alg_name not in KEY_WRAP_NAME_2_OID:
-        raise ValueError(f"Unrecognized algorithm name: {alg_name}")
-
-    if "128" in alg_name:
-        return 16
-    if "192" in alg_name:
-        return 24
-    if "256" in alg_name:
-        return 32
-
-    raise ValueError(f"Unable to determine key length for algorithm: {alg_name}")
 
 
 @not_keyword
@@ -1567,10 +1545,10 @@ def prepare_kem_recip_info(  # noqa D417 undocumented-param
     kem_recip_info["rid"] = rid
     kem_recip_info["wrap"] = prepare_alg_ids.prepare_wrap_alg_id(wrap_name)
 
-    kek_length = kek_length or get_aes_keywrap_length(wrap_name)
+    kek_length = kek_length or cryptoutils.get_aes_keywrap_length(wrap_name)
     der_ukm = prepare_cmsori_for_kem_other_info(
         wrap_algorithm=kem_recip_info["wrap"],
-        kek_length=kek_length or get_aes_keywrap_length(wrap_name),
+        kek_length=kek_length or cryptoutils.get_aes_keywrap_length(wrap_name),
         ukm=ukm,
     )
 
@@ -1619,7 +1597,7 @@ def prepare_kem_recip_info(  # noqa D417 undocumented-param
         )
 
     kem_recip_info["encryptedKey"] = encrypted_key
-    kem_recip_info["kekLength"] = kek_length or get_aes_keywrap_length(wrap_name)
+    kem_recip_info["kekLength"] = kek_length or cryptoutils.get_aes_keywrap_length(wrap_name)
 
     return kem_recip_info
 
@@ -1653,43 +1631,6 @@ def prepare_mqv_user_keying_material(
         mqv_ukm["addedukm"] = added_ukm_field
 
     return mqv_ukm
-
-
-@not_keyword
-def prepare_ecc_cms_shared_info(
-    key_wrap_oid: univ.ObjectIdentifier,
-    supp_pub_info: Optional[int] = 256,
-    ukm: Optional[bytes] = None,
-) -> rfc5753.ECC_CMS_SharedInfo:
-    """Create an `ECC_CMS_SharedInfo` structure.
-
-    The `ECC_CMS_SharedInfo` provides additional shared information needed
-    for key derivation in ECC-based key agreement. This function prepares
-    this structure with the specified key wrap algorithm and other parameters.
-
-    :param key_wrap_oid: OID for the key wrap algorithm.
-    :param supp_pub_info: Length of the key to derive in bits. Defaults to `256` (for AES-256).
-    :param ukm: Optional entity user information. Used to ensure a
-    unique key.
-    :return: An `ECC_CMS_SharedInfo` structure containing the shared info.
-    """
-    ecc_cms_info = rfc5753.ECC_CMS_SharedInfo()
-    ecc_cms_info["keyInfo"]["algorithm"] = key_wrap_oid
-
-    if supp_pub_info is None:
-        supp_pub_info = get_aes_keywrap_length(KEY_WRAP_OID_2_NAME[key_wrap_oid])
-
-    if ukm is not None:
-        ecc_cms_info["entityUInfo"] = univ.OctetString(ukm).subtype(
-            explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0)
-        )
-
-    supp_pub_info_bytes = supp_pub_info.to_bytes(4, byteorder="big")
-    ecc_cms_info["suppPubInfo"] = univ.OctetString(supp_pub_info_bytes).subtype(
-        explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 2)
-    )
-
-    return ecc_cms_info
 
 
 @keyword(name="Prepare OriginatorIdentifierOrKey")
