@@ -52,7 +52,6 @@ from resources import (
     cryptoutils,
     keyutils,
     oid_mapping,
-    protectionutils,
     typingutils,
     utils,
 )
@@ -192,7 +191,7 @@ def verify_cert_signature(cert: rfc9480.CMPCertificate, issuer_pub_key: Optional
     tbs_der = encoder.encode(cert["tbsCertificate"])
     pub_key = issuer_pub_key or load_public_key_from_cert(cert)
     pub_key = ensure_is_verify_key(pub_key)
-    protectionutils.verify_signature_with_alg_id(
+    cryptoutils.verify_signature_with_alg_id(
         public_key=pub_key,
         data=tbs_der,
         signature=cert["signature"].asOctets(),
@@ -381,7 +380,7 @@ def check_is_cert_signer(cert: rfc9480.CMPCertificate, poss_issuer: rfc9480.CMPC
             if not isinstance(public_key, RSAPublicKey):
                 raise ValueError("The public key is not an RSA public key.")
 
-            protectionutils.verify_rsassa_pss_from_alg_id(
+            cryptoutils.verify_rsassa_pss_from_alg_id(
                 public_key=public_key,
                 data=encoder.encode(cert["tbsCertificate"]),
                 signature=cert["signature"].asOctets(),
@@ -2135,9 +2134,7 @@ def verify_csr_signature(  # noqa: D417 Missing argument descriptions in the doc
     alg_id = csr["signatureAlgorithm"]
     data = encoder.encode(csr["certificationRequestInfo"])
     try:
-        protectionutils.verify_signature_with_alg_id(
-            public_key=verify_key, alg_id=alg_id, signature=signature, data=data
-        )
+        cryptoutils.verify_signature_with_alg_id(public_key=verify_key, alg_id=alg_id, signature=signature, data=data)
     except InvalidSignature as e:
         raise BadPOP("The signature verification failed.") from e
 

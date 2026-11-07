@@ -64,6 +64,7 @@ from resources import (
     certextractutils,
     certutils,
     cmputils,
+    cryptoutils,
     keyutils,
     prepare_alg_ids,
     protectionutils,
@@ -489,7 +490,7 @@ def _verify_alt_sig_for_pop(
     alt_signature_algorithm = decoder.decode(alt_sig_alg_id["extnValue"], asn1Spec=rfc5280.AlgorithmIdentifier())[0]
     alt_signature_value, _ = decoder.decode(alt_sig["extnValue"], asn1Spec=AltSignatureValueExt())
     try:
-        protectionutils.verify_signature_with_alg_id(
+        cryptoutils.verify_signature_with_alg_id(
             public_key=alt_pub_key,
             signature=alt_signature_value.asOctets(),
             alg_id=alt_signature_algorithm,
@@ -568,7 +569,7 @@ def verify_sig_popo_catalyst_cert_req_msg(  # noqa: D417 Missing argument descri
         alg_id = cert_req_msg["popo"]["signature"]["algorithmIdentifier"]
         data = encoder.encode(cert_req_msg["certReq"])
         first_key = ensure_is_verify_key(first_key)
-        protectionutils.verify_signature_with_alg_id(
+        cryptoutils.verify_signature_with_alg_id(
             public_key=first_key,
             alg_id=alg_id,
             data=data,
@@ -578,7 +579,7 @@ def verify_sig_popo_catalyst_cert_req_msg(  # noqa: D417 Missing argument descri
         alg_id = cert_req_msg["popo"]["signature"]["algorithmIdentifier"]
         first_key = ensure_is_verify_key(first_key)
         try:
-            protectionutils.verify_signature_with_alg_id(
+            cryptoutils.verify_signature_with_alg_id(
                 public_key=first_key,
                 signature=cert_req_msg["popo"]["signature"]["signature"].asOctets(),
                 alg_id=alg_id,

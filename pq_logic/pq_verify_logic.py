@@ -34,7 +34,7 @@ from pq_logic.tmp_oids import (
     id_ce_deltaCertificateDescriptor,
     id_relatedCert,
 )
-from resources import certutils, compareutils, convertutils, keyutils, protectionutils
+from resources import certutils, compareutils, convertutils, cryptoutils, keyutils, protectionutils
 from resources.asn1_structures import PKIMessageTMP
 from resources.certextractutils import get_extension
 from resources.convertutils import ensure_is_pq_verify_key
@@ -101,7 +101,7 @@ def verify_cert_hybrid_signature(  # noqa D417 undocumented-param
 
         data = encoder.encode(ee_cert["tbsCertificate"])
         signature = ee_cert["signature"].asOctets()
-        protectionutils.verify_signature_with_alg_id(composite_key, alg_id=alg_id, signature=signature, data=data)
+        cryptoutils.verify_signature_with_alg_id(composite_key, alg_id=alg_id, signature=signature, data=data)
 
     else:
         raise UnknownOID(oid=oid)
@@ -211,9 +211,7 @@ def verify_composite_signature_with_hybrid_cert(  # noqa D417 undocumented-param
         logging.info("The certificate contains a composite signature algorithm.")
         public_key = keyutils.load_public_key_from_spki(cert["tbsCertificate"]["subjectPublicKeyInfo"])
         public_key = convertutils.ensure_is_verify_key(public_key)
-        protectionutils.verify_signature_with_alg_id(
-            public_key=public_key, alg_id=sig_alg, data=data, signature=signature
-        )
+        cryptoutils.verify_signature_with_alg_id(public_key=public_key, alg_id=sig_alg, data=data, signature=signature)
 
     else:
         raise UnknownOID(cert_sig_alg, extra_info="Composite signature can not be verified.")
@@ -311,7 +309,7 @@ def build_migration_cert_chain(  # noqa D417 undocumented-param
             continue
 
         try:
-            protectionutils.verify_signature_with_alg_id(
+            cryptoutils.verify_signature_with_alg_id(
                 public_key=certutils.load_public_key_from_cert(poss_issuer),  # type: ignore
                 data=encoder.encode(cert["tbsCertificate"]),
                 signature=cert["signature"].asOctets(),
@@ -392,7 +390,7 @@ def _verify_sun_hybrid_trad_sig(
     data = encoder.encode(cert4["tbsCertificate"])
     alg_id = cert4["tbsCertificate"]["signature"]
     signature = cert4["signature"].asOctets()
-    protectionutils.verify_signature_with_alg_id(public_key=public_key, data=data, signature=signature, alg_id=alg_id)
+    cryptoutils.verify_signature_with_alg_id(public_key=public_key, data=data, signature=signature, alg_id=alg_id)
 
 
 def verify_sun_hybrid_cert(  # noqa D417 undocumented-param
@@ -544,7 +542,7 @@ def verify_hybrid_pkimessage_protection(  # noqa D417 undocumented-param
     oid = prot_alg_id["algorithm"]
 
     if isinstance(public_key, CompositeSigPublicKey) and (oid in COMPOSITE_SIG_OID_TO_NAME):
-        protectionutils.verify_signature_with_alg_id(
+        cryptoutils.verify_signature_with_alg_id(
             public_key=public_key,
             alg_id=prot_alg_id,
             data=data,
@@ -572,7 +570,7 @@ def verify_hybrid_pkimessage_protection(  # noqa D417 undocumented-param
         public_key = convertutils.ensure_is_verify_key(
             certutils.load_public_key_from_cert(pki_message["extraCerts"][0])
         )
-        protectionutils.verify_signature_with_alg_id(
+        cryptoutils.verify_signature_with_alg_id(
             public_key=public_key,
             alg_id=prot_alg_id,
             data=data,
@@ -599,7 +597,7 @@ def verify_hybrid_pkimessage_protection(  # noqa D417 undocumented-param
         data = protectionutils.prepare_protected_part(pki_message)
         other_key = convertutils.ensure_is_verify_key(other_key)
         try:
-            protectionutils.verify_signature_with_alg_id(
+            cryptoutils.verify_signature_with_alg_id(
                 public_key=other_key,
                 alg_id=sig_alg_id,
                 data=data,
@@ -688,7 +686,7 @@ def verify_crl_signature(  # noqa D417 undocumented-param
         data = encoder.encode(crl["tbsCertList"]) + encoder.encode(crl["signatureAlgorithm"])
         alt_public_key = convertutils.ensure_is_verify_key(alt_public_key)
         try:
-            protectionutils.verify_signature_with_alg_id(
+            cryptoutils.verify_signature_with_alg_id(
                 public_key=alt_public_key,
                 alg_id=alt_sig_alg,
                 signature=alt_sig_value,

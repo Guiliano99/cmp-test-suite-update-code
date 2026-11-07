@@ -1934,7 +1934,7 @@ def compute_key_transport_mechanism(
         param, rest = decoder.decode(key_enc_alg_id["parameters"], rfc4055.RSAES_OAEP_params())
         if rest != b"":
             raise ValueError("Decoding of `RSAES_OAEP_params` resulted in unexpected extra data.")
-        padding_val = protectionutils.get_rsa_oaep_padding(param)
+        padding_val = cryptoutils.get_rsa_oaep_padding(param)
 
     else:
         logging.info("%s", key_enc_alg_id.prettyPrint())
@@ -2238,7 +2238,7 @@ def process_kem_recip_info(
         ukm=validated_info["ukm"],
     )
 
-    key_enc_key = protectionutils.compute_kdf_from_alg_id(
+    key_enc_key = cryptoutils.compute_kdf_from_alg_id(
         kdf_alg_id=validated_info["kdf_algorithm"],
         length=validated_info["length"],
         ss=shared_secret,

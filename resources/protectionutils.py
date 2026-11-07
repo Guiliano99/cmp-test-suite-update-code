@@ -10,10 +10,8 @@ import os
 from typing import List, Optional, Tuple, Union
 
 import pyasn1.error
-from Crypto.PublicKey import RSA
-from Crypto.Signature import pss
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric import padding, rsa, x448, x25519
+from cryptography.hazmat.primitives.asymmetric import rsa, x448, x25519
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicKey
 from keyutils_py.types import (
     CompositeSigPrivateKey,
@@ -36,11 +34,9 @@ from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import tag, univ
 from pyasn1.type.tag import Tag, tagClassContext, tagFormatSimple
 from pyasn1_alt_modules import (
-    rfc4055,
     rfc4210,
     rfc5280,
     rfc5480,
-    rfc5990,
     rfc8017,
     rfc8018,
     rfc9044,
@@ -85,7 +81,6 @@ from resources.convertutils import (
     str_to_bytes,
     subject_public_key_info_from_pubkey,
 )
-from resources.data_objects import FixedSHAKE128, FixedSHAKE256
 from resources.exceptions import (
     BadAlg,
     BadAsn1Data,
@@ -94,30 +89,24 @@ from resources.exceptions import (
     BadMessageCheck,
     BadRequest,
     BadSigAlgID,
-    BadSigAlgIDParams,
     InvalidKeyCombination,
     LwCMPViolation,
     UnknownOID,
 )
 from resources.oid_mapping import (
     get_hash_from_oid,
-    hash_name_to_instance,
     may_return_oid_to_name,
 )
 from resources.oidutils import (
     AES_GMAC_OID_2_NAME,
     ALL_KNOWN_OIDS_2_NAME,
-    ECDSA_OID_2_NAME,
-    HKDF_OID_2_NAME,
     HMAC_OID_2_NAME,
     KMAC_OID_2_NAME,
     LWCMP_MAC_OID_2_NAME,
     MSG_SIG_ALG,
     PQ_OID_2_NAME,
     PQ_SIG_OID_2_NAME,
-    PQ_SIG_PRE_HASH_OID_2_NAME,
     PQ_STATEFUL_HASH_SIG_OID_2_NAME,
-    RSA_OID_2_NAME,
     RSASSA_PSS_OID_2_NAME,
     SHA2_NAME_2_OID,
     SHA_OID_2_NAME,
@@ -1326,12 +1315,12 @@ def _verify_pki_message_sig(pki_message: PKIMessageTMP, public_key: Optional[Ver
                 "The PKIMessage protectionAlg indicates `RSASSA_PSS`, but the public_key is not an RSA key. "
                 f"Type received: {type(pub_key)}"
             )
-        verify_rsassa_pss_from_alg_id(pub_key, data=encoded, signature=protection_value, alg_id=prot_alg_id)
+        cryptoutils.verify_rsassa_pss_from_alg_id(pub_key, data=encoded, signature=protection_value, alg_id=prot_alg_id)
     else:
         hash_alg = get_hash_from_oid(protection_type_oid)
         hash_alg = hash_alg if hash_alg is None else hash_alg.split("-")[-1]
         if public_key is not None:
-            verify_signature_with_alg_id(
+            cryptoutils.verify_signature_with_alg_id(
                 public_key=public_key, data=encoded, signature=protection_value, alg_id=prot_alg_id
             )
             return
@@ -1820,104 +1809,6 @@ def signature_protection_must_match(  # noqa D417 undocumented-param
     _check_is_same_chain(response["extraCerts"], pki_conf_certs, polling_certs)
 
 
-@not_keyword
-def verify_rsassa_pss_from_alg_id(
-    public_key: rsa.RSAPublicKey, data: bytes, signature: bytes, alg_id: rfc9480.AlgorithmIdentifier
-):
-    """Verify an RSASSA-PSS signature with the `AlgorithmIdentifier`.
-
-    :param public_key: The RSA public key.
-    :param data: The original data that was signed.
-    :param signature: The signature to verify.
-    :param alg_id: The parsed `protectionAlg` from the `PKIMessage`
-    :raises InvalidSignature: If the signature is invalid.
-    """
-    if alg_id["algorithm"] == rfc9481.id_RSASSA_PSS:
-        if not alg_id["parameters"].isValue:
-            raise ValueError("The `AlgorithmIdentifier` must have parameters for RSASSA-PSS set.")
-
-        if not isinstance(alg_id["parameters"], rfc8017.RSASSA_PSS_params):
-            params, rest = decoder.decode(alg_id["parameters"], rfc8017.RSASSA_PSS_params())
-            if rest != b"":
-                raise ValueError("The decoding of 'parameters' field inside the `protectionAlg` had a remainder!")
-        else:
-            params = alg_id["parameters"]
-        salt_length = int(params["saltLength"])
-        hash_alg = get_hash_from_oid(params["hashAlgorithm"]["algorithm"])
-        hash_algorithm = hash_name_to_instance(hash_alg)  # type: ignore
-
-        mgf_algorithm_encoded = params["maskGenAlgorithm"]["parameters"]
-        mgf_oid = params["maskGenAlgorithm"]["algorithm"]
-
-        if mgf_oid != rfc8017.id_mgf1:
-            raise ValueError(f"The `maskGenAlgorithm` should be MGF1, but got `{mgf_oid}`!")
-
-        if not isinstance(mgf_algorithm_encoded, rfc9480.AlgorithmIdentifier):
-            mgf, rest = decoder.decode(mgf_algorithm_encoded, rfc9480.AlgorithmIdentifier())
-            if rest != b"":
-                raise ValueError("The decoding of 'mgf1' field inside the `maskGenAlgorithm` field had a remainder!")
-
-        else:
-            mgf = mgf_algorithm_encoded
-
-        if mgf["algorithm"] != params["hashAlgorithm"]["algorithm"]:
-            raise ValueError("Mismatch between the algorithm for MGF1 and hashAlgorithm!")
-
-    elif alg_id["algorithm"] in [rfc9481.id_RSASSA_PSS_SHAKE128, rfc9481.id_RSASSA_PSS_SHAKE256]:
-        verify_rsassa_pss_shake(public_key, data, signature, alg_id)
-        return
-
-    else:
-        raise ValueError("Unknown RSASSA PSS OID")
-
-    public_key.verify(
-        signature=signature,
-        data=data,
-        padding=padding.PSS(
-            mgf=padding.MGF1(algorithm=hash_algorithm), salt_length=salt_length or hash_algorithm.digest_size
-        ),
-        algorithm=hash_algorithm,
-    )
-
-
-@not_keyword
-def verify_rsassa_pss_shake(
-    public_key: rsa.RSAPublicKey,
-    data: bytes,
-    signature: bytes,
-    alg_id: rfc9480.AlgorithmIdentifier,
-    salt_length: Optional[int] = None,
-):
-    """Verify an RSASSA-PSS signature with the `AlgorithmIdentifier`.
-
-    :param public_key: The RSA public key.
-    :param data: The original data that was signed.
-    :param signature: The signature to verify.
-    :param alg_id: The parsed `protectionAlg` from the `PKIMessage`
-    :param salt_length: The length of the salt to use. If not provided, defaults to the hash algorithm's digest size.
-    :raises InvalidSignature: If the signature is invalid.
-    """
-    if alg_id["parameters"].isValue:
-        raise BadDataFormat("The `AlgorithmIdentifier` for RSASSA-PSS with SHAKE must not have parameters set.")
-
-    if alg_id["algorithm"] == rfc9481.id_RSASSA_PSS_SHAKE128:
-        hash_for_verifying = FixedSHAKE128.new(data)
-    else:
-        hash_for_verifying = FixedSHAKE256.new(data)
-
-    n, e = public_key.public_numbers().n, public_key.public_numbers().e
-    pub_key_tmp = RSA.construct((n, e))
-
-    if salt_length is None:
-        salt_length = hash_for_verifying.digest_size
-
-    verifier = pss.new(pub_key_tmp, salt_bytes=salt_length)
-    try:
-        verifier.verify(hash_for_verifying, signature)  # type: ignore
-    except ValueError as err:
-        raise InvalidSignature("Signature verification failed for RSASSA-PSS with SHAKE.") from err
-
-
 @keyword(name="Patch protectionAlg")
 def patch_protection_alg(  # noqa D417 undocumented-param
     pki_message: PKIMessageTMP,
@@ -2055,59 +1946,6 @@ def get_cmp_protection_salt(  # noqa D417 undocumented-param
 
 
 @not_keyword
-def compute_kdf_from_alg_id(kdf_alg_id: rfc9480.AlgorithmIdentifier, ss: bytes, length: int, ukm: bytes) -> bytes:
-    """Compute the key derivation function using the provided `AlgorithmIdentifier`.
-
-    Supported are PBKDF2, HKDF, KDF2, and KDF3.
-    For PBKDF2, the parameters are extracted from the `AlgorithmIdentifier` structure
-    (only ss is needed).
-
-    :param kdf_alg_id: The `AlgorithmIdentifier` structure containing the KDF parameters.
-    :param ss: The shared secret to use as key material.
-    :param length: The length of the derived key.
-    :param ukm: The user keying material to use.
-    :return: The derived key.
-    :raises ValueError: If the KDF algorithm is not supported, or if the hash algorithm is not recognized.
-    """
-    if kdf_alg_id["algorithm"] in HKDF_OID_2_NAME:
-        hash_alg = HKDF_OID_2_NAME[kdf_alg_id["algorithm"]].split("-")[1]
-        return cryptoutils.compute_hkdf(hash_alg=hash_alg, length=length, key_material=ss, info=ukm)
-
-    if kdf_alg_id["algorithm"] in [rfc5990.id_kdf_kdf2, rfc5990.id_kdf_kdf3]:
-        if not isinstance(kdf_alg_id["parameters"], rfc9480.AlgorithmIdentifier):
-            sha_alg_id = decoder.decode(kdf_alg_id["parameters"], asn1Spec=rfc9480.AlgorithmIdentifier())[0]
-        else:
-            sha_alg_id = kdf_alg_id["parameters"]
-
-        hash_alg = get_hash_from_oid(sha_alg_id["algorithm"])
-        if hash_alg is None:
-            _name = may_return_oid_to_name(sha_alg_id["algorithm"])
-            raise BadAlg(f"Unsupported hash algorithm: {_name}")
-
-        return cryptoutils.compute_ansi_x9_63_kdf(
-            shared_secret=ss,
-            hash_alg=hash_alg,
-            key_length=length,
-            other_info=ukm,
-            use_version_2=(kdf_alg_id["algorithm"] == rfc5990.id_kdf_kdf2),
-        )
-
-    if kdf_alg_id["algorithm"] == rfc9481.id_PBKDF2:
-        if not isinstance(kdf_alg_id["parameters"], rfc8018.PBKDF2_params):
-            pbkdf2_params = decoder.decode(kdf_alg_id["parameters"], asn1Spec=rfc9480.AlgorithmIdentifier())[0]
-        else:
-            pbkdf2_params = kdf_alg_id["parameters"]
-
-        if pbkdf2_params["prf"]["algorithm"] not in HMAC_OID_2_NAME:
-            _name = may_return_oid_to_name(pbkdf2_params["prf"]["algorithm"])
-            raise BadAlg(f"Unsupported PRF algorithm: {_name}. Only HMAC is supported.")
-
-        return cryptoutils.compute_pbkdf2_from_parameter(key=ss, parameters=pbkdf2_params)
-
-    raise ValueError(f"Unsupported KDF algorithm: {kdf_alg_id['algorithm']}")
-
-
-@not_keyword
 def compute_kem_based_mac_from_alg_id(
     data: bytes,
     alg_id: rfc9480.AlgorithmIdentifier,
@@ -2147,7 +1985,7 @@ def compute_kem_based_mac_from_alg_id(
     kdf_alg_id = parameters["kdf"]
     length = int(parameters["len"])
 
-    mac_key = compute_kdf_from_alg_id(kdf_alg_id=kdf_alg_id, ss=ss, length=length, ukm=other_info_der)
+    mac_key = cryptoutils.compute_kdf_from_alg_id(kdf_alg_id=kdf_alg_id, ss=ss, length=length, ukm=other_info_der)
 
     logging.info("KEMBasedMac MAC-key: %s", mac_key.hex())
 
@@ -2397,32 +2235,6 @@ def verify_kem_based_mac_protection(
         raise BadMessageCheck("The KEMBasedMac verification failed.")
 
 
-@not_keyword
-def get_rsa_oaep_padding(param: rfc4055.RSAES_OAEP_params) -> padding.OAEP:
-    """Generate the appropriate RSA OAEP padding configuration based on the `RSAES_OAEP_params`.
-
-    :param param: The `RSAES_OAEP_params` structure that defines the padding scheme, including the hash function,
-                  mask generation function, and optional pSourceFunc.
-    :return: A `cryptography` library `OAEP` padding object configured with the specified parameters.
-    :raises ValueError: If there is an error decoding the mask generation function parameters.
-    :raises NotImplementedError: If the pSourceFunc parameter is present (not supported by the implementation).
-    """
-    hash_name = get_hash_from_oid(param["hashFunc"]["algorithm"])
-    hash_fun = hash_name_to_instance(hash_name)  # type: ignore
-
-    data = param["maskGenFunc"]["parameters"]
-    oid, rest = decoder.decode(data, univ.ObjectIdentifier())
-    if rest != b"":
-        raise BadAsn1Data("MGF1 parameters")
-
-    mgf_hash_alg = hash_name_to_instance(get_hash_from_oid(oid))  # type: ignore
-
-    if param["pSourceFunc"].isValue:
-        raise NotImplementedError("pSourceFunc is not supported")
-
-    return padding.OAEP(mgf=padding.MGF1(algorithm=mgf_hash_alg), algorithm=hash_fun, label=None)
-
-
 @keyword(name="Sign Data With AlgID")
 def sign_data_with_alg_id(  # noqa: D417 Missing argument descriptions in the docstring
     key: SignKey, alg_id: rfc9480.AlgorithmIdentifier, data: bytes
@@ -2487,197 +2299,6 @@ def _verify_composite_sig(
         signature=signature,
         use_pss=use_pss,
     )
-
-
-def _is_parmeters_null(alg_id: rfc9480.AlgorithmIdentifier) -> bool:
-    """Check if the parameters of the algorithm identifier are set to `NULL`."""
-    if not alg_id["parameters"].isValue:
-        return False
-    if isinstance(alg_id["parameters"], univ.Null):
-        return True
-    if not hasattr(alg_id["parameters"], "asOctets"):
-        return False
-    return alg_id["parameters"].asOctets() == b"\x05\x00"  # ASN.1 NULL is encoded as 0x05 0x00
-
-
-def _validate_pq_sig_alg_id(alg_id: rfc9480.AlgorithmIdentifier) -> None:
-    """Validate the PQ signature algorithm identifier.
-
-    :param alg_id: The `AlgorithmIdentifier` to validate.
-    :raises ValueError: If the algorithm identifier is not a valid PQ signature algorithm.
-    """
-    oid = alg_id["algorithm"]
-
-    name = may_return_oid_to_name(oid)
-
-    if oid in PQ_STATEFUL_HASH_SIG_OID_2_NAME:
-        _name = may_return_oid_to_name(oid)
-        if alg_id["parameters"].isValue:
-            msg = (
-                f"The {_name} signature algorithm identifier must not have parameters set. Got: {alg_id.prettyPrint()}"
-            )
-            raise BadSigAlgIDParams(msg)
-
-    elif oid in PQ_SIG_OID_2_NAME or oid in PQ_SIG_PRE_HASH_OID_2_NAME:
-        if alg_id["parameters"].isValue:
-            msg = f"For a PQ signature algorithm the parameters must be set absent. Got: {name} {alg_id.prettyPrint()}"
-            raise BadSigAlgIDParams(msg)
-    else:
-        raise BadAlg(f"Unsupported PQ signature algorithm identifier: {name}.")
-
-
-def _validate_rsa_sig_alg_id(alg_id: rfc9480.AlgorithmIdentifier) -> None:
-    """Validate the RSA signature algorithm identifier.
-
-    :param alg_id: The `AlgorithmIdentifier` to validate.
-    :raises BadSigAlgIDParams: If the algorithm identifier parameters are invalid.
-    :raises BadAlg: If the algorithm identifier is unsupported.
-    """
-    oid = alg_id["algorithm"]
-
-    if oid in RSA_OID_2_NAME:
-        if not _is_parmeters_null(alg_id):
-            msg = (
-                f"For an RSA signature algorithm identifier "
-                f"must have the parameters set to `NULL`."
-                f"\nGot: {alg_id.prettyPrint()}"
-            )
-            raise BadSigAlgIDParams(msg)
-
-    elif oid in RSASSA_PSS_OID_2_NAME:
-        if oid == rfc9481.id_RSASSA_PSS:
-            if not alg_id["parameters"].isValue:
-                msg = f"For RSASSA-PSS, the `AlgorithmIdentifier` must have parameters set. Got: {alg_id.prettyPrint()}"
-                raise BadSigAlgIDParams(msg)
-
-        else:
-            if alg_id["parameters"].isValue:
-                msg = (
-                    f"For RSASSA-PSS-SHAKE, the `AlgorithmIdentifier` must not have parameters set. "
-                    f"Got: {alg_id.prettyPrint()}"
-                )
-                raise BadSigAlgIDParams(msg)
-
-    else:
-        name = may_return_oid_to_name(oid)
-        raise BadAlg(f"Unsupported RSA signature algorithm identifier: {name}.")
-
-
-def _validate_ecc_alg_id(alg_id: rfc9480.AlgorithmIdentifier) -> None:
-    """Validate the ECC signature algorithm identifier.
-
-    :param alg_id: The `AlgorithmIdentifier` to validate.
-    :raises BadSigAlgIDParams: If the algorithm identifier parameters are invalid.
-    :raises BadAlg: If the algorithm identifier is unsupported.
-    """
-    oid = alg_id["algorithm"]
-
-    if oid in ECDSA_OID_2_NAME:
-        if alg_id["parameters"].isValue:
-            msg = f"For an ECDSA signature algorithm identifier not have parameters set. Got: {alg_id.prettyPrint()}"
-            raise BadSigAlgIDParams(msg)
-
-    elif oid in [rfc9481.id_Ed448, rfc9481.id_Ed25519]:
-        if alg_id["parameters"].isValue:
-            name = may_return_oid_to_name(oid)
-            msg = (
-                f"For {name} signature algorithm identifier must the `parameters` be absent. "
-                f"Got: {alg_id.prettyPrint()}"
-            )
-            raise BadSigAlgIDParams(msg)
-
-    else:
-        name = may_return_oid_to_name(oid)
-        raise BadAlg(f"Unsupported ECC signature algorithm identifier: {name}.")
-
-
-def _validate_sig_alg_id(alg_id: rfc9480.AlgorithmIdentifier) -> None:
-    """Validate the signature algorithm identifier.
-
-    :param alg_id: The `AlgorithmIdentifier` to validate.
-    :raises BadSigAlgIDParams: If the algorithm identifier parameters are invalid.
-    :raises BadAlg: If the algorithm identifier is unsupported.
-    """
-    oid = alg_id["algorithm"]
-    if oid in COMPOSITE_SIG_OID_TO_NAME:
-        if alg_id["parameters"].isValue:
-            msg = (
-                f"For a composite signature algorithm identifier the `parameters` must be absent. "
-                f"Got: {alg_id['algorithm'].prettyPrint()}"
-            )
-            raise BadSigAlgIDParams(msg)
-
-    elif oid in ECDSA_OID_2_NAME or oid in [rfc9481.id_Ed448, rfc9481.id_Ed25519]:
-        _validate_ecc_alg_id(alg_id)
-
-    elif oid in [*RSA_OID_2_NAME, *RSASSA_PSS_OID_2_NAME]:
-        _validate_rsa_sig_alg_id(alg_id)
-
-    elif oid in PQ_OID_2_NAME:
-        _validate_pq_sig_alg_id(alg_id)
-
-    else:
-        name = may_return_oid_to_name(oid)
-        raise BadAlg(f"Unsupported signature algorithm identifier: {name}.")
-
-
-@keyword(name="Verify Signature With AlgID")
-def verify_signature_with_alg_id(  # noqa: D417 Missing argument descriptions in the docstring
-    public_key: VerifyKey, alg_id: rfc9480.AlgorithmIdentifier, data: bytes, signature: bytes
-) -> None:
-    """Verify the provided data and signature using the given algorithm identifier.
-
-    Supports traditional-, pq- and composite signature algorithm.
-
-    Arguments:
-    ---------
-        - `public_key`: The public key to verify the signature.
-        - `alg_id`: An `AlgorithmIdentifier` specifying the algorithm and any associated parameters for
-        signature verification.
-        - `data`: The original message or data whose signature needs verification, as a byte string.
-        - `signature`: The digital signature to verify, as a byte string.
-
-    Raises:
-    ------
-        - `ValueError`: If the algorithm identifier is unsupported or invalid.
-        - `InvalidSignature`: If the signature is invalid.
-
-    Examples:
-    --------
-    | Verify Signature With Alg ID | ${public_key} | ${alg_id} | ${data} | ${signature} |
-
-    """
-    oid = alg_id["algorithm"]
-    _validate_sig_alg_id(alg_id)
-
-    if oid in COMPOSITE_SIG_OID_TO_NAME:
-        if not isinstance(public_key, CompositeSigPublicKey):
-            raise TypeError(f"The public key must be a CompositeSigPublicKey. Got: {keyutils.get_key_name(public_key)}")
-        name = COMPOSITE_SIG_OID_TO_NAME[oid]
-        use_pss = name.endswith("-pss")
-        logging.debug("Verifying composite signature with name: %s", name)
-        public_key.verify(
-            data=data,
-            signature=signature,
-            use_pss=use_pss,
-        )
-
-    elif oid in RSASSA_PSS_OID_2_NAME and isinstance(public_key, rsa.RSAPublicKey):
-        verify_rsassa_pss_from_alg_id(public_key=public_key, data=data, signature=signature, alg_id=alg_id)
-
-    elif oid in PQ_OID_2_NAME or str(oid) in PQ_OID_2_NAME or oid in TRAD_SIG_OID_2_NAME:
-        try:
-            hash_alg = get_hash_from_oid(oid, only_hash=True)
-            keyutils.check_consistency_sig_alg_id_and_key(alg_id, public_key)
-
-        except ValueError as e:
-            raise BadAlg(f"Algorithm identifier and key mismatch: {e}. Could not determine the hash algorithm.") from e
-
-        except BadAlg as e:
-            raise InvalidSignature(e.message) from e
-        cryptoutils.verify_signature(public_key=public_key, signature=signature, data=data, hash_alg=hash_alg)
-    else:
-        raise BadAlg(f"Unsupported public key type: {type(public_key).__name__}.")
 
 
 def _prepare_catalyst_info_vals(
@@ -2993,7 +2614,7 @@ def verify_composite_signature_with_keys(
     else:
         raise BadAlg(f"Invalid algorithm for composite signature: {alg_id['algorithm']}")
 
-    verify_signature_with_alg_id(
+    cryptoutils.verify_signature_with_alg_id(
         public_key=public_key,
         alg_id=alg_id,
         data=data,

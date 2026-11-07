@@ -1146,7 +1146,7 @@ def _verify_pop_signature(
         except ValueError as err:
             raise BadPOP("Public key is not a valid verify key.", failinfo="badPOP,badCertTemplate,badAlg") from err
 
-        protectionutils.verify_signature_with_alg_id(
+        cryptoutils.verify_signature_with_alg_id(
             public_key=public_key,
             alg_id=popo_sig["algorithmIdentifier"],
             data=encoder.encode(cert_req_msg["certReq"]),

@@ -16,7 +16,6 @@ from pyasn1_alt_modules import rfc5280, rfc5652, rfc6402, rfc9480
 from robot.api.deco import keyword, not_keyword
 
 import resources.prepare_alg_ids
-import resources.protectionutils
 from pq_logic.hybrid_structures import (
     DeltaCertificateDescriptor,
     DeltaCertificateRequestSignatureValue,
@@ -594,7 +593,7 @@ def verify_paired_csr_signature(  # noqa: D417 Missing argument description in t
 
     try:
         public_key = convertutils.ensure_is_verify_key(public_key)
-        resources.protectionutils.verify_signature_with_alg_id(
+        cryptoutils.verify_signature_with_alg_id(
             alg_id=sig_alg_id, data=data, public_key=public_key, signature=delta_sig.asOctets()
         )
     except ValueError as e:

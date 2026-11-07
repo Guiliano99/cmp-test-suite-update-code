@@ -25,7 +25,6 @@ from pyasn1_alt_modules import rfc2986, rfc4211, rfc5280, rfc6402, rfc9480
 from robot.api.deco import keyword, not_keyword
 
 import resources.prepare_alg_ids
-import resources.protectionutils
 from pq_logic.hybrid_structures import AltSignatureExt, AltSubPubKeyExt, UniformResourceIdentifier
 from pq_logic.tmp_oids import (
     COMPOSITE_SIG_PREHASH_OID_2_HASH,
@@ -825,9 +824,7 @@ def validate_alt_sig_extn(  # noqa: D417 Missing argument descriptions in the do
     if hashed_sig != _compute_hash(alg_name=hash_alg, data=signature):
         raise ValueError("The fetched signature was invalid!")
 
-    resources.protectionutils.verify_signature_with_alg_id(
-        alg_id=sig_alg_id, public_key=alt_pub_key, data=data, signature=signature
-    )
+    cryptoutils.verify_signature_with_alg_id(alg_id=sig_alg_id, public_key=alt_pub_key, data=data, signature=signature)
 
 
 def _patch_extensions(extensions: rfc9480.Extensions, extension: rfc5280.Extension) -> rfc9480.Extensions:

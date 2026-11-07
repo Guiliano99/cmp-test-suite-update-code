@@ -13,7 +13,7 @@ from resources.certextractutils import get_field_from_certificate
 from resources.certutils import parse_certificate
 from resources.envdatautils import prepare_key_transport_recipient_info
 from resources.keyutils import load_private_key_from_file
-from resources.protectionutils import get_rsa_oaep_padding
+from resources.cryptoutils import get_rsa_oaep_padding
 from resources.utils import load_and_decode_pem_file
 
 from unit_tests.prepare_ca_response import build_complete_envelope_data_ca_msg

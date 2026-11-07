@@ -59,7 +59,6 @@ from resources import (
     cryptoutils,
     keyutils,
     prepare_alg_ids,
-    protectionutils,
     utils,
 )
 from resources.convertutils import copy_asn1_certificate, ensure_is_kem_pub_key, str_to_bytes
@@ -761,7 +760,7 @@ def _encrypt_rsa_oaep(key: rsa.RSAPublicKey, alg_id: rfc5280.AlgorithmIdentifier
     :return: The encrypted content encryption key.
     """
     if alg_id["parameters"].isValue:
-        padding_val = protectionutils.get_rsa_oaep_padding(alg_id["parameters"])
+        padding_val = cryptoutils.get_rsa_oaep_padding(alg_id["parameters"])
     else:
         padding_val = padding.PKCS1v15()
 
@@ -1598,7 +1597,7 @@ def prepare_kem_recip_info(  # noqa D417 undocumented-param
 
     kem_recip_info["kdf"] = prepare_alg_ids.prepare_kdf_alg_id(kdf_name=kdf_name, hash_alg=hash_alg)
     if shared_secret is not None:
-        key_enc_key = protectionutils.compute_kdf_from_alg_id(
+        key_enc_key = cryptoutils.compute_kdf_from_alg_id(
             kdf_alg_id=kem_recip_info["kdf"],
             ss=shared_secret,
             ukm=der_ukm,

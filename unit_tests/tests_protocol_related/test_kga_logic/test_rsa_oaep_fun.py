@@ -16,7 +16,7 @@ from pyasn1.codec.der import encoder
 from pyasn1.type import univ
 from pyasn1_alt_modules import rfc4055, rfc5652
 from resources.ca_kga_logic import compute_key_transport_mechanism
-from resources.protectionutils import get_rsa_oaep_padding
+from resources.cryptoutils import get_rsa_oaep_padding
 
 
 class TestRSAOAEPFunctions(unittest.TestCase):
