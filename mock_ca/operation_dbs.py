@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple, Union
 
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
@@ -517,3 +518,53 @@ class BadRandomState:
 
     bad_hss_random: Optional[bytes] = None
     bad_random_count: int = 0
+
+
+def load_ca_cert_and_key() -> Tuple[rfc9480.CMPCertificate, Ed25519PrivateKey]:
+    """Load a valid Root CA key and certificate for testing."""
+    root_key = load_private_key_from_file("data/keys/private-key-ed25519.pem")
+    root_cert = parse_certificate(load_and_decode_pem_file("data/unittest/root_cert_ed25519.pem"))
+    return root_cert, root_key
+
+
+def load_kari_certs() -> Dict:
+    """Load the KARI certificate for Mock CA or testing."""
+    ecc_cert = parse_certificate(load_and_decode_pem_file("data/unittest/ca_encr_cert_ecc.pem"))
+    ecc_key = load_private_key_from_file("data/keys/private-key-ecdsa.pem")
+    x25519_cert = parse_certificate(load_and_decode_pem_file("data/unittest/ca_encr_cert_x25519.pem"))
+    x25519_key = load_private_key_from_file("data/keys/private-key-x25519.pem")
+    x448_cert = parse_certificate(load_and_decode_pem_file("data/unittest/ca_encr_cert_x448.pem"))
+    x448_key = load_private_key_from_file("data/keys/private-key-x448.pem")
+    return {
+        "ecc_cert": ecc_cert,
+        "ecc_key": ecc_key,
+        "x25519_cert": x25519_cert,
+        "x25519_key": x25519_key,
+        "x448_cert": x448_cert,
+        "x448_key": x448_key,
+    }
+
+
+def load_kem_certs():
+    """Load the KEM certificate for Mock CA or testing."""
+    data = {}
+    cert = parse_certificate(load_and_decode_pem_file("data/unittest/ca_encr_cert_ml_kem_768.pem"))
+    ml_kem_key = load_private_key_from_file("data/keys/private-key-ml-kem-768-seed.pem")
+    data["kem_cert"] = cert
+    data["kem_key"] = ml_kem_key
+    cert = parse_certificate(load_and_decode_pem_file("data/unittest/ca_encr_cert_xwing.pem"))
+    xwing_key = load_private_key_from_file("data/keys/private-key-xwing-seed.pem")
+    data["hybrid_kem_cert"] = cert
+    data["hybrid_kem_key"] = xwing_key
+    return data
+
+
+def load_env_data_certs():
+    """Load the CA encryption certificate and key for testing."""
+    data = load_kari_certs()
+    cert = parse_certificate(load_and_decode_pem_file("data/unittest/ca_encr_cert_rsa.pem"))
+    rsa_key = load_private_key_from_file("data/keys/private-key-rsa.pem", password=None)
+    data["encr_rsa_cert"] = cert
+    data["encr_rsa_key"] = rsa_key
+    data.update(load_kem_certs())
+    return data

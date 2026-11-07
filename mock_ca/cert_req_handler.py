@@ -12,7 +12,7 @@ from pyasn1.codec.der import encoder
 from pyasn1_alt_modules import rfc9480, rfc9481
 
 from mock_ca.mock_fun import MockCAState
-from mock_ca.operation_dbs import NonSigningKeyCertsAndKeys, StatefulSigState
+from mock_ca.operation_dbs import NonSigningKeyCertsAndKeys, StatefulSigState, load_env_data_certs
 from mock_ca.stfl_validator import STFLPKIMessageValidator
 from pq_logic.hybrid_sig.chameleon_logic import load_chameleon_csr_delta_key_and_sender
 from pq_logic.pq_verify_logic import verify_hybrid_pkimessage_protection
@@ -80,7 +80,6 @@ from resources.protectionutils import (
 )
 from resources.suiteenums import ProtectedType
 from resources.utils import get_openssl_name_notation
-from unit_tests.utils_for_test import load_env_data_certs
 
 # (Make sure to import all the required functions and exceptions, for example:
 #  build_cp_cmp_message, build_cp_from_p10cr, build_ip_cmp_message, build_kup_from_kur,

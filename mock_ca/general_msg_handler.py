@@ -28,6 +28,7 @@ from resources.asn1_structures import (
     OIDs,
     PKIMessageTMP,
 )
+from resources.asn1utils import try_decode_pyasn1
 from resources.ca_kga_logic import validate_enveloped_data
 from resources.ca_ra_utils import prepare_new_root_ca_certificate, set_ca_header_fields
 from resources.cmputils import prepare_pki_message
@@ -55,7 +56,6 @@ from resources.prepare_alg_ids import get_all_supported_ecc_alg_ids, prepare_alg
 from resources.protectionutils import get_protection_type_from_pkimessage
 from resources.typingutils import EnvDataPrivateKey
 from resources.utils import get_openssl_name_notation
-from unit_tests.utils_for_test import compare_pyasn1_objects, try_decode_pyasn1
 
 ABSENT_INFO_TYPES = {
     rfc9480.id_it_caProtEncCert,
@@ -436,7 +436,7 @@ class GeneralMessageHandler:
         if entry["infoValue"].isValue:
             root_val = _try_decode_mock_ca(entry["infoValue"].asOctets(), rfc9480.RootCaCertValue())
             root_val: rfc9480.CMPCertificate
-            if not compare_pyasn1_objects(root_val, self.root_ca_cert):
+            if encoder.encode(root_val) != encoder.encode(self.root_ca_cert):
                 info_value["infoType"] = rfc9480.id_it_rootCaKeyUpdate
                 return info_value, "The root CA certificate is not the same as the one in the Mock CA."
 

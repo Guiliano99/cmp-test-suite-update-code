@@ -16,7 +16,7 @@ from pyasn1_alt_modules import rfc9480, rfc9481
 
 from mock_ca.db_config_vars import ProtectionHandlerConfig, TrustConfig
 from mock_ca.mock_fun import KEMSharedSecretList, PQStatefulSigKeyConfig
-from mock_ca.operation_dbs import StatefulSigState
+from mock_ca.operation_dbs import StatefulSigState, load_env_data_certs
 from pq_logic.pq_verify_logic import verify_hybrid_pkimessage_protection
 from resources.asn1_structures import PKIMessageTMP
 from resources.ca_ra_utils import get_public_key_from_cert_req_msg
@@ -63,7 +63,6 @@ from resources.protectionutils import (
 )
 from resources.suiteenums import ProtectedType
 from resources.utils import get_password_in_size
-from unit_tests.utils_for_test import load_env_data_certs
 
 
 class ProtectionHandler:

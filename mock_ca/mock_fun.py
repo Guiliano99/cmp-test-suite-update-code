@@ -36,7 +36,6 @@ from resources.exceptions import (
 from resources.oid_mapping import compute_hash
 from resources.oidutils import id_KemBasedMac
 from resources.protectionutils import verify_kem_based_mac_protection
-from unit_tests.utils_for_test import compare_pyasn1_objects, convert_to_crypto_lib_cert
 
 
 @dataclass
@@ -148,10 +147,7 @@ class RevokedEntryList:
         """Remove an entry from the list."""
         found = None
         for x in self.entries:
-            if compare_pyasn1_objects(
-                entry.cert,
-                x.cert,
-            ):
+            if encoder.encode(entry.cert) == encoder.encode(x.cert):
                 found = x
                 break
 
@@ -233,7 +229,7 @@ class RevokedEntryList:
         :return: Whether the certificate is revoked.
         """
         for x in self.certs:
-            if compare_pyasn1_objects(cert, x):
+            if encoder.encode(cert) == encoder.encode(x):
                 return True
         return False
 
@@ -371,7 +367,7 @@ class CertRevStateDB:
         if self._update_eq_rev:
             nums += self.update_entry_list.serial_numbers
 
-        crypto_ca_cert = convert_to_crypto_lib_cert(ca_cert)
+        crypto_ca_cert = x509.load_der_x509_certificate(encoder.encode(ca_cert))
         _now = datetime.now(timezone.utc) - timedelta(seconds=60)  # to avoid time issues.
         _next_update = _now + timedelta(days=1)
 

@@ -40,7 +40,7 @@ from mock_ca.general_msg_handler import GeneralMessageHandler
 from mock_ca.hybrid_handler import HybridIssuingHandler, SunHybridHandler
 from mock_ca.mock_fun import BaseURLData, KeySecurityChecker, MockCAState
 from mock_ca.nested_handler import NestedHandler
-from mock_ca.operation_dbs import MockCAOPCertsAndKeys, StatefulSigState
+from mock_ca.operation_dbs import MockCAOPCertsAndKeys, StatefulSigState, load_ca_cert_and_key, load_env_data_certs
 from mock_ca.prot_handler import ProtectionHandler
 from mock_ca.rev_handler import RevocationHandler
 from mock_ca.stfl_validator import STFLPKIMessageValidator
@@ -125,7 +125,6 @@ from resources.protectionutils import (
 from resources.suiteenums import ProtectedType
 from resources.typingutils import EnvDataPrivateKey
 from resources.utils import load_and_decode_pem_file
-from unit_tests.utils_for_test import load_ca_cert_and_key, load_env_data_certs
 
 
 def _build_error_from_exception(e: CMPTestSuiteError, request_msg: Optional[PKIMessageTMP] = None) -> PKIMessageTMP:
