@@ -20,7 +20,8 @@ from resources.cmputils import (
 from resources.exceptions import BadMessageCheck
 from resources.keyutils import load_private_key_from_file
 from resources.protectionutils import protect_pkimessage, verify_pkimessage_protection
-from resources.utils import display_pki_status_info, load_and_decode_pem_file
+from resources.cmputils import display_pki_status_info
+from resources.utils import load_and_decode_pem_file
 from unit_tests.utils_for_test import try_encode_pyasn1
 
 

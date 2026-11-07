@@ -19,7 +19,7 @@ from resources.general_msg_utils import build_cmp_general_message, validate_genp
 from resources.keyutils import generate_key
 from resources.oidutils import id_KemBasedMac
 from resources.protectionutils import protect_pkimessage_kem_based_mac
-from resources.utils import display_pki_status_info
+from resources.cmputils import display_pki_status_info
 from unit_tests.utils_for_test import load_ca_cert_and_key
 
 

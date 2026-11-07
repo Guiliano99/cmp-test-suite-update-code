@@ -18,7 +18,7 @@ from resources.cmputils import (
 )
 from resources.keyutils import generate_key
 from resources.protectionutils import protect_pkimessage
-from resources.utils import display_pki_status_info
+from resources.cmputils import display_pki_status_info
 
 
 class TestKeyUpdateTest(unittest.TestCase):

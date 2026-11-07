@@ -15,7 +15,7 @@ from resources.cmputils import (
 )
 from resources.keyutils import generate_key, load_private_key_from_file
 from resources.protectionutils import protect_pkimessage
-from resources.utils import display_pki_status_info
+from resources.cmputils import display_pki_status_info
 from unit_tests.utils_for_test import load_ca_cert_and_key
 
 

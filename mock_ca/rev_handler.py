@@ -32,7 +32,7 @@ from resources.checkutils import (
     validate_request_message_nonces_and_tx_id,
     validate_senderkid_for_cmp_protection,
 )
-from resources.cmputils import get_pkistatusinfo
+from resources.cmputils import display_pki_status_info, get_pkistatusinfo
 from resources.cryptoutils import perform_ecdh
 from resources.exceptions import (
     AddInfoNotAvailable,
@@ -49,7 +49,6 @@ from resources.protectionutils import (
     verify_pkimessage_protection,
 )
 from resources.suiteenums import ProtectedType
-from resources.utils import display_pki_status_info
 
 
 def _build_rp_error_response(

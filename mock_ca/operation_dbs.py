@@ -15,15 +15,14 @@ from pyasn1_alt_modules import rfc9480
 
 from resources.asn1utils import encode_to_der
 from resources.certutils import build_cert_chain_from_dir, parse_certificate
+from resources.cmputils import is_certificate_and_key_set, may_load_cert_and_key
 from resources.convertutils import ensure_is_sign_key, str_to_bytes
 from resources.exceptions import BadConfig, BadRequest
 from resources.keyutils import load_private_key_from_file
 from resources.oid_mapping import compute_hash
 from resources.utils import (
-    is_certificate_and_key_set,
     load_and_decode_pem_file,
     load_certificate_chain,
-    may_load_cert_and_key,
 )
 
 

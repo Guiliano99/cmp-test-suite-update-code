@@ -23,6 +23,7 @@ from resources.certutils import build_cmp_chain_from_pkimessage
 from resources.cmputils import (
     build_cert_conf_from_resp,
     build_cmp_revoke_request,
+    display_pki_status_info,
     get_cmp_message_type,
     get_status_from_pkimessage,
     parse_pkimessage,
@@ -31,7 +32,7 @@ from resources.convertutils import ensure_is_sign_key
 from resources.extra_issuing_logic import get_enc_cert_from_pkimessage
 from resources.keyutils import save_key
 from resources.protectionutils import protect_pkimessage
-from resources.utils import display_pki_status_info, pyasn1_cert_to_pem, write_cmp_certificate_to_pem
+from resources.utils import pyasn1_cert_to_pem, write_cmp_certificate_to_pem
 
 
 def send_request_to_static_cert1() -> None:

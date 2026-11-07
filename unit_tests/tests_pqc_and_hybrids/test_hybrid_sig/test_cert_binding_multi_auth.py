@@ -94,7 +94,7 @@ class TestCertBindingMultiAuth(unittest.TestCase):
         with self.assertRaises(ValueError):
             get_related_cert_from_list(certs, cert_a)
 
-    @patch("resources.utils.load_certificate_from_uri")
+    @patch("resources.certutils.load_certificate_from_uri")
     def test_cert_binding_multi_auth_build_csr(self, mock_load_cert):
         """
         GIVEN a certificate and a private key.
@@ -124,7 +124,7 @@ class TestCertBindingMultiAuth(unittest.TestCase):
 
         self.assertTrue(compare_pyasn1_objects(cert_a, self.cert_a))
 
-    @patch("resources.utils.load_certificate_from_uri")
+    @patch("resources.certutils.load_certificate_from_uri")
     def test_cert_binding_multi_auth_build_csr_with_ca_cert(self, mock_load_cert):
         """
         GIVEN a certificate and a private key.

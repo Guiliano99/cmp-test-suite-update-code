@@ -11,7 +11,8 @@ from resources import certutils, cmputils, protectionutils
 from resources.certbuildutils import build_certificate
 from resources.certutils import parse_certificate
 from resources.keyutils import load_private_key_from_file, generate_key
-from resources.utils import load_and_decode_pem_file, display_pki_status_info
+from resources.cmputils import display_pki_status_info
+from resources.utils import load_and_decode_pem_file
 from unit_tests.utils_for_test import load_ca_cert_and_key
 
 

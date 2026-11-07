@@ -491,7 +491,7 @@ def validate_related_cert_pop(  # noqa: D417 Missing argument descriptions in th
 
     location_info = attributes["locationInfo"]
 
-    cert_chain = utils.load_certificate_from_uri(location_info, load_chain=load_chain)
+    cert_chain = certutils.load_certificate_from_uri(location_info, load_chain=load_chain)
     cert_a = cert_chain[0]
     ca_kga_logic.validate_issuer_and_serial_number_field(attributes["certID"], cert_a)
 

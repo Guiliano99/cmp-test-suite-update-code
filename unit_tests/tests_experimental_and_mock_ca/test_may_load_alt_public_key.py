@@ -123,7 +123,7 @@ class TestMayLoadAltPublicKey(unittest.TestCase):
         public_key = may_extract_alt_key_from_cert(cert4, other_certs=None)
         self.assertEqual(public_key, self.comp_key.pq_key.public_key())
 
-    @patch("resources.utils.load_certificate_from_uri")
+    @patch("resources.certutils.load_certificate_from_uri")
     def test_load_key_from_cert_discovery(self, mock_get_cert):
         """
         GIVEN a certificate with a subject info access extension.

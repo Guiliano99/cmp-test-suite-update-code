@@ -12,7 +12,7 @@ from mock_ca.client import build_example_rsa_mac_request, send_pkimessage_to_moc
 from resources.certutils import build_cmp_chain_from_pkimessage, validate_ocsp_status_openssl
 from resources.cmputils import build_cmp_revoke_request, get_pkistatusinfo
 from resources.protectionutils import protect_pkimessage
-from resources.utils import display_pki_status_info
+from resources.cmputils import display_pki_status_info
 from unit_tests.utils_for_test import wait_for_port
 
 

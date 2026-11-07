@@ -21,6 +21,7 @@ from keyutils_py.types import (
     CompositeKEMPublicKey,
     DHPrivateKey,
     HybridKEMPublicKey,
+    HybridPrivateKey,
     KEMPublicKey,
     PrivateKey,
     PublicKey,
@@ -3827,7 +3828,7 @@ def get_cert_response_from_pkimessage(  # noqa D417 undocumented-param
     message_type = get_cmp_message_type(pki_message)
 
     if message_type == "error":
-        logging.debug(utils.display_pki_status_info(pki_message, index=response_index))
+        logging.debug(display_pki_status_info(pki_message, index=response_index))
         raise ValueError("The provided `PKIMessage` is an error message, which does not contain a certificate.")
 
     if message_type not in {"cp", "kup", "ip", "ccp"}:
@@ -5782,3 +5783,163 @@ def get_inner_pkimessage(  # noqa D417 undocumented-param
         raise IndexError(f"Index {index} is out of bounds for the nested PKIMessage with length {length}.")
 
     return pki_message["body"]["nested"][index]
+
+
+def may_load_cert_and_key(  # noqa D417 undocumented-param
+    cert_path: Optional[Union[str, rfc9480.CMPCertificate]] = None,
+    key_path: Optional[Union[str, PrivateKey]] = None,
+    key_password: Union[None, str] = "11111",
+) -> Union[Tuple[None, None], Tuple[rfc9480.CMPCertificate, PrivateKey]]:
+    """Load a certificate and private key from specified file paths.
+
+    Attempts to load a certificate and its corresponding private key from
+    provided file paths. Used to verify if a certificate is provided to start
+    the test suite if, MAC-based-protection is disabled.
+
+    Arguments:
+    ---------
+        - `cert_path`: Optional string specifying the path to the certificate file.
+        - `key_path`: Optional string specifying the path to the private key file.
+        - `key_password`: A string representing the password for the private key file.
+                          Defaults to `"11111"`.
+        - `key_type`: Optional string specifying the type of private key (e.g., "RSA" or "ECDSA").
+                      Defaults to `None`.
+
+    Returns:
+    -------
+        - A tuple containing the loaded certificate and the corresponding private key
+
+    Raises:
+    ------
+        - `ValueError`: If only one of `cert_path` or `key_path` is provided, or if the private key
+                        does not match the public key in the certificate.
+
+    Examples:
+    --------
+    | ${cert} ${key}= | May Load Cert and Key | cert_path=/path/to/cert.pem | key_path=/path/to/key.pem |
+    | ${cert} ${key}= | May Load Cert and Key | cert_path=None | key_path=None |
+
+    """
+    if cert_path is None and key_path is None:
+        logging.info("Starts without loading a initial certificate and private key.")
+        return None, None
+
+    if not cert_path or not key_path:
+        raise ValueError("Both paths needs to be provided!")
+
+    if isinstance(cert_path, str):
+        der_cert = utils.load_and_decode_pem_file(cert_path)
+        cert = certutils.parse_certificate(der_cert)
+    else:
+        cert = cert_path
+
+    if isinstance(key_path, str):
+        key = keyutils.load_private_key_from_file(filepath=key_path, password=key_password)
+    else:
+        key = key_path
+
+    cert_pub_key = certutils.load_public_key_from_cert(cert)  # type: ignore
+    if key.public_key() != cert_pub_key:
+        raise ValueError("The private key and the public key inside the certificate are not a Pair!")
+
+    return cert, key
+
+
+def is_certificate_and_key_set(  # noqa D417 undocumented-param
+    cert: Optional[Union[str, rfc9480.CMPCertificate]] = None,
+    key: Optional[Union[PrivateKey, str]] = None,
+    for_sun_hybrid: bool = False,
+) -> bool:
+    """Check if a certificate and its corresponding private key are valid and set.
+
+    Is needed because the Robot Framework cannot check if a `pyasn1` certificate is None.
+
+    Arguments:
+    ---------
+        - `cert`: The certificate or path of the certificate to validate. Default is `None`.
+        - `key`: The private key to validate against the certificate. Default is `None`.
+        - `for_sun_hybrid`: Whether the certificate is Sun-Hybrid certificate. Default is `False`.
+
+    Returns:
+    -------
+        - `True` if both the certificate and key are set and match, `False` if both are None.
+
+    Raises:
+    ------
+        - `ValueError`: If the provided private key does not match the public key in the certificate.
+        - `ValueError`: If only one of `cert` or `key` is provided.
+
+    Examples:
+    --------
+    | ${is_valid}= | Is Certificate And Key Set | cert=${certificate} | key=${private_key} |
+    | ${is_valid}= | Is Certificate And Key Set | cert=None | key=None |
+
+    """
+    if cert is None and key is None:
+        return False
+
+    if cert is None or key is None:
+        raise ValueError("Both certificate and key must be provided or both must be None!")
+
+    if isinstance(key, str):
+        key = keyutils.load_private_key_from_file(key)
+
+    if isinstance(cert, str):
+        der_cert = utils.load_and_decode_pem_file(cert)
+        cert = certutils.parse_certificate(der_cert)
+
+    cert_pub_key = certutils.load_public_key_from_cert(cert)  # type: ignore
+
+    if not for_sun_hybrid:
+        if key.public_key() != cert_pub_key:
+            raise ValueError("The private key and the public key inside the certificate are not a pair!")
+
+    else:
+        if not isinstance(key, HybridPrivateKey):
+            raise ValueError("The Sun-Hybrid private key is not a `HybridPrivateKey`!")
+
+        if key.trad_key.public_key() != cert_pub_key:
+            raise ValueError("The private key and the public key inside the certificate are not a pair!")
+
+    return True
+
+
+@keyword(name="Display PKIStatusInfo")
+def display_pki_status_info(  # noqa D417 undocumented-param
+    pki_status_info: Union[PKIMessageTMP, rfc9480.PKIStatusInfo],
+    index: Strint = 0,
+) -> str:
+    """Display the PKI status information in a human-readable format.
+
+    Converts the provided or extracted PKI status information to a string representation,
+    which will be automatically logged, if called, by the Robot Framework (RF).
+    This function shows the human-readable representation of the PKI status.
+    Additionally, it will show the failInfo bits, which are otherwise not shown in the default logging.
+
+    Arguments:
+    ---------
+        - `pki_status_info`: The PKI status information to be logged.
+        - `index`: The index of the PKI status information, if a PKIMessage is provided.
+
+    Examples:
+    --------
+    | Log PKI Status Info | ${pki_status_info} |
+    | Log PKI Status Info | ${pki_status_info} |
+
+    """
+    if isinstance(pki_status_info, PKIMessageTMP):
+        pki_status_info = get_pkistatusinfo(pki_status_info, index)
+
+    data = ["PKIStatusInfo:"]
+    status = pki_status_info["status"].prettyPrint()
+    data.append(f"  Status: {status}")
+
+    if pki_status_info["failInfo"].isValue:
+        names = asn1utils.get_set_bitstring_names(pki_status_info["failInfo"])
+        data.append(f"  failInfo: {names}")
+
+    if pki_status_info["statusString"].isValue:
+        status_lines = [str(txt) for txt in pki_status_info["statusString"]]
+        data.append(f"  StatusString: {' | '.join(status_lines)}")
+
+    return "\n".join(data)

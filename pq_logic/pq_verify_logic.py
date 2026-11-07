@@ -34,7 +34,7 @@ from pq_logic.tmp_oids import (
     id_ce_deltaCertificateDescriptor,
     id_relatedCert,
 )
-from resources import certutils, compareutils, convertutils, keyutils, protectionutils, utils
+from resources import certutils, compareutils, convertutils, keyutils, protectionutils
 from resources.asn1_structures import PKIMessageTMP
 from resources.certextractutils import get_extension
 from resources.convertutils import ensure_is_pq_verify_key
@@ -779,7 +779,7 @@ def may_extract_alt_key_from_cert(  # noqa: D417 Missing argument descriptions i
 
     if rel_cert_desc is not None:
         logging.info("Validate signature with cert discovery.")
-        other_certs = utils.load_certificate_from_uri(
+        other_certs = certutils.load_certificate_from_uri(
             uri=rel_cert_desc["uniformResourceIdentifier"], load_chain=load_chain, timeout=timeout
         )
         other_cert = other_certs[0]

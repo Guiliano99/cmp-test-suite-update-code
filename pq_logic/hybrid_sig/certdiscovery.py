@@ -18,7 +18,7 @@ from robot.api.deco import keyword, not_keyword
 
 from pq_logic.hybrid_structures import OnRelatedCertificateDescriptor, RelatedCertificateDescriptor
 from pq_logic.tmp_oids import id_ad_certDiscovery, id_ad_relatedCertificateDescriptor
-from resources import certextractutils, certutils, compareutils, utils
+from resources import certextractutils, certutils, compareutils
 
 
 def _prepare_related_certificate_descriptor(
@@ -205,7 +205,7 @@ def get_cert_discovery_cert(cert: rfc9480.CMPCertificate) -> Optional[rfc9480.CM
         extension=extension,
     )
     uri = rel_dis_des["uniformResourceIdentifier"].prettyPrint()
-    other_cert = utils.load_certificate_from_uri(uri=uri, load_chain=False)[0]
+    other_cert = certutils.load_certificate_from_uri(uri=uri, load_chain=False)[0]
     return other_cert
 
 
@@ -283,7 +283,7 @@ def validate_cert_discovery_cert(  # noqa: D417 Missing argument descriptions in
         primary_cert["tbsCertificate"]["extensions"]
     )
 
-    other_cert = utils.load_certificate_from_uri(
+    other_cert = certutils.load_certificate_from_uri(
         uri=rel_cert_desc["uniformResourceIdentifier"], timeout=fetch_timeout, load_chain=False
     )[0]
 

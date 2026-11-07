@@ -39,7 +39,7 @@ from pkilint import loader, report
 from pkilint.pkix import certificate, extension, name
 from pkilint.validation import ValidationFindingSeverity
 from pyasn1.codec.der import decoder, encoder
-from pyasn1.type import univ
+from pyasn1.type import char, univ
 from pyasn1_alt_modules import rfc5280, rfc6402, rfc9480
 from robot.api.deco import keyword, not_keyword
 
@@ -2487,3 +2487,47 @@ def validate_ca_cross_signed_cert(  # noqa: D417 undocumented-param
         if oid not in cross_cert["tbsCertificate"]["extensions"]:
             name_oid = may_return_oid_to_name(oid)
             raise ValueError(f"The cross-signed certificate does not have the extension {name_oid}.")
+
+
+def load_certificate_from_uri(  # noqa: D417 Missing argument description in the docstring
+    uri: Union[str, char.IA5String], load_chain: bool = False, timeout: Union[str, int] = 20
+) -> List[rfc9480.CMPCertificate]:
+    """Get the related certificate using the provided URI.
+
+    Arguments:
+    ---------
+       - `uri`: The URI to load the certificate from.
+       - `load_chain`: Whether to load a chain or a single certificate. Defaults to `False`.
+       - `timeout`: The timeout for the request. Defaults to `20` seconds.
+
+    Returns:
+    -------
+       - The loaded certificate(s) as a list.
+
+    Raises:
+    ------
+       - `ValueError`: If the fetching fails.
+       - `ValueError`: If the decoding of the fetching certificate had a remainder.
+
+    Examples:
+    --------
+    | ${certs}= | Load Certificate From URI | uri=${uri} | load_chain=False |
+    | ${certs}= | Load Certificate From URI | uri=${uri} | load_chain=True | timeout=20 |
+
+    """
+    content = utils.fetch_value_from_location(str(uri), timeout)
+
+    if not load_chain:
+        cert, rest = decoder.decode(content, rfc9480.CMPCertificate())
+        if rest:
+            raise ValueError("The decoding of the fetching certificate had a remainder.")
+
+        return [cert]
+
+    if not content:
+        raise ValueError("No content was fetched from the provided URI.")
+
+    certs = content.split(b"-----END CERTIFICATE-----\n")
+    certs = [cert for cert in certs if cert.strip()]
+    cert = [parse_certificate(utils.decode_pem_string(cert)) for cert in certs]
+    return cert

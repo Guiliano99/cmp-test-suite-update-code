@@ -12,7 +12,7 @@ from mock_ca.client import build_example_rsa_mac_request, send_pkimessage_to_moc
 from pyasn1.codec.der import encoder
 
 from resources.cmputils import get_pkistatusinfo
-from resources.utils import display_pki_status_info
+from resources.cmputils import display_pki_status_info
 from unit_tests.utils_for_test import wait_for_port
 
 _PREFIXES = ["/", "/issuing/", "/.well-known/cmp/p/"]
