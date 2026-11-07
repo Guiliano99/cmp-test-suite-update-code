@@ -1746,6 +1746,21 @@ def _register_routes(flask_app: Flask) -> None:
             )
 
 
+def create_app(ca_handler: CAHandler) -> Flask:
+    """Bind the routes to the given handler and return the Flask app.
+
+    :param ca_handler: The handler that serves the requests.
+    :return: The registered app, also usable in-process with `app.test_client()`.
+    """
+    # ponytail: the routes live on the module-level app, so one call per process;
+    # move them to a Blueprint if a fresh app per call is ever needed.
+    global handler, state  # pylint: disable=global-statement
+    handler = ca_handler
+    state = ca_handler.state
+    _register_routes(app)
+    return app
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Mock CA server")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="The host address, is set to 0.0.0.0 for docker.")
@@ -1766,7 +1781,7 @@ if __name__ == "__main__":
         port=args.port,
         allow_same_key_cert_req=args.allow_same_key,
     )
-    _register_routes(app)
+    create_app(handler)
 
     root_cert_der = asn1utils.encode_to_der(handler.ca_cert)
     print(f"Root CA certificate (Base64 DER): {base64.b64encode(root_cert_der).decode('ascii')}") # noqa: T201

@@ -4,6 +4,7 @@
 
 import os
 import subprocess
+import tempfile
 import unittest
 
 from cryptography import x509
@@ -22,16 +23,17 @@ class TestLoadAndWriteCert(unittest.TestCase):
         and be readable by the OpenSSL command line tool.
         """
         cert_valid, _ = build_certificate(key_usage="digitalSignature")
-        os.makedirs("data/unittest", exist_ok=True)
-        write_cmp_certificate_to_pem(cert_valid, path="data/unittest/test_write.pem")
-        der_data = load_and_decode_pem_file("data/unittest/test_write.pem")
+        # Not in data/unittest: other tests load every file of that directory, also while this test runs.
+        with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as tmp:
+            path = tmp.name
+        self.addCleanup(os.remove, path)
+        write_cmp_certificate_to_pem(cert_valid, path=path)
+        der_data = load_and_decode_pem_file(path)
         loaded_cert = parse_certificate(der_data)
         self.assertIsInstance(loaded_cert, rfc9480.CMPCertificate)
         validate_key_usage(cert=loaded_cert, strictness=3, key_usages="digitalSignature")
-        command = "openssl x509 -in data/unittest/test_write.pem -text -noout".split(" ")
-        result = subprocess.run(command, capture_output=True, text=True)
+        result = subprocess.run(["openssl", "x509", "-in", path, "-text", "-noout"], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
-        os.remove("data/unittest/test_write.pem")
 
     def test_load_os_truststore(self):
         """
