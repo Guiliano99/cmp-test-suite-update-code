@@ -8,7 +8,9 @@ import base64
 import logging
 import math
 import os
+import random
 import re
+import string
 import textwrap
 from base64 import b64decode, b64encode
 from collections import Counter
@@ -948,3 +950,24 @@ def get_password_in_size(  # noqa D417 undocumented-param
         return str_to_bytes(password), protection
 
     return str_to_bytes(expand_string_to_length(password, size)), protection
+
+
+@not_keyword
+def modify_random_str(data: str, index: Optional[int] = None) -> str:  # type: ignore[reportReturnType]
+    """Modify a random character with a digit or ascii letter (upper and lower).
+
+    :param data: String to change a random character.
+    :param index: Optional index to change the character.
+    :return: The changed string.
+    :raises ValueError: If the character could not be changed, after 100 attempts.
+    """
+    chars = list(data)
+    options = list(string.ascii_letters) + list(string.digits)
+    random_index: int = index or random.randint(0, len(data) - 1)
+    for _ in range(100):
+        option = random.choice(options)
+        if option != chars[random_index]:
+            chars[random_index] = option
+            return "".join(chars)
+
+    raise ValueError("Could not change the character.")

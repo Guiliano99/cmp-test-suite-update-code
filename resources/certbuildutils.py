@@ -24,7 +24,6 @@ from resources import (
     asn1utils,
     certextractutils,
     certutils,
-    cmputils,
     compareutils,
     convertutils,
     copyasn1utils,
@@ -1205,7 +1204,7 @@ def modify_common_name_cert(  # noqa D417 undocumented-param
         utils.log_certificates([cert])
         raise ValueError("The certificate did not contain a value in the `issuer` field.")
 
-    issuer_name["CN"] = cmputils.modify_random_str(issuer_name["CN"], index=-1)
+    issuer_name["CN"] = utils.modify_random_str(issuer_name["CN"], index=-1)
     data = ""
     for x, y in issuer_name.items():
         data += x + "=" + y + ","

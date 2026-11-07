@@ -8,8 +8,6 @@
 import glob
 import logging
 import os
-import random
-import string
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Sequence, Tuple, Union
@@ -4148,7 +4146,7 @@ def _prepare_generalinfo(
 
         if negative_value:
             # MUST be present in the same size as either `GenMsgContent` or `CertReqMsg`.
-            value.append(char.UTF8String(modify_random_str(cert_profile)))
+            value.append(char.UTF8String(utils.modify_random_str(cert_profile)))
 
         value.append(cert_profile)
         cert_profile_obj["infoType"] = rfc9480.id_it_certProfile
@@ -4406,7 +4404,7 @@ def _patch_senderkid_for_mac(sender: rfc9480.GeneralName, negative: bool) -> byt
         raise ValueError("The 'directoryName' must contain a common name (CN) for MAC-based protection.")
 
     if negative:
-        common_name = modify_random_str(common_name)  # type: ignore
+        common_name = utils.modify_random_str(common_name)  # type: ignore
 
     return common_name.encode("utf-8")  # type: ignore
 
@@ -5681,27 +5679,6 @@ def build_kem_based_mac_protected_message(  # noqa: D417 Missing argument descri
         pki_message=request,
         shared_secret=shared_secret,
     )
-
-
-@not_keyword
-def modify_random_str(data: str, index: Optional[int] = None) -> str:  # type: ignore[reportReturnType]
-    """Modify a random character with a digit or ascii letter (upper and lower).
-
-    :param data: String to change a random character.
-    :param index: Optional index to change the character.
-    :return: The changed string.
-    :raises ValueError: If the character could not be changed, after 100 attempts.
-    """
-    chars = list(data)
-    options = list(string.ascii_letters) + list(string.digits)
-    random_index: int = index or random.randint(0, len(data) - 1)
-    for _ in range(100):
-        option = random.choice(options)
-        if option != chars[random_index]:
-            chars[random_index] = option
-            return "".join(chars)
-
-    raise ValueError("Could not change the character.")
 
 
 @keyword(name="Add Certs To PKIMessage")
