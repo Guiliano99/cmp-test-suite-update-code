@@ -58,7 +58,8 @@ _ERROR_TABLE = [
     (BadKeyUsage, "notAuthorized", 23, "error", "ip", "cp", "rp", "error"),
     # BUG-15: badDataFormat is bit 5. The client gets bit 5.
     (BadSigAlgID, "badDataFormat", 0, "error", "ip", "cp", "rp", "error"),
-    (BodyRelevantError, "badCertTemplate", 24, "ip", "ip", "cp", "rp", "error"),
+    # BUG-15: inherits bit 26 from the keyutils_py base (systemFailure is 25); every instance sets its failinfo.
+    (BodyRelevantError, "badCertTemplate", 26, "ip", "ip", "cp", "rp", "error"),
     (InvalidSignature, "badMessageCheck", None, "error", "error", "error", "rp", "error"),
     # The revocation handler reports every ValueError as badMessageCheck.
     (ValueError, "systemFailure", None, "error", "error", "error", ("rp", "badMessageCheck"), "error"),

@@ -54,20 +54,6 @@ class UnknownOID(CMPTestSuiteError):
         super().__init__(self.message)
 
 
-class AlgorithmProfileError(CMPTestSuiteError):
-    """Raised when an algorithm used which is not in RFC9483 or violate the expected algorithm for LwCMP."""
-
-    failinfo = "badAlg"
-
-    def __init__(self, message: str):
-        """Initialize the exception with the message.
-
-        :param message: The message to display.
-        """
-        self.message = message
-        super().__init__(message)
-
-
 class InvalidAltSignature(InvalidSignature):
     """Raised when the alternative signature is invalid."""
 
@@ -261,8 +247,6 @@ class BadKeyUsage(NotAuthorized):
 class BodyRelevantError(CMPTestSuiteError):
     """Raised when a `PKIBody` relevant error is raised."""
 
-    failinfo = "badRelevantError"
-    bit_num = 24
     pki_message: PKIMessageTMP
 
     def __init__(
