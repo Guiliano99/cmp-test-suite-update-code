@@ -663,11 +663,11 @@ Exchange PKIMessage
     ...                | ${response_pki_message}= | Exchange PKIMessage | ${request_pki_message} | add_pkibody_prefix=${False} |
     ...
     [Tags]    exchange    http
-    [Arguments]    ${request_pki_message}    ${url}=${CA_CMP_URL}    ${pkibody_type}=${None}    ${add_pkibody_prefix}=${APPEND_PKIBODY_URL_SUFFIX}  # robocop: off=ARG01
+    [Arguments]    ${request_pki_message}    ${url}=${CA_CMP_URL}    ${pkibody_type}=${None}    ${add_pkibody_prefix}=${APPEND_PKIBODY_URL_SUFFIX}
     VAR    ${effective_url}=    ${url}
     IF    '${pkibody_type}' != '${None}'
         VAR    ${effective_url}=    ${url}/${pkibody_type}
-    ELSE IF    ${APPEND_PKIBODY_URL_SUFFIX}
+    ELSE IF    ${add_pkibody_prefix}
         ${body_name}=    Get Cmp Message Type    ${request_pki_message}
         VAR    ${effective_url}=    ${url}/${body_name}
     END
