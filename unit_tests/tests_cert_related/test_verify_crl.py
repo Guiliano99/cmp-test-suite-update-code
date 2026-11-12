@@ -2,7 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import os
 import subprocess
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -15,6 +17,7 @@ from resources.certutils import (
     parse_certificate,
     verify_openssl_crl,
 )
+from resources.exceptions import BadConfig
 from resources.utils import load_and_decode_pem_file
 
 from unit_tests.utils_for_test import compare_pyasn1_objects
@@ -83,6 +86,17 @@ class TestCRLSignatureVerification(unittest.TestCase):
 
         with patch.object(certutils.subprocess, "run", side_effect=_other_caller_first):
             verify_openssl_crl(build_crl_chain_from_list(self.crl_obj, certs=certs))
+
+    def test_missing_openssl_binary_is_a_config_error(self):
+        """
+        GIVEN a CRL with a valid signature and a `PATH` without an `openssl` binary.
+        WHEN the CRL is verified using OpenSSL.
+        THEN `BadConfig` is raised, not the verdict `ValueError`.
+        """
+        crl_chain = build_crl_chain_from_list(self.crl_obj, certs=load_certificates_from_dir("data/unittest"))
+        with tempfile.TemporaryDirectory() as empty_dir, patch.dict(os.environ, {"PATH": empty_dir}):
+            with self.assertRaises(BadConfig):
+                verify_openssl_crl(crl_chain)
 
 
 if __name__ == "__main__":

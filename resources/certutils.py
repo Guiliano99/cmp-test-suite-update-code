@@ -58,6 +58,7 @@ from resources import (
 from resources.convertutils import ensure_is_kem_pub_key, ensure_is_verify_key
 from resources.exceptions import (
     BadAsn1Data,
+    BadConfig,
     BadKeyUsage,
     BadPOP,
     BadSigAlgID,
@@ -735,6 +736,7 @@ def _verify_certificate_chain(
 
     :raises SignerNotTrusted: If `cert_chain` is empty, or OpenSSL returns a non-zero exit code,
     indicating a validation failure or if the verification process exceeds the specified timeout.
+    :raises BadConfig: If the `openssl` binary cannot be executed.
     """
     if len(cert_chain) == 0:
         raise ValueError("Got a empty chain to validate!")
@@ -758,6 +760,8 @@ def _verify_certificate_chain(
     except subprocess.TimeoutExpired as e:
         logging.error("Reached timeout of %d seconds during certificate validation.", timeout)
         raise SignerNotTrusted("Validation of the certificate failed! Timeout!") from e
+    except OSError as err:
+        raise BadConfig(f"Could not run the `openssl` binary: {err}") from err
     except Exception as err:
         logging.error("An unexpected error occurred during certificate validation: %s", err)
         raise SignerNotTrusted(f"Validation of the certificate failed! Error: {err}") from err
@@ -942,6 +946,7 @@ def verify_cert_chain_openssl(  # noqa D417 undocumented-param
     ------
         - `SignerNotTrusted`: If the certificate validation fails, according to the OpenSSL `verify` command.
         - `SignerNotTrusted`: If the verification took to long.
+        - `BadConfig`: If the `openssl` binary cannot be executed.
 
     Examples:
     --------
@@ -1202,6 +1207,7 @@ def verify_openssl_crl(crl_chain: List, timeout: int = 60):
     :param timeout: The timeout in seconds for the verification.Defaults to 60 seconds.
     :return: True if the CRL is verified, False otherwise.
     :raises ValueError: If the CRL is invalid or verification fails.
+    :raises BadConfig: If the `openssl` binary cannot be executed.
     """
     if not isinstance(crl_chain[0], rfc5280.CertificateList):
         raise ValueError("The first element of the CRL chain must be a CertificateList object.")
@@ -1228,6 +1234,8 @@ def verify_openssl_crl(crl_chain: List, timeout: int = 60):
         return
     except subprocess.TimeoutExpired:
         logging.warning("Reached time out of for CRL validation. Seconds: %d", timeout)
+    except OSError as err:
+        raise BadConfig(f"Could not run the `openssl` binary: {err}") from err
     except Exception as err:
         logging.warning(err)
     finally:

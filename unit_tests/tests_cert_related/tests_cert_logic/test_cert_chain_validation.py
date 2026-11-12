@@ -2,7 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import os
 import subprocess
+import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from typing import List
@@ -14,6 +16,7 @@ from pyasn1.codec.der import encoder
 from pyasn1_alt_modules import rfc9480
 from resources import certutils
 from resources.certutils import verify_cert_chain_openssl
+from resources.exceptions import BadConfig
 from resources.keyutils import load_private_key_from_file
 
 from unit_tests.utils_for_test import load_or_generate_cert_chain
@@ -92,3 +95,13 @@ class TestVerifyCertChainOpenssl(unittest.TestCase):
             patch.object(certutils.subprocess, "run", side_effect=_other_caller_first),
         ):
             verify_cert_chain_openssl(chain, crl_check=True)
+
+    def test_missing_openssl_binary_is_a_config_error(self):
+        """
+        GIVEN a valid certificate chain (Intermediate, Root) and a `PATH` without an `openssl` binary,
+        WHEN the chain is validated using OpenSSL,
+        THEN `BadConfig` is raised, not the trust verdict `SignerNotTrusted`.
+        """
+        with tempfile.TemporaryDirectory() as empty_dir, patch.dict(os.environ, {"PATH": empty_dir}):
+            with self.assertRaises(BadConfig):
+                verify_cert_chain_openssl([self.ca1_cert, self.root_cert])
