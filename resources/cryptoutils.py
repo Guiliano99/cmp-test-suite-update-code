@@ -1532,10 +1532,10 @@ def verify_signature_with_alg_id(  # noqa: D417 Missing argument descriptions in
 
 @not_keyword
 def get_aes_keywrap_length(alg_name: str) -> int:
-    """Retrieve the AES key length in bits for the specified key wrap algorithm.
+    """Retrieve the AES key length in bytes for the specified key wrap algorithm.
 
     :param alg_name: The name of the key wrap algorithm (e.g., "aes128-wrap", "aes192-wrap", "aes256-wrap").
-    :return: The key length in bits corresponding to the specified algorithm.
+    :return: The key length in bytes corresponding to the specified algorithm.
     :raises ValueError: If the algorithm name is not recognized.
     """
     if alg_name not in KEY_WRAP_NAME_2_OID:
@@ -1573,7 +1573,7 @@ def prepare_ecc_cms_shared_info(
     ecc_cms_info["keyInfo"]["algorithm"] = key_wrap_oid
 
     if supp_pub_info is None:
-        supp_pub_info = get_aes_keywrap_length(KEY_WRAP_OID_2_NAME[key_wrap_oid])
+        supp_pub_info = get_aes_keywrap_length(KEY_WRAP_OID_2_NAME[key_wrap_oid]) * 8
 
     if ukm is not None:
         ecc_cms_info["entityUInfo"] = univ.OctetString(ukm).subtype(
