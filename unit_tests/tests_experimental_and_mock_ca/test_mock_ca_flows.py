@@ -244,7 +244,10 @@ class TestMockCAFlows(unittest.TestCase):
         WHEN it is sent to a CMP route.
         THEN the response is HTTP 400 with an error message and `badDataFormat`.
         """
-        for path in ["/issuing", "/ir", "/.well-known/cmp/p/ir", "/issuing/rr"]:
+        paths = ["/issuing", "/ir", "/.well-known/cmp/p/ir", "/issuing/rr"]
+        paths += ["/chameleon", "/sun-hybrid", "/multi-auth", "/cert-discovery", "/related-cert"]
+        paths += ["/catalyst-sig", "/catalyst-issuing"]
+        for path in paths:
             with self.subTest(path=path):
                 response = self.client.post(path, data=b"not a PKIMessage")
                 self.assertEqual(response.status_code, 400)
@@ -252,14 +255,6 @@ class TestMockCAFlows(unittest.TestCase):
                 message = parse_pkimessage(response.data)
                 self.assertEqual(message["body"].getName(), "error")
                 self.assertEqual(get_set_bitstring_names(get_pkistatusinfo(message)["failInfo"]), "badDataFormat")
-
-    def test_undecodable_body_without_error_handler(self):
-        """
-        GIVEN a body which is not a PKIMessage.
-        WHEN it is sent to a route which does not catch the parse error.
-        THEN the response is HTTP 500, which is today's behaviour (BUG-15: no Flask errorhandler).
-        """
-        self.assertEqual(self.client.post("/chameleon", data=b"not a PKIMessage").status_code, 500)
 
     def test_body_not_allowed_on_route(self):
         """

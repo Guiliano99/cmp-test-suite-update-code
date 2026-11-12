@@ -1591,8 +1591,9 @@ def handle_chameleon():
 
     :return: The DER-encoded response.
     """
-    data = request.get_data()
-    pki_message = parse_pkimessage(data)
+    pki_message, can_be_parsed = _check_pkimessage_can_be_parsed(request.get_data())
+    if not can_be_parsed:
+        return _build_response(pki_message, status=400)
     pki_message = handler.process_chameleon(
         pki_message=pki_message,
     )
@@ -1605,8 +1606,9 @@ def handle_sun_hybrid():
 
     :return: The DER-encoded response.
     """
-    data = request.get_data()
-    pki_message = parse_pkimessage(data)
+    pki_message, can_be_parsed = _check_pkimessage_can_be_parsed(request.get_data())
+    if not can_be_parsed:
+        return _build_response(pki_message, status=400)
     response = handler.process_sun_hybrid(
         pki_message=pki_message,
     )
@@ -1619,9 +1621,9 @@ def handle_multi_auth():
 
     :return: The DER-encoded response.
     """
-    data = request.get_data()
-
-    pki_message = parse_pkimessage(data)
+    pki_message, can_be_parsed = _check_pkimessage_can_be_parsed(request.get_data())
+    if not can_be_parsed:
+        return _build_response(pki_message, status=400)
     pki_message = handler.process_multi_auth(
         pki_message=pki_message,
     )
@@ -1634,8 +1636,9 @@ def handle_cert_discovery():
 
     :return: The DER-encoded response.
     """
-    data = request.get_data()
-    pki_message = parse_pkimessage(data)
+    pki_message, can_be_parsed = _check_pkimessage_can_be_parsed(request.get_data())
+    if not can_be_parsed:
+        return _build_response(pki_message, status=400)
     pki_message = handler.process_cert_discovery(pki_message)
     return _build_response(pki_message)
 
@@ -1646,8 +1649,9 @@ def handle_related_cert():
 
     :return: The DER-encoded response.
     """
-    data = request.get_data()
-    pki_message = parse_pkimessage(data)
+    pki_message, can_be_parsed = _check_pkimessage_can_be_parsed(request.get_data())
+    if not can_be_parsed:
+        return _build_response(pki_message, status=400)
     pki_message = handler.process_related_cert(pki_message)
     return _build_response(pki_message)
 
@@ -1658,8 +1662,9 @@ def handle_catalyst_sig():
 
     :return: The DER-encoded response.
     """
-    data = request.get_data()
-    pki_message = parse_pkimessage(data)
+    pki_message, can_be_parsed = _check_pkimessage_can_be_parsed(request.get_data())
+    if not can_be_parsed:
+        return _build_response(pki_message, status=400)
     pki_message = handler.process_catalyst_sig(pki_message)
     return _build_response(pki_message)
 
@@ -1670,8 +1675,9 @@ def handle_catalyst_issuing():
 
     :return: The DER-encoded response.
     """
-    data = request.get_data()
-    pki_message = parse_pkimessage(data)
+    pki_message, can_be_parsed = _check_pkimessage_can_be_parsed(request.get_data())
+    if not can_be_parsed:
+        return _build_response(pki_message, status=400)
     pki_message = handler.process_catalyst_issuing(pki_message)
     return _build_response(pki_message)
 
