@@ -1275,6 +1275,8 @@ class CertificateDB:
             updated_certs=self.updated_certs,
             crl_number=self._crl_number,
         )
+        # The copy increments only its own counter; RFC 5280 Section 5.2.3 forbids reusing a CRL number.
+        self._crl_number += 1
         return rev_db.get_crl_response(
             sign_key=ca_key,
             ca_cert=ca_cert,

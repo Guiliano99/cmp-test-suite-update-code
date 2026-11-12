@@ -4,7 +4,9 @@
 
 import unittest
 
+from cryptography import x509
 from mock_ca.mock_fun import CertDBEntry, CertificateDB, CertStateEnum
+from mock_ca.operation_dbs import load_ca_cert_and_key
 
 from resources.asn1utils import encode_to_der
 from resources.certutils import cert_in_list, parse_certificate
@@ -26,6 +28,7 @@ class TestCertificateDB(unittest.TestCase):
 
         cls.cert1_digest = compute_hash("sha1", encode_to_der(cls.example_cert))
         cls.updated_cert_digest = compute_hash("sha1", encode_to_der(cls.example_cert2))
+        cls.ca_cert, cls.ca_key = load_ca_cert_and_key()
 
     def test_add_cert(self):
         """
@@ -144,3 +147,19 @@ class TestCertificateDB(unittest.TestCase):
         )
         self.assertIsNotNone(db.get_cert(self.example_cert))
         self.assertIsNone(db.get_cert(self.example_cert2))
+
+    def test_crl_number_increases(self):
+        """
+        GIVEN an empty CertificateDB and the Mock CA test root.
+        WHEN the current CRL is asked twice.
+        THEN the CRL numbers are 1 and 2 (RFC 5280 Section 5.2.3: two CRLs of one scope MUST NOT have the same
+        CRL number).
+        """
+        db = CertificateDB()
+        crl_numbers = [
+            db.get_current_crl(ca_key=self.ca_key, ca_cert=self.ca_cert)
+            .extensions.get_extension_for_class(x509.CRLNumber)
+            .value.crl_number
+            for _ in range(2)
+        ]
+        self.assertEqual(crl_numbers, [1, 2])
