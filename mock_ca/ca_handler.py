@@ -900,12 +900,16 @@ class CAHandler:
         """Check the request for a compromised key.
 
         :param pki_message: The PKIMessage request.
-        :raises BadCertTemplate: If the certificate template is invalid.
+        :raises BodyRelevantError: If the request contains the key of a revoked certificate or a key which
+        cannot be loaded (failinfo `badCertTemplate`).
         """
         try:
-            result = self.state.cert_state_db.check_request_for_compromised_key(pki_message)
-            if result:
-                raise BadCertTemplate("The certificate template contained a compromised key.")
+            if self.state.check_request_for_compromised_key(pki_message):
+                raise BodyRelevantError(
+                    "The certificate template contained a compromised key.",
+                    pki_message=pki_message,
+                    failinfo="badCertTemplate",
+                )
         except (InvalidKeyData, BadAsn1Data, BadAlg) as e:
             raise BodyRelevantError(
                 e.message,
@@ -1408,13 +1412,8 @@ class CAHandler:
         return response.public_bytes(encoding=Encoding.DER)
 
     def get_current_crl(self) -> bytes:
-        """Process the CRL request and return the response."""
-        response = self.state.cert_state_db.get_crl_response(
-            ca_cert=self.ca_cert,
-            sign_key=self.ca_key,
-            hash_alg="sha256",
-        )
-        return response.public_bytes(encoding=Encoding.DER)
+        """Process the CRL request and return the DER-encoded CRL of the certificate database."""
+        return self.rev_handler.get_current_crl(ca_key=self.ca_key, ca_cert=self.ca_cert)
 
     def get_details(self, options: Optional[str]) -> Any:
         """Get the details of a state object.

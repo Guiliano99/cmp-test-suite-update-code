@@ -1330,7 +1330,6 @@ class MockCAState:
 
     """
 
-    cert_state_db: CertRevStateDB = field(default_factory=CertRevStateDB)
     currently_used_ids: Set[bytes] = field(default_factory=set)
     # stores the transaction id mapped to the shared secret.
     kem_mac_based: KEMSharedSecretList = field(default_factory=KEMSharedSecretList)
@@ -1460,8 +1459,11 @@ class MockCAState:
             )
 
     def check_request_for_compromised_key(self, request_msg: PKIMessageTMP) -> bool:
-        """Check the request for a compromised key."""
-        return self.cert_state_db.check_request_for_compromised_key(request_msg)
+        """Check whether the request contains the public key of a revoked certificate."""
+        rev_db = CertRevStateDB.build(
+            hash_alg=self.certificate_db.hash_alg, revoked_certs=self.certificate_db.revoked_certs
+        )
+        return rev_db.check_request_for_compromised_key(request_msg)
 
     def add_may_update_cert(
         self, old_cert: rfc9480.CMPCertificate, update_cert: rfc9480.CMPCertificate, was_confirmed: bool

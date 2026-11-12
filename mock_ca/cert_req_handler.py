@@ -430,7 +430,8 @@ class CertReqHandler:
         :return: The response `PKIMessage`.
         """
         logging.debug("CertReqHandler: Processing P10CR message")
-        self.state.cert_state_db.check_request_for_compromised_key(pki_message)
+        if self.state.check_request_for_compromised_key(pki_message):
+            raise BadCertTemplate("The certificate template contained a compromised key.")
 
         for_mac = self._get_for_mac(request=pki_message)
         logging.info("Processing P10CR message")

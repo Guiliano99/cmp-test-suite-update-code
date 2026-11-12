@@ -46,6 +46,7 @@ from resources.protectionutils import protect_pkimessage, verify_pkimessage_prot
 from resources.utils import load_and_decode_pem_file
 
 _SENDER = "CN=Mock CA Flow Tester"
+_OTHER_SUBJECT = "CN=Mock CA Flow Tester 2"
 
 # Today's behaviour, right or wrong. Columns: the exception, the failinfo the client gets (set by name, not by
 # `bit_num`), the `bit_num` the class declares, then the response body when a call inside the stage raises it, for
@@ -92,6 +93,20 @@ class TestMockCAFlows(unittest.TestCase):
         self.assertEqual(response["body"].getName(), body_name, response["body"].prettyPrint())
         self.assertEqual(str(get_pkistatusinfo(response)["status"]), "accepted", display_pki_status_info(response))
 
+    def _assert_rejected(self, response, body_name: str, failinfo: str) -> None:
+        """Assert the body name of a response, that its status is `rejection` and its exact failinfo."""
+        status_info = get_pkistatusinfo(response)
+        self.assertEqual(response["body"].getName(), body_name, response["body"].prettyPrint())
+        self.assertEqual(str(status_info["status"]), "rejection", display_pki_status_info(response))
+        self.assertEqual(get_set_bitstring_names(status_info["failInfo"]), failinfo)
+
+    def _get_crl(self) -> x509.CertificateRevocationList:
+        """Fetch and parse the CRL from the `/crl` route."""
+        crl_response = self.client.get("/crl")
+        self.assertEqual(crl_response.status_code, 200)
+        self.assertEqual(crl_response.content_type, "application/pkix-crl")
+        return x509.load_der_x509_crl(crl_response.data)
+
     def _issue_cert(self, implicit_confirm: bool = True):
         """Issue a certificate over the `/issuing` route and return the key, the response and the certificate."""
         key = generate_key("ecc")
@@ -119,9 +134,9 @@ class TestMockCAFlows(unittest.TestCase):
         return _mac_protect(cert_conf)
 
     @staticmethod
-    def _build_rr(key, cert):
+    def _build_rr(key, cert, reason: str = "keyCompromise"):
         """Build a revocation request signed with the certificate to revoke."""
-        rr = build_cmp_revoke_request(cert=cert, reason="keyCompromise")
+        rr = build_cmp_revoke_request(cert=cert, reason=reason)
         return protect_pkimessage(rr, "signature", private_key=key, cert=cert, certs_dir="data/unittest/")
 
     @staticmethod
@@ -136,7 +151,8 @@ class TestMockCAFlows(unittest.TestCase):
         """
         GIVEN a certificate issued with an ir and confirmed with a certConf.
         WHEN it is revoked with an rr and the CRL and OCSP routes are asked afterwards.
-        THEN every message is accepted, the CRL parses and OCSP answers successfully with `revoked`.
+        THEN every message is accepted, the CRL lists the serial number and OCSP answers successfully with
+        `revoked`.
         """
         key, response, cert = self._issue_cert(implicit_confirm=False)
 
@@ -145,11 +161,8 @@ class TestMockCAFlows(unittest.TestCase):
 
         self._assert_accepted(self._post("/rr", self._build_rr(key, cert)), "rp")
 
-        # BUG-23: the CRL is empty, so only its availability is checked here.
-        crl_response = self.client.get("/crl")
-        self.assertEqual(crl_response.status_code, 200)
-        self.assertEqual(crl_response.content_type, "application/pkix-crl")
-        x509.load_der_x509_crl(crl_response.data)
+        serial_number = int(cert["tbsCertificate"]["serialNumber"])
+        self.assertIsNotNone(self._get_crl().get_revoked_certificate_by_serial_number(serial_number))
 
         ocsp_request, _ = create_ocsp_request(cert, self.ca_handler.ca_cert)
         ocsp_response = self.client.post("/ocsp", data=ocsp_request.public_bytes(Encoding.DER))
@@ -158,6 +171,71 @@ class TestMockCAFlows(unittest.TestCase):
         parsed_ocsp = ocsp.load_der_ocsp_response(ocsp_response.data)
         self.assertEqual(parsed_ocsp.response_status, ocsp.OCSPResponseStatus.SUCCESSFUL)
         self.assertEqual(parsed_ocsp.certificate_status, ocsp.OCSPCertStatus.REVOKED)
+
+    def test_revived_cert_leaves_the_crl(self):
+        """
+        GIVEN a certificate revoked with an rr.
+        WHEN it is revived with an rr for `removeFromCRL`.
+        THEN the CRL lists it after the revocation and no longer after the revival, and OCSP answers `good`.
+        """
+        key, _, cert = self._issue_cert()
+        serial_number = int(cert["tbsCertificate"]["serialNumber"])
+
+        self._assert_accepted(self._post("/rr", self._build_rr(key, cert)), "rp")
+        self.assertIsNotNone(self._get_crl().get_revoked_certificate_by_serial_number(serial_number))
+
+        self._assert_accepted(self._post("/rr", self._build_rr(key, cert, reason="removeFromCRL")), "rp")
+        self.assertIsNone(self._get_crl().get_revoked_certificate_by_serial_number(serial_number))
+
+        ocsp_request, _ = create_ocsp_request(cert, self.ca_handler.ca_cert)
+        ocsp_response = self.client.post("/ocsp", data=ocsp_request.public_bytes(Encoding.DER))
+        self.assertEqual(ocsp_response.status_code, 200)
+        self.assertEqual(ocsp.load_der_ocsp_response(ocsp_response.data).certificate_status, ocsp.OCSPCertStatus.GOOD)
+
+    def test_crl_route_and_genp_share_the_crl_number(self):
+        """
+        GIVEN the Mock CA.
+        WHEN a CRL is fetched from `/crl`, then from the source of the genp currentCRL
+        (`RevocationHandler.get_current_crl`), then from `/crl` again.
+        THEN each CRL number is one more than the one before (RFC 5280 Section 5.2.3).
+        """
+
+        def crl_number(crl: x509.CertificateRevocationList) -> int:
+            return crl.extensions.get_extension_for_class(x509.CRLNumber).value.crl_number
+
+        first = crl_number(self._get_crl())
+        genp_crl = self.ca_handler.rev_handler.get_current_crl(self.ca_handler.ca_key, self.ca_handler.ca_cert)
+        genp = crl_number(x509.load_der_x509_crl(genp_crl))
+        last = crl_number(self._get_crl())
+        self.assertEqual([genp, last], [first + 1, first + 2])
+
+    def test_compromised_key_is_rejected_for_another_subject(self):
+        """
+        GIVEN a key whose certificate was revoked with an rr for `keyCompromise`.
+        WHEN an ir for the same public key and another subject is sent to `/issuing`.
+        THEN the response is an ip with status `rejection` and `badCertTemplate`.
+        """
+        key, _, cert = self._issue_cert()
+        self._assert_accepted(self._post("/rr", self._build_rr(key, cert)), "rp")
+
+        ir = build_ir_from_key(key, common_name=_OTHER_SUBJECT, sender=_SENDER, implicit_confirm=True, for_mac=True)
+        self._assert_rejected(self._post("/issuing", _mac_protect(ir)), "ip", "badCertTemplate")
+
+    def test_cert_req_handler_rejects_p10cr_with_compromised_key(self):
+        """
+        GIVEN a key whose certificate was revoked with an rr for `keyCompromise`.
+        WHEN a p10cr for that key and another subject goes straight to the certificate request handler, as the
+        nested handler sends its inner requests.
+        THEN the response is a cp with status `rejection` and `badCertTemplate`.
+        """
+        key, _, cert = self._issue_cert()
+        self._assert_accepted(self._post("/rr", self._build_rr(key, cert)), "rp")
+
+        p10cr = build_p10cr_from_key(
+            key, common_name=_OTHER_SUBJECT, sender=_SENDER, implicit_confirm=True, for_mac=True
+        )
+        response = self.ca_handler.cert_req_handler.process_cert_request(_mac_protect(p10cr))
+        self._assert_rejected(response, "cp", "badCertTemplate")
 
     def test_rr_with_dh_based_mac(self):
         """
@@ -224,15 +302,16 @@ class TestMockCAFlows(unittest.TestCase):
 
     def test_ccr_with_compromised_key_is_rejected(self):
         """
-        GIVEN a key registered as compromised and a ccr for that key, signed by a trusted CA.
+        GIVEN a revoked certificate and a ccr for its key, signed by a trusted CA.
         WHEN the ccr is sent to the `/issuing` route.
-        THEN the response is an error with `badCertTemplate`, as for an ir with that key.
+        THEN the response is a ccp with status `rejection` and `badCertTemplate`, as for an ir with that key.
 
-        This registers `data/keys/private-key-rsa.pem` as compromised on the class-level `CAHandler`, which every
+        This revokes the certificate of `data/keys/private-key-rsa.pem` on the class-level `CAHandler`, which every
         test of this class shares. No other test of this class uses that key.
         """
         bare_cert = parse_certificate(load_and_decode_pem_file("data/unittest/bare_certificate.pem"))
-        self.ca_handler.state.cert_state_db.add_compromised_key({"reason": "keyCompromise", "cert": bare_cert})
+        self.ca_handler.state.add_certs([bare_cert])
+        self.ca_handler.rev_handler.mark_as_revoked(bare_cert, reason="keyCompromise")
         key = load_private_key_from_file("data/keys/private-key-rsa.pem", password=None)
         now = datetime.now(timezone.utc)
         cert_template = prepare_cert_template(
@@ -253,9 +332,7 @@ class TestMockCAFlows(unittest.TestCase):
             cert_chain=build_cert_chain_from_dir(trusted_ca_cert, "data/unittest"),
         )
 
-        response = self._post("/issuing", ccr)
-        self.assertEqual(response["body"].getName(), "error", response["body"].prettyPrint())
-        self.assertEqual(get_set_bitstring_names(get_pkistatusinfo(response)["failInfo"]), "badCertTemplate")
+        self._assert_rejected(self._post("/issuing", ccr), "ccp", "badCertTemplate")
 
     def test_cert_conf_with_pvno_1_is_unsupported_version(self):
         """
