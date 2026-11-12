@@ -3,9 +3,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import unittest
+from unittest import mock
 
 from pq_logic.hybrid_issuing import prepare_catalyst_cert_req_msg_approach
 from pq_logic.hybrid_sig.catalyst_logic import load_catalyst_public_key
+from resources import protectionutils
 from resources.ca_ra_utils import get_public_key_from_cert_req_msg
 from resources.keyutils import load_private_key_from_file, generate_key
 
@@ -102,3 +104,26 @@ class TestPrepareCatalystCertReq(unittest.TestCase):
         self.assertEqual(public_key, key.pq_key.public_key())
         loaded_key = load_catalyst_public_key(cert_req_msg["certReq"]["certTemplate"]["extensions"])
         self.assertEqual(loaded_key, key.trad_key.public_key())
+
+    def test_bad_pop_with_two_signature_keys_changes_signature(self):
+        """
+        GIVEN a traditional and a post-quantum signature key, and a signer whose output starts with 0x01.
+        WHEN a Catalyst `CertReqMsg` is prepared with `bad_pop=True`,
+        THEN the POP signature differs from the computed signature.
+        """
+        real_sign = protectionutils.sign_data_with_alg_id
+        signed = []
+
+        def _sign_first_byte_01(*args, **kwargs):
+            signed.append(b"\x01" + real_sign(*args, **kwargs)[1:])
+            return signed[-1]
+
+        with mock.patch.object(protectionutils, "sign_data_with_alg_id", side_effect=_sign_first_byte_01):
+            cert_req_msg = prepare_catalyst_cert_req_msg_approach(
+                first_key=self.ec_key, alt_key=self.pq_mldsa, bad_pop=True
+            )
+
+        # The alternative POP is signed first, so the last signature is the first-key POP.
+        self.assertEqual(len(signed), 2)
+        popo_signature = cert_req_msg["popo"]["signature"]["signature"].asOctets()
+        self.assertNotEqual(popo_signature, signed[-1])

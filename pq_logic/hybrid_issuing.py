@@ -720,9 +720,6 @@ def prepare_catalyst_cert_req_msg_approach(  # noqa: D417 Missing argument descr
         )
         sig = protectionutils.sign_data_with_alg_id(key=signing_key, alg_id=sig_alg, data=data)
 
-        if bad_pop:
-            sig = utils.manipulate_first_byte(sig)
-
         popo = cmputils.prepare_sig_popo_structure(
             alg_id=sig_alg,
             signature=sig,
