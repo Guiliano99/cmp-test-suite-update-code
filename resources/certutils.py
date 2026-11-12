@@ -2274,7 +2274,7 @@ def is_ca_cert(cert: rfc9480.CMPCertificate) -> Optional[bool]:
     """Check if the provided certificate is a CA certificate.
 
     :param cert: The certificate to check.
-    :return: `None` if the certificate is not a CA certificate, `True` if it is a CA certificate, or `False`.
+    :return: `None` if the BasicConstraints extension is absent, `True` if `cA` is TRUE, or `False` if `cA` is FALSE.
     :raises BadAsn1Data: If the BasicConstraints extension is malformed.
     """
     extn = certextractutils.get_extension(
@@ -2292,7 +2292,7 @@ def is_ca_cert(cert: rfc9480.CMPCertificate) -> Optional[bool]:
     if rest:
         raise BadAsn1Data("BasicConstraints")
 
-    return basic_constraints["cA"].isValue
+    return bool(basic_constraints["cA"])
 
 
 def _validate_key_identifiers(
