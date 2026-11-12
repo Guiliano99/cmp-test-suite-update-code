@@ -2556,7 +2556,7 @@ def verify_ca_basic_constraints(  # noqa D417 undocumented-param
         return None
 
     path_len = 0 if not basic_con["pathLenConstraint"].isValue else int(basic_con["pathLenConstraint"])
-    if basic_con["cA"] is False and path_len != 0:
+    if not basic_con["cA"] and path_len != 0:
         raise BadCertTemplate(
             "The `BasicConstraints` extension is not valid. CA was set to False but `pathLenConstraint` "
             "was not 0 or absent."
@@ -2570,9 +2570,6 @@ def verify_ca_basic_constraints(  # noqa D417 undocumented-param
                 "The `BasicConstraints` extension is not valid. CA was set to True but `pathLenConstraint` "
                 "was less than 0."
             )
-
-        if not is_ca and path_len > 0:
-            raise BadCertTemplate("A end entity certificate can not have a path length greater 0 set.")
 
     if isinstance(cert_template, CertRelatedType):
         if spki.isValue:  # type: ignore
