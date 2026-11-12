@@ -2017,8 +2017,9 @@ def prepare_sig_popo_structure(
     popo_key = rfc4211.POPOSigningKey().subtype(implicitTag=Tag(tagClassContext, tagFormatConstructed, 1))
 
     if isinstance(alg_id, univ.ObjectIdentifier):
+        alg_oid = alg_id
         alg_id = rfc9480.AlgorithmIdentifier()
-        alg_id["algorithm"] = alg_id
+        alg_id["algorithm"] = alg_oid
 
     popo_key["algorithmIdentifier"] = alg_id
 

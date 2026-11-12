@@ -6,9 +6,9 @@ import unittest
 
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import tag, univ
-from pyasn1_alt_modules import rfc4211
-from resources.cmputils import prepare_popo
-from resources.keyutils import load_private_key_from_file
+from pyasn1_alt_modules import rfc4211, rfc9481
+from resources.cmputils import prepare_popo, prepare_sig_popo_structure
+from resources.keyutils import generate_key, load_private_key_from_file
 
 
 class TestPreparePOPO(unittest.TestCase):
@@ -57,6 +57,21 @@ class TestPreparePOPO(unittest.TestCase):
         """
         with self.assertRaises(ValueError):
             prepare_popo(signature=self.signature, signing_key=None, alg_oid=None)
+
+    def test_prepare_sig_popo_structure_with_oid(self):
+        """
+        GIVEN a signature algorithm OID instead of an `AlgorithmIdentifier`.
+        WHEN prepare_sig_popo_structure is called with that OID, an Ed25519 key and a fixed signature.
+        THEN the encoded POPO decodes without remainder, its algorithm is the OID and the
+        parameters are absent, as RFC 8410 Section 6 requires for Ed25519.
+        """
+        ed_key = generate_key("ed25519")
+        popo = prepare_sig_popo_structure(alg_id=rfc9481.id_Ed25519, signing_key=ed_key, signature=self.signature)
+        decoded, rest = decoder.decode(encoder.encode(popo), asn1Spec=rfc4211.ProofOfPossession())
+        self.assertEqual(rest, b"")
+        alg_id = decoded["signature"]["algorithmIdentifier"]
+        self.assertEqual(alg_id["algorithm"], rfc9481.id_Ed25519)
+        self.assertFalse(alg_id["parameters"].isValue)
 
 
 if __name__ == "__main__":
