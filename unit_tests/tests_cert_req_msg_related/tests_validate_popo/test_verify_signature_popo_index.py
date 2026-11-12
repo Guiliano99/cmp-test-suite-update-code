@@ -4,9 +4,10 @@
 
 import unittest
 
-from resources.ca_ra_utils import build_cp_cmp_message, verify_popo_for_cert_request
+from resources.ca_ra_utils import build_cp_cmp_message, verify_popo_for_cert_request, verify_sig_pop_for_pki_request
+from resources.certbuildutils import build_csr
 from resources.certutils import parse_certificate
-from resources.cmputils import build_cr_from_key, prepare_cert_req_msg
+from resources.cmputils import build_cr_from_key, build_p10cr_from_csr, prepare_cert_req_msg
 from resources.exceptions import BadPOP
 from resources.keyutils import load_private_key_from_file
 from resources.utils import load_and_decode_pem_file
@@ -54,6 +55,25 @@ class TestVerifySignaturePopoIndex(unittest.TestCase):
         pki_message = self._build_cr(bad_first=False, bad_second=True)
         with self.assertRaises(BadPOP):
             build_cp_cmp_message(request=pki_message, ca_key=self.ca_key, ca_cert=self.ca_cert)
+
+    def test_verify_sig_pop_for_valid_p10cr(self):
+        """
+        GIVEN a `p10cr` with a valid CSR signature.
+        WHEN the signature POP is verified.
+        THEN must the verification succeed.
+        """
+        pki_message = build_p10cr_from_csr(build_csr(self.key, common_name="CN=Good CSR"))
+        verify_sig_pop_for_pki_request(pki_message)
+
+    def test_verify_sig_pop_for_invalid_p10cr(self):
+        """
+        GIVEN a `p10cr` with an invalid CSR signature.
+        WHEN the signature POP is verified.
+        THEN must a `BadPOP` be raised.
+        """
+        pki_message = build_p10cr_from_csr(build_csr(self.key, common_name="CN=Bad CSR", bad_pop=True))
+        with self.assertRaises(BadPOP):
+            verify_sig_pop_for_pki_request(pki_message)
 
 
 if __name__ == "__main__":

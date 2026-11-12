@@ -2160,8 +2160,8 @@ def verify_sig_pop_for_pki_request(  # noqa: D417 Missing argument descriptions 
                 "POP signature is missing in the PKIMessage.", error_details=[e.message] + e.error_details
             ) from e
 
-    elif pki_message["p10cr"]:
-        csr = pki_message["p10cr"]
+    elif body_name == "p10cr":
+        csr = pki_message["body"]["p10cr"]
         try:
             certutils.verify_csr_signature(csr)
 
