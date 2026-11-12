@@ -1304,7 +1304,7 @@ def verify_popo_for_cert_request(  # noqa: D417 Missing argument descriptions in
         )
 
     elif name == "signature":
-        verify_sig_pop_for_pki_request(pki_message)
+        verify_sig_pop_for_pki_request(pki_message, cert_index=cert_req_index)
     elif name == "keyEncipherment":
         public_key = get_public_key_from_cert_req_msg(cert_req_msg=cert_req_msg)
 
