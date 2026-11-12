@@ -953,8 +953,11 @@ def get_password_in_size(  # noqa D417 undocumented-param
 
 
 @not_keyword
-def modify_random_str(data: str, index: Optional[int] = None) -> str:  # type: ignore[reportReturnType]
+def modify_random_str(data: str, index: Optional[int] = None) -> str:
     """Modify a random character with a digit or ascii letter (upper and lower).
+
+    The new character also differs when case is ignored, because names are compared case-insensitively
+    (RFC 5280 Section 7.1, caseIgnoreMatch).
 
     :param data: String to change a random character.
     :param index: Optional index to change the character.
@@ -963,10 +966,10 @@ def modify_random_str(data: str, index: Optional[int] = None) -> str:  # type: i
     """
     chars = list(data)
     options = list(string.ascii_letters) + list(string.digits)
-    random_index: int = index or random.randint(0, len(data) - 1)
+    random_index: int = index if index is not None else random.randint(0, len(data) - 1)
     for _ in range(100):
         option = random.choice(options)
-        if option != chars[random_index]:
+        if option.lower() != chars[random_index].lower():
             chars[random_index] = option
             return "".join(chars)
 
