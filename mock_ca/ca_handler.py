@@ -265,7 +265,7 @@ class CAHandler:
         ca_alt_key: Optional[PQSignaturePrivateKey] = None,
         mock_ca_state: Optional[MockCAState] = None,
         port: int = 5000,
-        use_openssl: bool = False,
+        use_openssl: bool = True,
         base_url: str = "http://127.0.0.1",
         enforce_rfc9481: bool = False,
         trusted_ras_dir: str = "./data/trusted_ras",
@@ -279,7 +279,7 @@ class CAHandler:
         :param pre_shared_secret: The pre-shared secret for the CA. Defaults to b"SiemensIT".
         :param mock_ca_state: The state of the CA, creates a fresh state if not provided. Defaults to `None`.
         :param port: The port for the CA, used for the Extensions preparation. Defaults to `5000`.
-        :param use_openssl: If OpenSSL should be used for verification. Defaults to `False`.
+        :param use_openssl: If OpenSSL should be used for verification. Defaults to `True`.
         :param config: The configuration for the CA Handler.
         :param base_url: The base URL for the CA ONLY used to prepare the extensions (CRL-DP, OCSP, IDP, Sun-Hybrid).
         Defaults to `http://localhost`.
@@ -406,7 +406,7 @@ class CAHandler:
             cmp_prot_key=self.ca_key,
             kem_ss_list=self.state.kem_mac_based,
             pre_shared_secret=self.pre_shared_secret,
-            use_openssl=True,
+            use_openssl=use_openssl,
             def_mac_alg="password_based_mac",
             enforce_rfc9481=enforce_rfc9481,
             trusted_ras_dir=trusted_ras_dir,
