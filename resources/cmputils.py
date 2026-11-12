@@ -1852,7 +1852,7 @@ def prepare_popo(  # noqa D417 undocumented-param
     ra_verified: bool = False,
     sender: Optional[str] = None,
     use_encr_cert: bool = True,
-    use_key_enc: Optional[bool] = True,
+    use_key_enc: Optional[bool] = None,
 ) -> rfc4211.ProofOfPossession:
     """Prepare the `ProofOfPossession` (POPO) structure for a certificate request.
 
@@ -1876,7 +1876,8 @@ def prepare_popo(  # noqa D417 undocumented-param
         - `sender`: The sender of the `PKIMessage` used inside the `POPOSigningKeyInput` structure.
         (which *MUST* be absent.)
         - `use_encr_cert`: Indicates if the certificate request is for a keyAgreement or keyEncipherment key.
-        _ `use_key_enc`: Indicates if the certificate request is for a keyEncipherment key.
+        - `use_key_enc`: Whether to use keyEncipherment (`True`) or keyAgreement (`False`).
+          Defaults to `None`: keyEncipherment for KEM keys, keyAgreement for X25519/X448 keys.
 
     Returns:
     -------
