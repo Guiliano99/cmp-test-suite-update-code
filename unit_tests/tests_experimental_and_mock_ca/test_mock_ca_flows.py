@@ -100,18 +100,18 @@ class TestMockCAFlows(unittest.TestCase):
         return key, response, get_cert_from_pkimessage(response)
 
     @staticmethod
-    def _build_cert_conf(response, cert):
+    def _build_cert_conf(response, cert, pvno: int = 3, hash_alg: str | None = "sha256"):
         """Build a protected certConf for an issued certificate."""
         cert_conf = build_cert_conf_from_resp(
             ca_message=response,
             cert=cert,
-            pvno=3,
+            pvno=pvno,
             sender_nonce=os.urandom(16),
             sender=_SENDER,
             recipient="CN=Mock CA",
             for_mac=True,
             exclude_fields=None,
-            hash_alg="sha256",
+            hash_alg=hash_alg,
         )
         return _mac_protect(cert_conf)
 
@@ -198,6 +198,19 @@ class TestMockCAFlows(unittest.TestCase):
         response = self._post("/issuing", ccr)
         self.assertEqual(response["body"].getName(), "error", response["body"].prettyPrint())
         self.assertEqual(get_set_bitstring_names(get_pkistatusinfo(response)["failInfo"]), "badCertTemplate")
+
+    def test_cert_conf_with_pvno_1_is_unsupported_version(self):
+        """
+        GIVEN an issued certificate and a certConf with pvno 1 (cmp1999) and without hashAlg.
+        WHEN the certConf is sent to the `/certConf` route.
+        THEN the response is an error with exactly `unsupportedVersion` and pvno 2, the lowest supported version
+        (RFC 9483 Section 3.5, RFC 9810 Section 7).
+        """
+        _, response, cert = self._issue_cert(implicit_confirm=False)
+        result = self._post("/certConf", self._build_cert_conf(response, cert, pvno=1, hash_alg=None))
+        self.assertEqual(result["body"].getName(), "error", result["body"].prettyPrint())
+        self.assertEqual(get_set_bitstring_names(get_pkistatusinfo(result)["failInfo"]), "unsupportedVersion")
+        self.assertEqual(int(result["header"]["pvno"]), 2)
 
     def test_read_routes(self):
         """

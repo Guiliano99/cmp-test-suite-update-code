@@ -104,7 +104,6 @@ from resources.exceptions import (
     InvalidKeyData,
     NotAuthorized,
     UnknownOID,
-    UnsupportedVersion,
 )
 from resources.general_msg_utils import build_genp_kem_ct_info_from_genm
 from resources.keyutils import generate_key, load_private_key_from_file, load_public_key_from_spki
@@ -719,8 +718,7 @@ class CAHandler:
         logging.debug("Processing request with body: %s", pki_message["body"].getName())
 
         try:
-            if pki_message["header"]["pvno"] not in (1,2,3):
-                raise UnsupportedVersion(f"Unsupported CMP version: {pki_message['header']['pvno']}")
+            self.cert_req_handler.validate_pvno(pki_message)
 
             if pki_message["extraCerts"].isValue:
                 self.rev_handler.is_not_allowed_to_request(

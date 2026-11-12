@@ -216,3 +216,26 @@ class TestProcessAddedProtReq(unittest.TestCase):
         with self.assertRaises(BadMessageCheck) as context:
             _ = nested_handler.process_nested_request(request=nested, prot_handler=self.ca_handler.protection_handler)
         self.assertEqual(str(context.exception), "The original `PKIMessage` protection is invalid.")
+
+    def test_inner_pvno_1_is_rejected(self):
+        """
+        GIVEN an added-protection request whose outer message has pvno 2 and whose inner ir has pvno 1.
+        WHEN the request is processed by the CA handler,
+        THEN the response is an error with exactly `unsupportedVersion`, because `validate_header` also checks
+        the pvno of the inner message (RFC 9483 Section 3.5).
+        """
+        ir = build_ir_from_key(self.key, sender=self.cm, common_name=self.cm, for_mac=True, pvno=1)
+        ir = protect_pkimessage(pki_message=ir, password=self.password, protection="pbmac1")
+        nested = build_nested_pkimessage(other_messages=ir, for_added_protection=True)
+        nested = protect_pkimessage(
+            pki_message=nested, protection="signature", cert=self.ra_cert, private_key=self.ra_key
+        )
+
+        response = self.ca_handler.process_normal_request(nested)
+
+        self.assertEqual(int(nested["header"]["pvno"]), 2)
+        self.assertEqual(response["body"].getName(), "error", display_pki_status_info(response))
+        status = get_pkistatusinfo(response)
+        self.assertTrue(
+            is_bit_set(status["failInfo"], "unsupportedVersion", exclusive=True), display_pki_status_info(response)
+        )
