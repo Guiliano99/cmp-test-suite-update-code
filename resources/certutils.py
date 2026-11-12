@@ -2016,7 +2016,7 @@ def validate_migration_certificate_key_usage(  # noqa: D417 Missing argument des
         if set(key_usage) & ml_dsa_disallowed:
             raise ValueError(f"ML-DSA keyUsage must not include: {ml_dsa_disallowed}")
 
-    if is_kem_public_key(public_key):
+    elif is_kem_public_key(public_key):
         ml_kem_allowed = {"keyEncipherment"}
         if set(key_usage) != ml_kem_allowed:
             raise ValueError(f"ML-KEM keyUsage must only contain: {ml_kem_allowed}.But got {key_usage}")
