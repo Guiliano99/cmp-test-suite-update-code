@@ -199,9 +199,9 @@ Load Verbose PQ Stateful Sig Keys
     END
 
 Set Up CRR Test Cases
-    [Documentation]    Prepare the environment variables for the Cross-Certification Request (CRR) tests.
+    [Documentation]    Prepare the environment variables for the Cross-Certification Request (CCR) tests.
     ...                By loading the trusted CA credentials and chain. Is required to correctly protect a
-    ...                `PKIMessage` with the trusted CA certificate and key, so that a CRR certificate can
+    ...                `PKIMessage` with the trusted CA certificate and key, so that a CCR certificate can
     ...                be issued.
     ...
     ...                Notes:

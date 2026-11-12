@@ -8,7 +8,7 @@ from mock_ca.mock_fun import CertRevStateDB, RevokedEntry, RevokedEntryList
 
 from resources.certbuildutils import build_csr, prepare_cert_template
 from resources.certutils import parse_certificate
-from resources.cmputils import build_ir_from_key, build_p10cr_from_csr
+from resources.cmputils import build_ccr_from_key, build_ir_from_key, build_p10cr_from_csr
 from resources.keyutils import generate_key, load_private_key_from_file
 from resources.utils import load_and_decode_pem_file
 
@@ -72,6 +72,18 @@ class TestCompromisedKeyLogic(unittest.TestCase):
         cert_rev_db = CertRevStateDB()
         cert_rev_db.add_compromised_key({"reason": "keyCompromise", "cert": self.cert})
         result = cert_rev_db.check_request_for_compromised_key(ir)
+        self.assertTrue(result)
+
+    def test_check_compromised_key_from_ccr(self):
+        """
+        GIVEN a certificate and a ccr for the same key.
+        WHEN checking if the key is compromised,
+        THEN the result should be True.
+        """
+        ccr = build_ccr_from_key(self.key)
+        cert_rev_db = CertRevStateDB()
+        cert_rev_db.add_compromised_key({"reason": "keyCompromise", "cert": self.cert})
+        result = cert_rev_db.check_request_for_compromised_key(ccr)
         self.assertTrue(result)
 
     def test_check_compromised_comp_key_from_p10cr(self):

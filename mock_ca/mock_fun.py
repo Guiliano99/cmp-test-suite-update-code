@@ -417,7 +417,7 @@ class CertRevStateDB:
 
         body_name = request["body"].getName()
 
-        if body_name in ["ir", "cr", "crr", "kur"]:
+        if body_name in ["ir", "cr", "ccr", "kur"]:
             for entry in request["body"][body_name]:
                 public_key = ca_ra_utils.get_public_key_from_cert_req_msg(entry, must_be_present=False)
                 if public_key is None:

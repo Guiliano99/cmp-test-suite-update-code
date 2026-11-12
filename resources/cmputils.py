@@ -2659,9 +2659,9 @@ def build_ccr_from_key(  # noqa D417 undocumented-param
     cert_req_msg: Optional[Union[List[rfc4211.CertReqMsg], rfc4211.CertReqMsg]] = None,
     **params,
 ):
-    """Create an `Crr` (Cross-Certification Request) PKIMessage using a signing key and specified parameters.
+    """Create a `ccr` (Cross-Certification Request) PKIMessage using a signing key and specified parameters.
 
-    Constructs a `PKIMessage` with an `crr` body type, which is used for requesting
+    Constructs a `PKIMessage` with a `ccr` body type, which is used for requesting
     the issuance of a new certificate. The message includes a `CertReqMsg` generated from the
     provided signing key and other optional parameters.
 
@@ -2691,7 +2691,7 @@ def build_ccr_from_key(  # noqa D417 undocumented-param
 
     Returns:
     -------
-        - The constructed `PKIMessage` with the `crr` body.
+        - The constructed `PKIMessage` with the `ccr` body.
 
     Raises:
     ------
@@ -2699,9 +2699,9 @@ def build_ccr_from_key(  # noqa D417 undocumented-param
 
     Examples:
     --------
-    | ${crr}= | Build Ir From Key | ${signing_key} |
-    | ${crr}= | Build Ir From Key | ${signing_key} | sender=custom_sender@example.com |
-    | ${crr}= | Build Ir From Key | ${signing_key} | exclude_fields=transactionID,senderNonce |
+    | ${ccr}= | Build Ccr From Key | ${signing_key} |
+    | ${ccr}= | Build Ccr From Key | ${signing_key} | sender=custom_sender@example.com |
+    | ${ccr}= | Build Ccr From Key | ${signing_key} | exclude_fields=transactionID,senderNonce |
 
     """
     if cert_req_msg is None:
@@ -2900,7 +2900,7 @@ def build_ccr_from_csr(  # noqa D417 undocumented-param
     cert_req_msg: Optional[Union[List[rfc4211.CertReqMsg], rfc4211.CertReqMsg]] = None,
     **params,
 ):
-    """Create a PKIMessage of type `crr` (Cross-Certification Request) from a PKCS#10 CSR and a signing key.
+    """Create a PKIMessage of type `ccr` (Cross-Certification Request) from a PKCS#10 CSR and a signing key.
 
     The provided Certification Request (CSR) is used to create the `CertTemplate` structure.
     The `CertRequest` is then signed with the given `signing_key`, and optional parameters can be
@@ -2929,7 +2929,7 @@ def build_ccr_from_csr(  # noqa D417 undocumented-param
 
     Returns:
     -------
-        - The constructed `PKIMessage` with the `crr` body.
+        - The constructed `PKIMessage` with the `ccr` body.
 
     Raises:
     ------
@@ -2937,10 +2937,10 @@ def build_ccr_from_csr(  # noqa D417 undocumented-param
 
     Examples:
     --------
-    | ${crr}= | Build Ir From CSR | ${csr} | ${signing_key} |
-    | ${crr}= | Build Ir From CSR | ${csr} | ${signing_key} | common_name=${cm} |
-    | ${crr}= | Build Ir From CSR | ${csr} | ${signing_key} | sender=${sender} |
-    | ${crr}= | Build Ir From CSR | ${csr} | ${signing_key} | exclude_fields=transactionID,senderNonce |
+    | ${ccr}= | Build Ccr From CSR | ${csr} | ${signing_key} |
+    | ${ccr}= | Build Ccr From CSR | ${csr} | ${signing_key} | common_name=${cm} |
+    | ${ccr}= | Build Ccr From CSR | ${csr} | ${signing_key} | sender=${sender} |
+    | ${ccr}= | Build Ccr From CSR | ${csr} | ${signing_key} | exclude_fields=transactionID,senderNonce |
 
     """
     cert_template = certbuildutils.prepare_cert_template_from_csr(csr)

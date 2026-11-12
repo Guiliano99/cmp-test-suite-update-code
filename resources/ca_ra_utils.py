@@ -427,7 +427,7 @@ def get_cert_req_msg_from_pkimessage(  # noqa: D417 Missing argument description
 
     Raises:
     ------
-        - ValueError: If the body type is not one of `ir`, `cr`, `kur`, or `crr`.
+        - ValueError: If the body type is not one of `ir`, `cr`, `kur`, or `ccr`.
         - IndexError: If the index is out of range.
 
     Examples:
@@ -476,7 +476,7 @@ def validate_cert_req_id(  # noqa: D417 Missing argument descriptions in the doc
         if cert_id != cert_req_id:
             raise BadRequest("Invalid certReqId in PKIMessage.")
     else:
-        raise ValueError(f"Invalid PKIMessage body: {body_name} Expected: ir, cr, kur, crr or p10cr")
+        raise ValueError(f"Invalid PKIMessage body: {body_name} Expected: ir, cr, kur, ccr or p10cr")
 
 
 @not_keyword
@@ -1098,7 +1098,7 @@ def check_if_request_is_for_kga(  # noqa: D417 undocumented-params
 
     Raises:
     ------
-        - ValueError: If the body type is not one of `ir`, `cr`, `kur`, or `crr`.
+        - ValueError: If the body type is not one of `ir`, `cr`, `kur`, or `ccr`.
         - BadCertTemplate: If the key OID is not recognized.
 
     Examples:
@@ -1267,7 +1267,7 @@ def verify_popo_for_cert_request(  # noqa: D417 Missing argument descriptions in
 
     Raises:
     ------
-        - ValueError: If the body type is not one of `ir`, `cr`, `kur`, or `crr`.
+        - ValueError: If the body type is not one of `ir`, `cr`, `kur`, or `ccr`.
         - ValueError: If the POP structure is invalid
         - ValueError: If the public key type is invalid.
         - NotImplementedError: If the request is for key agreement.
@@ -1281,8 +1281,8 @@ def verify_popo_for_cert_request(  # noqa: D417 Missing argument descriptions in
 
     """
     body_name = pki_message["body"].getName()
-    if body_name not in {"ir", "cr", "kur", "crr"}:
-        raise ValueError(f"Invalid PKIMessage body: {pki_message['body'].getName()} Expected: ir, cr, kur, crr")
+    if body_name not in {"ir", "cr", "kur", "ccr"}:
+        raise ValueError(f"Invalid PKIMessage body: {pki_message['body'].getName()} Expected: ir, cr, kur, ccr")
 
     cert_req_msg = get_cert_req_msg_from_pkimessage(pki_message, index=cert_req_index)
 
@@ -2137,7 +2137,7 @@ def verify_sig_pop_for_pki_request(  # noqa: D417 Missing argument descriptions 
 
     Raises:
     ------
-        - ValueError: If the body type is not one of `ir`, `cr`, `kur`, or `crr`.
+        - ValueError: If the body type is not one of `ir`, `cr`, `kur`, or `ccr`.
         - IndexError: If the index is out of range.
         - BadAsn1Data: If the ASN.1 data is invalid.
         - BadPOP: If the signature is invalid.
@@ -2148,7 +2148,7 @@ def verify_sig_pop_for_pki_request(  # noqa: D417 Missing argument descriptions 
 
     """
     body_name = pki_message["body"].getName()
-    if body_name in {"ir", "cr", "kur", "crr"}:
+    if body_name in {"ir", "cr", "kur", "ccr"}:
         cert_req_msg = get_cert_req_msg_from_pkimessage(pki_message, index=cert_index)
         popo: rfc4211.ProofOfPossession = cert_req_msg["popo"]
         if not popo["signature"].isValue:
@@ -2174,7 +2174,7 @@ def verify_sig_pop_for_pki_request(  # noqa: D417 Missing argument descriptions 
             raise BadPOP("POP verification for `p10cr` failed.")  # pylint: disable=raise-missing-from
 
     else:
-        raise ValueError(f"Invalid PKIMessage body: {body_name} Expected: ir, cr, kur, crr or p10cr")
+        raise ValueError(f"Invalid PKIMessage body: {body_name} Expected: ir, cr, kur, ccr or p10cr")
 
 
 @not_keyword
@@ -2459,26 +2459,6 @@ def _process_cert_requests(
     return responses, certs
 
 
-@not_keyword
-def get_response_body_type(request: PKIMessageTMP) -> str:
-    """Get the response body type.
-
-    :param request: The PKIMessage to get the response body type from.
-    :return: The response body type.
-    """
-    body_name = request["body"].getName()
-    if body_name == "ir":
-        return "ip"
-    if body_name in ["cr", "p10cr"]:
-        return "cp"
-    if body_name == "kur":
-        return "kup"
-    if body_name == "crr":
-        return "ccp"
-
-    raise ValueError(f"Invalid PKIMessage body: {body_name}. Expected: ir, cr, kur, crr or p10cr.")
-
-
 def _build_ca_cert_response_body(
     responses: Union[Sequence[CertResponseTMP], CertResponseTMP],
     set_header_fields: bool = True,
@@ -2491,7 +2471,7 @@ def _build_ca_cert_response_body(
         kwargs = set_ca_header_fields(request, kwargs)
 
     if request is not None:
-        body_name = body_name or get_response_body_type(request)
+        body_name = body_name or get_correct_ca_body_name(request)
 
     if body_name is None:
         raise ValueError("The `body_name` must be set to build a CA certificate response body.")
@@ -2661,7 +2641,7 @@ def enforce_lwcmp_for_ca(  # noqa: D417 Missing argument descriptions in the doc
 ) -> None:
     """Enforce the Lightweight CMP (LwCMP) for a CA.
 
-    When the request is "ir", "cr", "kur", or "crr", the `certReqId` **MUST** be `0`,
+    When the request is "ir", "cr", "kur", or "ccr", the `certReqId` **MUST** be `0`,
     and only one **MUST** be present (p10cr does not have a `certReqId`).
 
     Supported request types:
@@ -2669,7 +2649,7 @@ def enforce_lwcmp_for_ca(  # noqa: D417 Missing argument descriptions in the doc
     - ir (initialization request)
     - cr (certification request)
     - kur (key update request)
-    - crr (cross-certification request)
+    - ccr (cross-certification request)
     - rr (revocation request)
     - certConf (certificate confirmation)
 
@@ -2690,7 +2670,7 @@ def enforce_lwcmp_for_ca(  # noqa: D417 Missing argument descriptions in the doc
     """
     if request["body"].getName() == "p10cr":
         pass
-    elif request["body"].getName() in {"ir", "cr", "kur", "crr"}:
+    elif request["body"].getName() in {"ir", "cr", "kur", "ccr"}:
         if len(request["body"][request["body"].getName()]) != 1:
             raise BadRequest("Only one certificate request is allowed for LwCMP.")
 
@@ -2707,7 +2687,7 @@ def enforce_lwcmp_for_ca(  # noqa: D417 Missing argument descriptions in the doc
 
     else:
         raise BadRequest(
-            "Invalid PKIMessage body for LwCMP. Expected: ir, cr, kur, crr, rr, certConf or p10cr."
+            "Invalid PKIMessage body for LwCMP. Expected: ir, cr, kur, ccr, rr, certConf or p10cr."
             f"Got: {request['body'].getName()}."
         )
 
@@ -4352,7 +4332,7 @@ def _process_crr_single(
     bad_sig: bool = False,
     extensions: Optional[ExtensionsParseType] = None,
 ) -> rfc9480.CMPCertificate:
-    """Process a single CRR message.
+    """Process a single CCR message.
 
     :param request: The PKIMessage to process.
     :param ca_key: The CA key to use for signing the new certificate.
@@ -4703,7 +4683,7 @@ def get_cert_template_from_pkimessage(request: PKIMessageTMP, index: Strint = 0)
     :return: The `CertTemplate` object.
     """
     body_name = request["body"].getName()
-    if body_name not in ["ir", "cr", "kur", "crr"]:
+    if body_name not in ["ir", "cr", "kur", "ccr"]:
         raise ValueError(f"The PKIMessage was not a certification request. Got body name: {body_name}")
 
     body_name = request["body"].getName()

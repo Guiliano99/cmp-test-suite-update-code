@@ -732,7 +732,7 @@ class CAHandler:
             if pki_message["body"].getName() not in ["rr", "genm"]:
                 self.verify_protection(pki_message)
 
-            if pki_message["body"].getName() in ["ir", "cr", "p10cr", "crr", "kur", "rr"]:
+            if pki_message["body"].getName() in ["ir", "cr", "p10cr", "ccr", "kur", "rr"]:
                 self._check_for_compromised_key(pki_message)
 
             if pki_message["body"].getName() not in ["certConf", "error"]:

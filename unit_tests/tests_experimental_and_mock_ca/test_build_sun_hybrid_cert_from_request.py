@@ -13,7 +13,12 @@ from keyutils_py.types import CompositeSigPrivateKey
 from resources.ca_kga_logic import validate_kemri_enveloped_data
 from resources.certbuildutils import build_certificate
 from resources.certutils import parse_certificate
-from resources.cmputils import build_ir_from_key, get_cert_from_pkimessage, get_cert_response_from_pkimessage
+from resources.cmputils import (
+    build_ccr_from_key,
+    build_ir_from_key,
+    get_cert_from_pkimessage,
+    get_cert_response_from_pkimessage,
+)
 from resources.keyutils import generate_key
 from unit_tests.utils_for_test import compare_pyasn1_objects, try_encode_pyasn1
 from resources.asn1utils import try_decode_pyasn1
@@ -45,6 +50,25 @@ class TestBuildSunHybridCertFromRequest(unittest.TestCase):
         loaded_cert = get_cert_from_pkimessage(response, cert_number=0)
         result = compare_pyasn1_objects(cert4, loaded_cert)
         self.assertTrue(result)
+
+    def test_build_with_composite_sig_ccr(self):
+        """
+        GIVEN a composite signature cross-certification request (ccr).
+        WHEN the Sun-Hybrid certificate is built from it.
+        THEN the response is a ccp which carries the issued certificate.
+        """
+        comp_sig = generate_key("composite-sig")
+        ccr = build_ccr_from_key(comp_sig, "CN=Hans the Tester")
+        response, cert4, _ = build_sun_hybrid_cert_from_request(
+            request=ccr,
+            ca_cert=self.ca_cert,
+            ca_key=self.ca_key,
+            pub_key_loc="https://example.com/pubkey/1",
+            sig_loc="https://example.com/sig/1",
+            serial_number=1,
+        )
+        self.assertEqual(response["body"].getName(), "ccp")
+        self.assertTrue(compare_pyasn1_objects(cert4, get_cert_from_pkimessage(response, cert_number=0)))
 
     def test_built_with_composite_kem(self):
         """

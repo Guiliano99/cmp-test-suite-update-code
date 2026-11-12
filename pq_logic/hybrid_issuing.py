@@ -161,7 +161,7 @@ def build_sun_hybrid_cert_from_request(  # noqa: D417 Missing argument descripti
         )
         pki_message, _ = ca_ra_utils.build_cp_from_p10cr(request=request, cert=cert4, cert_req_id=-1)
 
-    elif request["body"].getName() in ["ir", "cr", "kur", "crr"]:
+    elif request["body"].getName() in ["ir", "cr", "kur", "ccr"]:
         body_name = request["body"].getName()
         cert_index = cert_index if cert_index is not None else 0
         cert_req_msg: rfc4211.CertReqMsg = request["body"][body_name][cert_index]
@@ -1075,7 +1075,7 @@ def build_catalyst_signed_cert_from_req(  # noqa: D417 Missing argument descript
 
     else:
         raise ValueError(
-            f"Body type needs to be either `p10cr` or `ir` or `cr` or `kur` or `crr`.Got: {request['body'].getName()}"
+            f"Body type needs to be either `p10cr` or `ir` or `cr` or `kur` or `ccr`.Got: {request['body'].getName()}"
         )
 
     pki_message = ca_ra_utils.build_ca_message(request=request, responses=cert_responses)

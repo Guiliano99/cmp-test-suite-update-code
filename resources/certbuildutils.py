@@ -1692,8 +1692,6 @@ def build_cert_from_cert_template(  # noqa D417 undocumented-param
         - `ca_cert`: The CA certificate.
         - `ca_key`: The CA private key.
         - `hash_alg`: The hash algorithm to use (e.g. "sha256"). Defaults to `sha256`.
-        - `for_crr_request`: Whether to build the certificate for a cross-certification request.
-         Defaults to `False`.
 
     **kwargs:
     ---------

@@ -5,6 +5,7 @@
 import base64
 import os
 import unittest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 from cryptography import x509
@@ -16,8 +17,10 @@ from mock_ca.ca_handler import CAHandler, create_app
 from mock_ca.client import build_example_rsa_mac_request
 
 from resources.asn1utils import encode_to_der, get_set_bitstring_names
-from resources.certutils import create_ocsp_request, parse_certificate
+from resources.certbuildutils import prepare_cert_template, prepare_validity
+from resources.certutils import build_cert_chain_from_dir, create_ocsp_request, parse_certificate
 from resources.cmputils import (
+    build_ccr_from_key,
     build_cert_conf_from_resp,
     build_cmp_revoke_request,
     build_ir_from_key,
@@ -35,8 +38,10 @@ from resources.exceptions import (
     BodyRelevantError,
     CMPTestSuiteError,
 )
-from resources.keyutils import generate_key
+from resources.keyutils import generate_key, load_private_key_from_file
+from resources.prepare_alg_ids import prepare_sig_alg_id
 from resources.protectionutils import protect_pkimessage
+from resources.utils import load_and_decode_pem_file
 
 _SENDER = "CN=Mock CA Flow Tester"
 
@@ -158,6 +163,41 @@ class TestMockCAFlows(unittest.TestCase):
         THEN the response is an accepted cp.
         """
         self._assert_accepted(self._post("/p10cr", self._build_p10cr()), "cp")
+
+    def test_ccr_with_compromised_key_is_rejected(self):
+        """
+        GIVEN a key registered as compromised and a ccr for that key, signed by a trusted CA.
+        WHEN the ccr is sent to the `/issuing` route.
+        THEN the response is an error with `badCertTemplate`, as for an ir with that key.
+
+        This registers `data/keys/private-key-rsa.pem` as compromised on the class-level `CAHandler`, which every
+        test of this class shares. No other test of this class uses that key.
+        """
+        bare_cert = parse_certificate(load_and_decode_pem_file("data/unittest/bare_certificate.pem"))
+        self.ca_handler.state.cert_state_db.add_compromised_key({"reason": "keyCompromise", "cert": bare_cert})
+        key = load_private_key_from_file("data/keys/private-key-rsa.pem", password=None)
+        now = datetime.now(timezone.utc)
+        cert_template = prepare_cert_template(
+            key,
+            validity=prepare_validity(now - timedelta(days=1), now + timedelta(days=100)),
+            subject=_SENDER,
+            issuer="CN=Mock CA",
+            version="v3",
+            sign_alg=prepare_sig_alg_id(key, hash_alg="sha256"),
+            include_fields="subject,issuer,validity,publicKey,version,signingAlg",
+        )
+        ccr = build_ccr_from_key(key, cert_template=cert_template, recipient="CN=Mock CA")
+        trusted_ca_cert = parse_certificate(load_and_decode_pem_file("data/trusted_ras/ra_cms_cert_ecdsa.pem"))
+        ccr = protect_pkimessage(
+            ccr,
+            "signature",
+            private_key=load_private_key_from_file("data/keys/private-key-ecdsa.pem", password="11111"),
+            cert_chain=build_cert_chain_from_dir(trusted_ca_cert, "data/unittest"),
+        )
+
+        response = self._post("/issuing", ccr)
+        self.assertEqual(response["body"].getName(), "error", response["body"].prettyPrint())
+        self.assertEqual(get_set_bitstring_names(get_pkistatusinfo(response)["failInfo"]), "badCertTemplate")
 
     def test_read_routes(self):
         """
