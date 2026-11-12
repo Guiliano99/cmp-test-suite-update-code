@@ -874,10 +874,14 @@ class CAHandler:
         :param pki_message: The RR message.
         :return: The PKI message containing the response.
         """
+        shared_secret = self.state.get_kem_mac_shared_secret(pki_message=pki_message)
+        if ProtectedType.get_protection_type(pki_message) == ProtectedType.DH:
+            _, shared_secret = self.protection_handler.get_dh_cert_and_ss(pki_message["extraCerts"][0])
+            self.protection_handler.check_signer_is_trusted(pki_message, for_dh=True)
         response, _ = self.rev_handler.process_revocation_request(
             pki_message=pki_message,
             issued_certs=self.state.issued_certs,
-            shared_secret=self.state.get_kem_mac_shared_secret(pki_message=pki_message),
+            shared_secret=shared_secret,
         )
         return response
 

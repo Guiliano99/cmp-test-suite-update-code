@@ -10,10 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
-from cryptography.hazmat.primitives.asymmetric.x448 import X448PrivateKey
-from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey
-from keyutils_py.types import ECDHPublicKey, PublicKey, SignKey
+from keyutils_py.types import PublicKey, SignKey
 from pyasn1_alt_modules import rfc9480
 
 from mock_ca.mock_fun import (
@@ -26,14 +23,12 @@ from pq_logic.pq_verify_logic import verify_hybrid_pkimessage_protection
 from resources import certutils, cmputils
 from resources.asn1_structures import PKIMessageTMP
 from resources.ca_ra_utils import build_rp_from_rr, set_ca_header_fields, validate_rr_crl_entry_details_reason
-from resources.certutils import load_public_key_from_cert
 from resources.checkutils import (
     check_sender_cmp_protection,
     validate_request_message_nonces_and_tx_id,
     validate_senderkid_for_cmp_protection,
 )
 from resources.cmputils import display_pki_status_info, get_pkistatusinfo
-from resources.cryptoutils import perform_ecdh
 from resources.exceptions import (
     AddInfoNotAvailable,
     BadCertId,
@@ -82,18 +77,9 @@ def _build_rp_error_response(
 class RevocationHandler:
     """Handler for certificate revocation with improved state management."""
 
-    def __init__(
-        self,
-        rev_db: Optional[CertificateDB] = None,
-        x25519_key: Optional[X25519PrivateKey] = None,
-        x448_key: Optional[X448PrivateKey] = None,
-        ec_key: Optional[EllipticCurvePrivateKey] = None,
-    ):
+    def __init__(self, rev_db: Optional[CertificateDB] = None):
         """Initialize the revocation handler and state."""
         self.rev_db = rev_db or CertificateDB()
-        self.x25519_key = x25519_key
-        self.x448_key = x448_key
-        self.ec_key = ec_key
 
     def get_current_crl(self, ca_key: SignKey, ca_cert: rfc9480.CMPCertificate) -> bytes:
         """Get the current CRL as DER-encoded bytes."""
@@ -393,24 +379,6 @@ class RevocationHandler:
             exception=exception,
         )
 
-    def _get_ecdh_shared_secret(self, public_key: PublicKey) -> bytes:
-        """Get the private key for a given public key."""
-        if not isinstance(public_key, ECDHPublicKey):
-            raise ValueError("Provided public key is not an ECDH key.")
-
-        key = None
-        if isinstance(public_key, X25519PrivateKey):
-            key = self.x25519_key
-        elif isinstance(public_key, X448PrivateKey):
-            key = self.x448_key
-        elif isinstance(public_key, EllipticCurvePrivateKey):
-            key = self.ec_key
-
-        if key is None:
-            raise ValueError("No private key found for the provided public key.")
-
-        return perform_ecdh(key, public_key)
-
     def verify_protection(self, pki_message: PKIMessageTMP, shared_secret: Optional[bytes] = None) -> None:
         """Verify the protection of a revocation request."""
         if not pki_message["protection"].isValue:
@@ -432,11 +400,9 @@ class RevocationHandler:
             return
 
         if prot_type == ProtectedType.DH:
-            cmp_cert = pki_message["extraCerts"][0]
-            public_key = load_public_key_from_cert(cmp_cert)
-            shared_secret = self._get_ecdh_shared_secret(public_key)
-
+            # The caller derives the shared secret with the CA key-agreement key that matches the client key.
             verify_pkimessage_protection(pki_message=pki_message, shared_secret=shared_secret)
+            return
 
         if prot_type == ProtectedType.MAC:
             raise WrongIntegrity("MAC protection is not supported for revocation requests.")

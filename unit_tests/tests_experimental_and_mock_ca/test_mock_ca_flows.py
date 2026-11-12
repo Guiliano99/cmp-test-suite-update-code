@@ -15,9 +15,11 @@ from cryptography.x509 import ocsp
 from mock_ca import rev_handler
 from mock_ca.ca_handler import CAHandler, create_app
 from mock_ca.client import build_example_rsa_mac_request
+from mock_ca.operation_dbs import load_kari_certs
+from pyasn1_alt_modules import rfc9480
 
 from resources.asn1utils import encode_to_der, get_set_bitstring_names
-from resources.certbuildutils import prepare_cert_template, prepare_validity
+from resources.certbuildutils import build_certificate, prepare_cert_template, prepare_validity
 from resources.certutils import build_cert_chain_from_dir, create_ocsp_request, parse_certificate
 from resources.cmputils import (
     build_ccr_from_key,
@@ -40,7 +42,7 @@ from resources.exceptions import (
 )
 from resources.keyutils import generate_key, load_private_key_from_file
 from resources.prepare_alg_ids import prepare_sig_alg_id
-from resources.protectionutils import protect_pkimessage
+from resources.protectionutils import protect_pkimessage, verify_pkimessage_protection
 from resources.utils import load_and_decode_pem_file
 
 _SENDER = "CN=Mock CA Flow Tester"
@@ -156,6 +158,61 @@ class TestMockCAFlows(unittest.TestCase):
         parsed_ocsp = ocsp.load_der_ocsp_response(ocsp_response.data)
         self.assertEqual(parsed_ocsp.response_status, ocsp.OCSPResponseStatus.SUCCESSFUL)
         self.assertEqual(parsed_ocsp.certificate_status, ocsp.OCSPCertStatus.REVOKED)
+
+    def test_rr_with_dh_based_mac(self):
+        """
+        GIVEN a confirmed X25519, X448 or ECDH P-256 certificate issued by the Mock CA.
+        WHEN an rr protected with DHBasedMac against the matching CA key-agreement certificate is sent to `/rr`,
+        with a valid or a modified protection value, or from a P-256 certificate without `keyAgreement` key usage.
+        THEN the valid rr is accepted with a DHBasedMac-protected rp the client can verify and the certificate is
+        revoked. The modified rr is rejected with `badMessageCheck`, the rr of the `digitalSignature`-only
+        certificate with `notAuthorized`, and both certificates stay valid (RFC 9810 Section 5.1.3.2).
+        """
+        kari_certs = load_kari_certs()
+        p256 = {"curve": "secp256r1"}
+        # Columns: key name, key arguments, key usage, modify the protection value, expected failinfo.
+        cases = [
+            ("x25519", {}, "keyAgreement", False, None),
+            ("x25519", {}, "keyAgreement", True, "badMessageCheck"),
+            ("x448", {}, "keyAgreement", False, None),
+            ("x448", {}, "keyAgreement", True, "badMessageCheck"),
+            ("ecc", p256, "keyAgreement", False, None),
+            ("ecc", p256, "keyAgreement", True, "badMessageCheck"),
+            ("ecc", p256, "digitalSignature", False, "notAuthorized"),
+        ]
+        for name, key_args, key_usage, bad_message_check, failinfo in cases:
+            with self.subTest(key=name, key_usage=key_usage, bad_message_check=bad_message_check):
+                key = generate_key(name, **key_args)
+                cert, _ = build_certificate(
+                    private_key=key,
+                    common_name=_SENDER,
+                    key_usage=key_usage,
+                    include_ski=True,
+                    ca_cert=self.ca_handler.ca_cert,
+                    ca_key=self.ca_handler.ca_key,
+                )
+                self.ca_handler.state.add_certs([cert])
+                rr = protect_pkimessage(
+                    build_cmp_revoke_request(cert=cert, reason="keyCompromise"),
+                    "dh",
+                    private_key=key,
+                    cert=cert,
+                    peer=kari_certs[f"{name}_cert"],
+                    bad_message_check=bad_message_check,
+                )
+
+                response = self._post("/rr", rr)
+                if failinfo is None:
+                    self._assert_accepted(response, "rp")
+                    self.assertEqual(response["header"]["protectionAlg"]["algorithm"], rfc9480.id_DHBasedMac)
+                    verify_pkimessage_protection(response, private_key=key)
+                    self.assertTrue(self.ca_handler.rev_handler.is_revoked(cert))
+                else:
+                    status_info = get_pkistatusinfo(response)
+                    self.assertEqual(response["body"].getName(), "rp", response["body"].prettyPrint())
+                    self.assertEqual(str(status_info["status"]), "rejection", display_pki_status_info(response))
+                    self.assertEqual(get_set_bitstring_names(status_info["failInfo"]), failinfo)
+                    self.assertFalse(self.ca_handler.rev_handler.is_revoked(cert))
 
     def test_p10cr(self):
         """
