@@ -56,7 +56,7 @@ CA MUST Accept valid Request with CSR with related Cert
     [Documentation]    As defined in Cert-binding-for-multiple-auth Section 3, we generate a CSR with the related
     ...                certificate attribute. We send a valid CSR, with an valid POP, and an valid related certificate
     ...                from the same CA. The CA MUST accept the request and issue a valid certificate.
-    [Tags]         multiple-auth   csr   positive   known-issue
+    [Tags]         multiple-auth   csr   positive
     Skip If   '${URI_RELATED_CERT}' == None   The URI for related cert is not defined.
     Issue New PQ Sig Cert For Testing
     ${cert_url}=  Prepare Related Cert URL    ${PQ_SIG_CERT}
@@ -84,7 +84,7 @@ CA SHOULD Accept CSR with related cert from different CA
     [Documentation]    As defined in Cert-binding-for-multiple-auth Section 3, we generate a CSR with the related
     ...                certificate attribute. We send a valid CSR, with an valid POP, but an valid related certificate
     ...                from a different CA. The CA SHOULD accept the request and issue a valid certificate.
-    [Tags]         multiple-auth   csr   positive   different-ca   known-issue
+    [Tags]         multiple-auth   csr   positive   different-ca
     Skip If   '${URI_RELATED_CERT}' == None   The URI for related cert is not defined.
     # TODO uncomment, if needed.
     # get a new cert, if the CA requires to issue a related cert in time.
@@ -124,7 +124,7 @@ CA MUST Reject Invalid POP for Cert A
     ...                certificate attribute. We send a valid CSR, with an invalid POPO for the signature inside the
     ...                `RequesterCertificate` structure. The CA MUST detect this error and reject the request and MAY
     ...                respond with the optional failInfo `badPOP`.
-    [Tags]         multiple-auth   csr   negative   popo   known-issue
+    [Tags]         multiple-auth   csr   negative   popo
     Skip If   '${URI_RELATED_CERT}' == None   The URI for related cert is not defined.
     ${cert_url}=  Prepare Related Cert URL    ${ISSUED_CERT}
     ${req_cert}=   Prepare RequesterCertificate  cert_a=${ISSUED_CERT}
@@ -149,7 +149,7 @@ CA MUST Validate that the URI is reachable
     ...                certificate attribute. We send a valid CSR, with an valid POP, but an
     ...                unreachable URI for the related certificate. The CA MUST detect this error and reject
     ...                the request and MAY respond with the optional failInfo `badRequest`.
-    [Tags]         multiple-auth   csr   negative   uri   known-issue
+    [Tags]         multiple-auth   csr   negative   uri
     Skip If   '${NEG_URI_RELATED_CERT}' == None    The Not reachable URI for multiple auth is not defined.
     ${req_cert}=   Prepare RequesterCertificate  cert_a=${ISSUED_CERT}
     ...            cert_a_key=${ISSUED_KEY}   uri=${NEG_URI_RELATED_CERT}
@@ -171,7 +171,7 @@ CA MUST Check If The Related Certificate Is Not Revoked
     ...                certificate attribute. We send a valid CSR, with an valid POP, but an invalid related certificate
     ...                for the related certificate. The CA MUST detect this error and reject the request and MAY
     ...                respond with the optional failInfo `badCertTemplate`.
-    [Tags]         multiple-auth   csr   negative   rr   known-issue
+    [Tags]         multiple-auth   csr   negative   rr
     Skip If   '${URI_RELATED_CERT}' == None   The URI for related cert is not defined.
     Revoked New PQ Sig Cert
     ${cert_url}=  Prepare Related Cert URL    ${REVOKED_PQ_CERT}
@@ -196,7 +196,7 @@ CA MUST Check If The Related Certificate Is Not Updated
     ...                certificate attribute. We send a valid CSR, with an valid POP, but an invalid related certificate
     ...                for the related certificate. The CA MUST detect this error and reject the request and MAY
     ...                respond with the optional failInfo `badCertTemplate`.
-    [Tags]         multiple-auth   csr   negative   rr   known-issue
+    [Tags]         multiple-auth   csr   negative   rr
     Skip If   '${URI_RELATED_CERT}' == None   The URI for related cert is not defined.
     Update New PQ Sig Cert
     ${cert_url}=  Prepare Related Cert URL    ${UPDATED_PQ_CERT}
@@ -221,7 +221,7 @@ CA MUST Reject Related Cert With Non-EE Cert
     ...                certificate attribute. We send a valid CSR, with an valid POP, but the Certificates is not for
     ...                an end entity. The CA MUST detect this error and reject the request and MAY respond with the
     ...                optional failInfo `badCertTemplate`.
-    [Tags]         multiple-auth   csr   negative   known-issue
+    [Tags]         multiple-auth   csr   negative
     Skip If   '${URI_RELATED_CERT}' == None   The URI for related cert is not defined.
     Issue New PQ CA Cert For Testing
     ${cert_url}=  Prepare Related Cert URL    ${PQ_CA_CERT}
@@ -244,7 +244,7 @@ CA MUST Reject Related Cert For Non-EE Cert
     [Documentation]    As defined in Cert-binding-for-multiple-auth Section 3, we generate a CSR with the related
     ...                certificate attribute. We send a valid CSR, with an valid POP, and an valid related certificate
     ...                from the same CA. The CA MUST accept the request and issue a valid certificate.
-    [Tags]         multiple-auth   csr   positive   known-issue
+    [Tags]         multiple-auth   csr   positive
     Skip If   '${URI_RELATED_CERT}' == None   The URI for related cert is not defined.
     ${cert_url}=  Prepare Related Cert URL    ${ISSUED_CERT}
     ${extns}=   Prepare Extensions    is_ca=True

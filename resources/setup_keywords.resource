@@ -81,9 +81,11 @@ Set Up Related Certificates Suite
     ...                (e.g., a traditional certificate and a PQ certificate issued together).
     ...
     ...                The CA_CMP_URL suite variable is updated to the related certificate-specific endpoint.
+    ...                The endpoint takes every body type, so APPEND_PKIBODY_URL_SUFFIX is `${False}` for the suite.
     Set Up Test Suite
     ${url}=   Add URL Suffix   ${CA_BASE_URL}    ${RELATED_CERT_SUFFIX}
     VAR   ${CA_CMP_URL}=    ${url}   scope=SUITE
+    VAR   ${APPEND_PKIBODY_URL_SUFFIX}=    ${False}   scope=SUITE
 
 ##############################################
 ## Issue New Certificates for Testing Keywords
