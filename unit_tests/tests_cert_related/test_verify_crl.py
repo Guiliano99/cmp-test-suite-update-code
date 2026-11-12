@@ -2,8 +2,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import subprocess
 import unittest
+from unittest.mock import patch
 
+from resources import certutils
 from resources.certutils import (
     build_crl_chain_from_list,
     find_crl_signer_cert,
@@ -62,6 +65,24 @@ class TestCRLSignatureVerification(unittest.TestCase):
         crl_chain = build_crl_chain_from_list(self.crl_obj, certs=certs)
         verify_openssl_crl(crl_chain)
 
+    def test_crl_verification_survives_concurrent_verification(self):
+        """
+        GIVEN a CRL with a valid signature.
+        WHEN a second CRL verification finishes right before the first one runs OpenSSL,
+        THEN the first verification still finds its own files and the CRL is successfully verified.
+        """
+        certs = load_certificates_from_dir("data/unittest")
+        real_run = subprocess.run
+        calls = []
+
+        def _other_caller_first(cmd, *args, **kwargs):
+            if not calls:
+                calls.append(cmd)
+                verify_openssl_crl(build_crl_chain_from_list(self.crl_obj, certs=certs))
+            return real_run(cmd, *args, **kwargs)
+
+        with patch.object(certutils.subprocess, "run", side_effect=_other_caller_first):
+            verify_openssl_crl(build_crl_chain_from_list(self.crl_obj, certs=certs))
 
 
 if __name__ == "__main__":

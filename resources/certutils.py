@@ -722,12 +722,15 @@ def _verify_more_certs_than_three(cert_chain: List[rfc9480.CMPCertificate], dir_
     return command
 
 
-def _verify_certificate_chain(command: List[str], cert_chain: List[rfc9480.CMPCertificate], timeout: int = 60) -> None:
+def _verify_certificate_chain(
+    command: List[str], cert_chain: List[rfc9480.CMPCertificate], dir_fpath: str, timeout: int = 60
+) -> None:
     """Verify a certificate chain using OpenSSL commands.
 
     :param command: List of OpenSSL command line arguments to append for verification.
     :param cert_chain: List of `rfc9480.CMPCertificate` objects representing the certificate chain.
                        The chain order should start with the end-entity certificate and end with the root certificate.
+    :param dir_fpath: The temporary directory of this call, to write the PEM files to. The caller removes it.
     :param timeout: Maximum time in seconds for the OpenSSL verification command to run. Defaults to 60 seconds.
 
     :raises SignerNotTrusted: If `cert_chain` is empty, or OpenSSL returns a non-zero exit code,
@@ -735,8 +738,6 @@ def _verify_certificate_chain(command: List[str], cert_chain: List[rfc9480.CMPCe
     """
     if len(cert_chain) == 0:
         raise ValueError("Got a empty chain to validate!")
-
-    dir_fpath = tempfile.mkdtemp(prefix="tmp_cert_checks_", dir="data")
 
     if len(cert_chain) <= 3:
         cmds = _verify_less_then_three_certificates(cert_chain, dir_fpath=dir_fpath)
@@ -760,11 +761,6 @@ def _verify_certificate_chain(command: List[str], cert_chain: List[rfc9480.CMPCe
     except Exception as err:
         logging.error("An unexpected error occurred during certificate validation: %s", err)
         raise SignerNotTrusted(f"Validation of the certificate failed! Error: {err}") from err
-    finally:
-        if os.path.exists("data/tmp_crl"):
-            shutil.rmtree("data/tmp_crl")
-
-        shutil.rmtree(dir_fpath)
 
     logging.info("Certificate chain verified successfully.")
 
@@ -825,10 +821,11 @@ def ensure_is_pem_crl(data: bytes) -> bytes:
         raise ValueError("Data is neither valid DER nor PEM format.")  # pylint: disable=raise-missing-from
 
 
-def _fetch_crls(crl_urls: List[str]) -> List[str]:
+def _fetch_crls(crl_urls: List[str], dir_fpath: str) -> List[str]:
     """Download CRL files from the given list of URLs and saves them as temporary files.
 
     :param crl_urls: List of CRL URLs to download.
+    :param dir_fpath: The temporary directory of the calling verification, to save the CRL files to.
     :return: List of paths to the downloaded CRL files.
     """
     downloaded_files = []
@@ -840,7 +837,7 @@ def _fetch_crls(crl_urls: List[str]) -> List[str]:
             response.raise_for_status()
 
             # Create a temporary file with a .crl suffix
-            with tempfile.NamedTemporaryFile(dir="data/tmp_crl", mode="wb", delete=False, suffix=".crl") as temp_file:
+            with tempfile.NamedTemporaryFile(dir=dir_fpath, mode="wb", delete=False, suffix=".crl") as temp_file:
                 data = ensure_is_pem_crl(response.content)
                 temp_file.write(data)
                 temp_file.flush()
@@ -855,10 +852,13 @@ def _fetch_crls(crl_urls: List[str]) -> List[str]:
     return downloaded_files
 
 
-def _concatenate_crls(crl_files: Union[None, str, List[str]], filename: str = "combined_crls.crl") -> None:
+def _concatenate_crls(
+    crl_files: Union[None, str, List[str]], dir_fpath: str, filename: str = "combined_crls.crl"
+) -> None:
     """Concatenates multiple CRL files into a single temporary PEM file.
 
     :param crl_files: List or a single path to CRL files to be concatenated.
+    :param dir_fpath: The temporary directory of the calling verification, to write the combined file to.
     :return: Path to the concatenated temporary CRL file.
     """
     if not crl_files:
@@ -867,9 +867,7 @@ def _concatenate_crls(crl_files: Union[None, str, List[str]], filename: str = "c
     if isinstance(crl_files, str):
         crl_files = [crl_files]
 
-    output_dir = Path("data/tmp_crl")
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_file = output_dir / filename
+    output_file = Path(dir_fpath) / filename
     with open(output_file, "wb") as outfile:
         for crl_file in crl_files:
             with open(crl_file, "rb") as infile:
@@ -879,12 +877,14 @@ def _concatenate_crls(crl_files: Union[None, str, List[str]], filename: str = "c
 
 def _get_crl_filepath_for_verification(
     cert_chain: List[rfc9480.CMPCertificate],
+    dir_fpath: str,
     crl_path: Optional[str] = None,
     check_crl_all: bool = False,
 ) -> None:
     """Get the CRL file path for verification.
 
     :param cert_chain: A list of `rfc9480.CMPCertificate` objects representing the certificate chain.
+    :param dir_fpath: The temporary directory of the calling verification, to save the fetched CRLs to.
     :param crl_path: The path to the CRL file to use for verification. Defaults to `None`.
     :return: The path to the CRL file.
     :raises ValueError: If the CRL file path is not valid or if the CRL URLs are not found in the certificate chain.
@@ -894,19 +894,17 @@ def _get_crl_filepath_for_verification(
             raise ValueError(f"The provided CRL path does not exist: {crl_path}")
         return
 
-    os.makedirs("data/tmp_crl", exist_ok=True)
-
     crl_urls = _get_crls_from_certs(crl_path=crl_path, cert_chain=cert_chain, check_crl_all=check_crl_all)
 
     crl_files = []
     for uri in set(crl_urls):
         if uri.startswith("http://") or uri.startswith("https://"):
-            crl_files += _fetch_crls(crl_urls)
+            crl_files += _fetch_crls(crl_urls, dir_fpath)
 
     if not crl_files:
         raise ValueError(f"Could not fetch the CRLs form the uri: {crl_urls}.")
 
-    _concatenate_crls(crl_files=crl_files)
+    _concatenate_crls(crl_files=crl_files, dir_fpath=dir_fpath)
 
 
 @keyword(name="Verify Cert Chain OpenSSL")
@@ -924,8 +922,8 @@ def verify_cert_chain_openssl(  # noqa D417 undocumented-param
 
     Note:
     ----
-      - The OpenSSL command will be executed in a temporary directory. data/tmp_cert_check and data/tmp_crl.
-      - The certificates will be written to files in PEM format, as well as the CRL files (For debugging).
+      - The certificates and the fetched CRL files are written to a temporary directory under `data/`,
+      one per call, which is removed afterwards.
       - If cert_check_all is set to `True`, the CRL check will be performed for all certificates in the chain,
       but also expects **every certificate** to have a CRL distribution point set, besides the **root certificate**.
 
@@ -955,19 +953,10 @@ def verify_cert_chain_openssl(  # noqa D417 undocumented-param
     if verbose:
         utils.log_certificates(certs=cert_chain, msg_suffix="Untrusted Certificates:\n")
 
-    temp_dir = "./data/tmp_cert_check"
-    if not os.path.isdir("./data/tmp_cert_check"):
-        os.mkdir(temp_dir)
-
     if not crl_check and not crl_check_all:
         logging.warning("Please Note the CRL check is deactivate!")
 
     command = ["openssl", "verify"]
-
-    if crl_check or crl_check_all:
-        _get_crl_filepath_for_verification(cert_chain=cert_chain, crl_path=crl_path, check_crl_all=crl_check_all)
-        crl_path = crl_path or "data/tmp_crl/combined_crls.crl"
-        command.extend(["-CRLfile", crl_path])
 
     if crl_check_all:
         command.append("-crl_check_all")
@@ -980,7 +969,15 @@ def verify_cert_chain_openssl(  # noqa D417 undocumented-param
     if verbose:
         command.append("-verbose")
 
-    _verify_certificate_chain(command=command, cert_chain=cert_chain, timeout=int(timeout))
+    # One directory per call: parallel callers never share or delete each other's files.
+    with tempfile.TemporaryDirectory(prefix="tmp_cert_checks_", dir="data") as dir_fpath:
+        if crl_check or crl_check_all:
+            _get_crl_filepath_for_verification(
+                cert_chain=cert_chain, dir_fpath=dir_fpath, crl_path=crl_path, check_crl_all=crl_check_all
+            )
+            command.extend(["-CRLfile", crl_path or os.path.join(dir_fpath, "combined_crls.crl")])
+
+        _verify_certificate_chain(command=command, cert_chain=cert_chain, dir_fpath=dir_fpath, timeout=int(timeout))
 
 
 @not_keyword
@@ -1206,13 +1203,11 @@ def verify_openssl_crl(crl_chain: List, timeout: int = 60):
     :return: True if the CRL is verified, False otherwise.
     :raises ValueError: If the CRL is invalid or verification fails.
     """
-    dir_fpath = "data/tmp_cert_checks"
-    os.makedirs(dir_fpath, exist_ok=True)
-
-    crl_path = f"{dir_fpath}/crl.der"
-
     if not isinstance(crl_chain[0], rfc5280.CertificateList):
         raise ValueError("The first element of the CRL chain must be a CertificateList object.")
+
+    dir_fpath = tempfile.mkdtemp(prefix="tmp_crl_checks_", dir="data")
+    crl_path = f"{dir_fpath}/crl.der"
 
     with open(crl_path, "wb") as crl_file:
         crl_file.write(encoder.encode(crl_chain[0]))
