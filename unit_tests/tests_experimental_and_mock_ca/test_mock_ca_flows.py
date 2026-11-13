@@ -152,7 +152,8 @@ class TestMockCAFlows(unittest.TestCase):
         GIVEN a certificate issued with an ir and confirmed with a certConf.
         WHEN it is revoked with an rr and the CRL and OCSP routes are asked afterwards.
         THEN every message is accepted, the CRL lists the serial number and OCSP answers successfully with
-        `revoked`.
+        `revoked`, both with the stored revocation date and the reason `keyCompromise`, and the CRL carries no
+        issuing distribution point.
         """
         key, response, cert = self._issue_cert(implicit_confirm=False)
 
@@ -160,9 +161,19 @@ class TestMockCAFlows(unittest.TestCase):
         self.assertEqual(response["body"].getName(), "pkiconf", response["body"].prettyPrint())
 
         self._assert_accepted(self._post("/rr", self._build_rr(key, cert)), "rp")
+        # CRLs and OCSP responses carry whole seconds.
+        revoked_date = self.ca_handler.state.certificate_db.get_cert(cert).revoked_entry.revoked_date
+        revoked_date = revoked_date.replace(microsecond=0)
 
         serial_number = int(cert["tbsCertificate"]["serialNumber"])
-        self.assertIsNotNone(self._get_crl().get_revoked_certificate_by_serial_number(serial_number))
+        crl = self._get_crl()
+        with self.assertRaises(x509.ExtensionNotFound):
+            crl.extensions.get_extension_for_class(x509.IssuingDistributionPoint)
+        crl_entry = crl.get_revoked_certificate_by_serial_number(serial_number)
+        self.assertIsNotNone(crl_entry)
+        self.assertEqual(crl_entry.revocation_date_utc, revoked_date)
+        crl_reason = crl_entry.extensions.get_extension_for_class(x509.CRLReason).value.reason
+        self.assertEqual(crl_reason, x509.ReasonFlags.key_compromise)
 
         ocsp_request, _ = create_ocsp_request(cert, self.ca_handler.ca_cert)
         ocsp_response = self.client.post("/ocsp", data=ocsp_request.public_bytes(Encoding.DER))
@@ -171,6 +182,8 @@ class TestMockCAFlows(unittest.TestCase):
         parsed_ocsp = ocsp.load_der_ocsp_response(ocsp_response.data)
         self.assertEqual(parsed_ocsp.response_status, ocsp.OCSPResponseStatus.SUCCESSFUL)
         self.assertEqual(parsed_ocsp.certificate_status, ocsp.OCSPCertStatus.REVOKED)
+        self.assertEqual(parsed_ocsp.revocation_time_utc, revoked_date)
+        self.assertEqual(parsed_ocsp.revocation_reason, x509.ReasonFlags.key_compromise)
 
     def test_revived_cert_leaves_the_crl(self):
         """

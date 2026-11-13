@@ -8,7 +8,7 @@ import enum
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Set, Tuple, Union
 
 from cryptography import x509
 from cryptography.x509 import CertificateRevocationList, ExtensionNotFound, ocsp
@@ -47,6 +47,15 @@ class RevokedEntry:
     hashed_cert: Optional[bytes] = None
     revoked_date: Optional[datetime] = None
 
+    @property
+    def crl_reason(self) -> Optional[str]:
+        """Return the reason to write into a CRL entry or an OCSP response, or `None` to write none.
+
+        RFC 5280 Section 5.3.1: the reason code SHOULD be absent instead of using the unspecified (0) reasonCode
+        value. `updated` is no CRLReason.
+        """
+        return None if self.reason in ("unspecified", "updated") else self.reason
+
 
 @dataclass
 class RevokedEntryList:
@@ -56,11 +65,20 @@ class RevokedEntryList:
     hash_alg: str = "sha1"
 
     @classmethod
-    def build(cls, hash_alg: str, entries: List[Union[dict, rfc9480.CMPCertificate]]) -> "RevokedEntryList":
-        """Build a RevokedEntryList from the given entries."""
+    def build(
+        cls, hash_alg: str, entries: Sequence[Union[dict, rfc9480.CMPCertificate, RevokedEntry]]
+    ) -> "RevokedEntryList":
+        """Build a RevokedEntryList from the given entries.
+
+        :param hash_alg: The hash algorithm for the certificate hashes.
+        :param entries: `RevokedEntry` objects (kept as they are), dicts with their fields, or bare certificates
+        (reason `unspecified`, no date).
+        """
         data = []
         for entry in entries:
-            if isinstance(entry, dict):
+            if isinstance(entry, RevokedEntry):
+                data.append(entry)
+            elif isinstance(entry, dict):
                 data.append(RevokedEntry(**entry))
             elif isinstance(entry, rfc9480.CMPCertificate):
                 hashed_cert = compute_hash(hash_alg, encoder.encode(entry))
@@ -248,11 +266,17 @@ class CertRevStateDB:
     def build(
         cls,
         hash_alg: Optional[str] = None,
-        revoked_certs: Optional[List[rfc9480.CMPCertificate]] = None,
-        updated_certs: Optional[List[rfc9480.CMPCertificate]] = None,
+        revoked_certs: Optional[Sequence[Union[rfc9480.CMPCertificate, RevokedEntry]]] = None,
+        updated_certs: Optional[Sequence[Union[rfc9480.CMPCertificate, RevokedEntry]]] = None,
         crl_number: int = 1,
     ) -> "CertRevStateDB":
-        """Build the certificate revocation state database."""
+        """Build the certificate revocation state database.
+
+        :param hash_alg: The hash algorithm for the certificate hashes. Defaults to `sha1`.
+        :param revoked_certs: The revoked certificates or their stored `RevokedEntry` objects.
+        :param updated_certs: The updated certificates or their `RevokedEntry` objects.
+        :param crl_number: The CRL number of the next CRL. Defaults to `1`.
+        """
         hash_alg = hash_alg or "sha1"
         rev_list = RevokedEntryList.build(hash_alg=hash_alg, entries=revoked_certs or [])  # type: ignore
         update_list = RevokedEntryList.build(hash_alg=hash_alg, entries=updated_certs or [])  # type: ignore
@@ -276,11 +300,16 @@ class CertRevStateDB:
             logging.info("OCSP Nonce not found in the request.")
             return None
 
+    @property
+    def _revoked_entries(self) -> List[RevokedEntry]:
+        """Return the entries listed as revoked: the revoked ones and, if counted as revoked, the updated ones."""
+        return self.rev_entry_list.entries + (self.update_entry_list.entries if self._update_eq_rev else [])
+
     def _check_ocps_request_cert_status(
         self,
         request: ocsp.OCSPRequest,
         issued_certs: List[rfc9480.CMPCertificate],
-    ) -> Tuple[Optional[rfc9480.CMPCertificate], str]:
+    ) -> Tuple[Optional[rfc9480.CMPCertificate], str, Optional[RevokedEntry]]:
         """Check the OCSP request for the certificate status.
 
         If the certificate is not found in the list of issued certificates,
@@ -288,28 +317,19 @@ class CertRevStateDB:
 
         :param request: The OCSP request.
         :param issued_certs: The list of issued certificates.
-        :return: The certificate, if found and the status.
+        :return: The certificate if found, the status, and the revoked entry of a revoked certificate.
         """
         num = request.serial_number
 
-        nums = self.rev_entry_list.serial_numbers
+        for entry in self._revoked_entries:
+            if num == int(entry.cert["tbsCertificate"]["serialNumber"]):
+                return entry.cert, "revoked", entry
 
-        if self._update_eq_rev:
-            nums += self.update_entry_list.serial_numbers
+        for cert in issued_certs:
+            if num == int(cert["tbsCertificate"]["serialNumber"]):
+                return cert, "good", None
 
-        status = "unauthorized"
-        found_cert = None
-        if num in nums:
-            status = "revoked"
-            found_cert = self.rev_entry_list.get_cert_by_serial_number(num)
-        else:
-            for cert in issued_certs:
-                if num == int(cert["tbsCertificate"]["serialNumber"]):
-                    found_cert = cert
-                    status = "good"
-                    break
-
-        return found_cert, status
+        return None, "unauthorized", None
 
     def get_ocsp_response(
         self,
@@ -320,31 +340,26 @@ class CertRevStateDB:
         responder_cert: Optional[rfc9480.CMPCertificate] = None,
     ) -> ocsp.OCSPResponse:
         """Get the OCSP response for the request."""
-        found_cert, status = self._check_ocps_request_cert_status(request, issued_certs)
+        found_cert, status, revoked_entry = self._check_ocps_request_cert_status(request, issued_certs)
 
-        if found_cert is None and status == "unauthorized":
+        if found_cert is None:
             # If the extension is not present:
             # As of RFC 6960, section 2.3
             # The response "unauthorized" is returned in cases where the client is
             # not authorized to make this query to this server or the server is not
             # capable of responding authoritatively (cf. [RFC5019], Section 2.2.3).
             return ocsp.OCSPResponseBuilder.build_unsuccessful(ocsp.OCSPResponseStatus.UNAUTHORIZED)
-        if found_cert is None:
-            raise NotImplementedError("Certificate not found in the list of issued certificates.")
 
         nonce = self._get_nonce(request)
-
-        # TODO maybe also save revocation time.
-        revocation_time = None
-        if status == "revoked":
-            revocation_time = datetime.now(timezone.utc) - timedelta(seconds=60)
 
         return certutils.build_ocsp_response(
             cert=found_cert,
             ca_cert=ca_cert,
             hash_alg=request.hash_algorithm.name,
             status=status,
-            revocation_time=revocation_time,
+            # RFC 6960 Section 2.4: the time at which the certificate was revoked.
+            revocation_time=None if revoked_entry is None else revoked_entry.revoked_date,
+            revocation_reason=None if revoked_entry is None else revoked_entry.crl_reason,
             responder_hash_alg=request.hash_algorithm.name,
             responder_key=sign_key,
             responder_cert=responder_cert,
@@ -363,10 +378,6 @@ class CertRevStateDB:
         :param ca_cert: The CA certificate.
         :param hash_alg: The hash algorithm to use for signing.
         """
-        nums = self.rev_entry_list.serial_numbers
-        if self._update_eq_rev:
-            nums += self.update_entry_list.serial_numbers
-
         crypto_ca_cert = x509.load_der_x509_certificate(encoder.encode(ca_cert))
         _now = datetime.now(timezone.utc) - timedelta(seconds=60)  # to avoid time issues.
         _next_update = _now + timedelta(days=1)
@@ -387,10 +398,18 @@ class CertRevStateDB:
         builder = builder.add_extension(x509.CRLNumber(self._crl_number), critical=False)
         self._crl_number += 1
 
-        for serial_number in nums:
-            builder = builder.add_revoked_certificate(
-                x509.RevokedCertificateBuilder(serial_number=serial_number, revocation_date=datetime.now()).build(),
+        for entry in self._revoked_entries:
+            # RFC 5280 Section 5.1.2.6: the date on which the revocation occurred. Only an entry built from a bare
+            # certificate has none; the CertificateDB stores the date of every revocation and key update.
+            rev_builder = x509.RevokedCertificateBuilder(
+                serial_number=int(entry.cert["tbsCertificate"]["serialNumber"]),
+                revocation_date=entry.revoked_date or _now,
             )
+            if entry.crl_reason is not None:
+                rev_builder = rev_builder.add_extension(
+                    x509.CRLReason(x509.ReasonFlags(entry.crl_reason)), critical=False
+                )
+            builder = builder.add_revoked_certificate(rev_builder.build())
 
         trad_sign_key = ensure_is_trad_sign_key(sign_key)
         return _sign_crl_builder(crl_builder=builder, sign_key=trad_sign_key, hash_alg=hash_alg or "sha256")
@@ -960,7 +979,6 @@ class CertificateDB:
         - `certs`: The list of certificates.
         - `hash_alg`: The hash algorithm to use for hashing the certificates. Defaults to "sha1".
         - `save_date_time`: Whether to save the datetime, when the certificate was issued. Defaults to `False`.
-        - `save_revoked_date_time`: Whether to save the datetime, when the certificate was revoked. Defaults to `False`.
         - `treat_update_as_revoked`: Whether to treat the update certificates as revoked. Defaults to `True`.
         - `updated_cert_timeout`: The timeout for the updated certificates in seconds. Defaults to 10 seconds.
 
@@ -968,7 +986,6 @@ class CertificateDB:
 
     _certs: List[CertDBEntry] = field(default_factory=list)
     save_date_time: bool = False
-    save_revoked_date_time: bool = False
     treat_update_as_revoked: bool = True
     hash_alg: str = "sha1"
     updated_cert_timeout: int = 10  # seconds
@@ -1075,17 +1092,15 @@ class CertificateDB:
         """Process the revoked certificate.
 
         :param cert_digest: The digest of the certificate.
-        :param revoke_entry: The revoked entry to add to the certificate.
+        :param revoke_entry: The revoked entry to add to the certificate. Defaults to the reason `unspecified`.
+        An entry without a date gets the current time, so the CRL and OCSP answer with a stored date.
         """
         if revoke_entry is None:
-            RevokedEntry(
-                reason="unspecified",
-                cert=entry.cert,
-                hashed_cert=cert_digest,
-                revoked_date=datetime.now(timezone.utc) if self.save_revoked_date_time else None,
-            )
+            revoke_entry = RevokedEntry(reason="unspecified", cert=entry.cert, hashed_cert=cert_digest)
         elif isinstance(revoke_entry, dict):
             revoke_entry = RevokedEntry(**revoke_entry)
+        if revoke_entry.revoked_date is None:
+            revoke_entry.revoked_date = datetime.now(timezone.utc)
         entry.revoked_entry = revoke_entry
 
     def _process_update_cert(
@@ -1256,6 +1271,30 @@ class CertificateDB:
             entry = next_entry
         return history
 
+    def _build_rev_state_db(self) -> CertRevStateDB:
+        """Build the revocation state of the CRL and OCSP answers from the stored entries.
+
+        A revoked certificate keeps its stored date and reason. A certificate replaced by a key update is listed
+        with its update date and the reason `superseded`.
+        """
+        # _process_rev_cert stores an entry for every revocation; a bare certificate would be listed as unspecified.
+        revoked = [
+            entry.revoked_entry or entry.cert for entry in self._certs if entry.cert_state == CertStateEnum.REVOKED
+        ]
+        superseded = [
+            RevokedEntry(
+                reason="superseded", cert=entry.cert, hashed_cert=entry.cert_digest, revoked_date=entry.updated_date
+            )
+            for entry in self._certs
+            if entry.cert_state in (CertStateEnum.UPDATED, CertStateEnum.UPDATED_BUT_NOT_CONFIRMED)
+        ]
+        return CertRevStateDB.build(
+            hash_alg=self.hash_alg,
+            revoked_certs=revoked,
+            updated_certs=superseded,
+            crl_number=self._crl_number,
+        )
+
     def get_current_crl(
         self,
         ca_key: SignKey,
@@ -1269,12 +1308,7 @@ class CertificateDB:
         :param hash_alg: The hash algorithm to use for signing. Defaults to `sha256`.
         :return: The current CRL DER-encoded.
         """
-        rev_db = CertRevStateDB.build(
-            hash_alg=self.hash_alg,
-            revoked_certs=self.revoked_certs,
-            updated_certs=self.updated_certs,
-            crl_number=self._crl_number,
-        )
+        rev_db = self._build_rev_state_db()
         # The copy increments only its own counter; RFC 5280 Section 5.2.3 forbids reusing a CRL number.
         self._crl_number += 1
         return rev_db.get_crl_response(
@@ -1302,13 +1336,7 @@ class CertificateDB:
         """
         add_certs = add_certs or []
 
-        rev_db = CertRevStateDB.build(
-            hash_alg=self.hash_alg,
-            revoked_certs=self.revoked_certs,
-            updated_certs=self.updated_certs,
-            crl_number=self._crl_number,
-        )
-        return rev_db.get_ocsp_response(
+        return self._build_rev_state_db().get_ocsp_response(
             request=request,
             sign_key=sign_key,
             ca_cert=ca_cert,

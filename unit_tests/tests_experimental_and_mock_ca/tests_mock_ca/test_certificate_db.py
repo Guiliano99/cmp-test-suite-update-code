@@ -3,13 +3,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import unittest
+from datetime import datetime, timezone
 
 from cryptography import x509
-from mock_ca.mock_fun import CertDBEntry, CertificateDB, CertStateEnum
+from cryptography.x509 import ocsp
+from mock_ca.mock_fun import CertDBEntry, CertificateDB, CertStateEnum, RevokedEntry
 from mock_ca.operation_dbs import load_ca_cert_and_key
 
 from resources.asn1utils import encode_to_der
-from resources.certutils import cert_in_list, parse_certificate
+from resources.certutils import cert_in_list, create_ocsp_request, parse_certificate
 from resources.keyutils import load_private_key_from_file
 from resources.oid_mapping import compute_hash
 from resources.utils import load_and_decode_pem_file
@@ -163,3 +165,94 @@ class TestCertificateDB(unittest.TestCase):
             for _ in range(2)
         ]
         self.assertEqual(crl_numbers, [1, 2])
+
+    def _crl_entry_and_ocsp(self, db: CertificateDB, cert):
+        """Return the CRL entry of `cert` in the current CRL of `db` and the OCSP response of `db` for `cert`."""
+        crl = db.get_current_crl(ca_key=self.ca_key, ca_cert=self.ca_cert)
+        crl_entry = crl.get_revoked_certificate_by_serial_number(int(cert["tbsCertificate"]["serialNumber"]))
+        self.assertIsNotNone(crl_entry)
+        ocsp_request, _ = create_ocsp_request(cert, self.ca_cert, must_be_present=False)
+        ocsp_response = db.get_ocsp_response(request=ocsp_request, sign_key=self.ca_key, ca_cert=self.ca_cert)
+        self.assertEqual(ocsp_response.response_status, ocsp.OCSPResponseStatus.SUCCESSFUL)
+        self.assertEqual(ocsp_response.certificate_status, ocsp.OCSPCertStatus.REVOKED)
+        return crl_entry, ocsp_response
+
+    def _revoke(self, db: CertificateDB, reason: str) -> datetime:
+        """Add the example certificate as confirmed, revoke it with a fixed date and `reason`, return the date."""
+        revoked_date = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+        db.add_cert(cert=self.example_cert, cert_state=CertStateEnum.CONFIRMED)
+        db.change_cert_state(
+            cert=self.example_cert,
+            new_state=CertStateEnum.REVOKED,
+            revoke_entry=RevokedEntry(reason=reason, cert=self.example_cert, revoked_date=revoked_date),
+        )
+        return revoked_date
+
+    def test_crl_and_ocsp_use_stored_revocation_date_and_reason(self):
+        """
+        GIVEN a certificate revoked with the reason `keyCompromise` and a fixed revocation date.
+        WHEN the current CRL and an OCSP response for it are built.
+        THEN both carry the stored date and the reason `keyCompromise` (RFC 5280 Section 5.1.2.6, RFC 6960
+        Section 2.4).
+        """
+        db = CertificateDB()
+        revoked_date = self._revoke(db, reason="keyCompromise")
+        crl_entry, ocsp_response = self._crl_entry_and_ocsp(db, self.example_cert)
+        self.assertEqual(crl_entry.revocation_date_utc, revoked_date)
+        crl_reason = crl_entry.extensions.get_extension_for_class(x509.CRLReason).value.reason
+        self.assertEqual(crl_reason, x509.ReasonFlags.key_compromise)
+        self.assertEqual(ocsp_response.revocation_time_utc, revoked_date)
+        self.assertEqual(ocsp_response.revocation_reason, x509.ReasonFlags.key_compromise)
+
+    def test_unspecified_reason_is_absent(self):
+        """
+        GIVEN a certificate revoked with the reason `unspecified` and a fixed revocation date.
+        WHEN the current CRL and an OCSP response for it are built.
+        THEN both carry the stored date and no reason (RFC 5280 Section 5.3.1: the reason code SHOULD be absent
+        instead of using the unspecified (0) reasonCode value).
+        """
+        db = CertificateDB()
+        revoked_date = self._revoke(db, reason="unspecified")
+        crl_entry, ocsp_response = self._crl_entry_and_ocsp(db, self.example_cert)
+        self.assertEqual(crl_entry.revocation_date_utc, revoked_date)
+        with self.assertRaises(x509.ExtensionNotFound):
+            crl_entry.extensions.get_extension_for_class(x509.CRLReason)
+        self.assertEqual(ocsp_response.revocation_time_utc, revoked_date)
+        self.assertIsNone(ocsp_response.revocation_reason)
+
+    def test_revocation_without_entry_stores_one(self):
+        """
+        GIVEN a confirmed certificate.
+        WHEN its state is changed to revoked without a revoked entry.
+        THEN the database stores an entry with the reason `unspecified` and the revocation date, and the CRL lists
+        the certificate with that date.
+        """
+        db = CertificateDB()
+        db.add_cert(cert=self.example_cert, cert_state=CertStateEnum.CONFIRMED)
+        before = datetime.now(timezone.utc)
+        db.change_cert_state(cert=self.example_cert, new_state=CertStateEnum.REVOKED)
+
+        revoked_entry = db.get_cert(self.example_cert).revoked_entry
+        self.assertIsNotNone(revoked_entry)
+        self.assertEqual(revoked_entry.reason, "unspecified")
+        self.assertGreaterEqual(revoked_entry.revoked_date, before)
+        crl_entry, _ = self._crl_entry_and_ocsp(db, self.example_cert)
+        self.assertEqual(crl_entry.revocation_date_utc, revoked_entry.revoked_date.replace(microsecond=0))
+
+    def test_updated_cert_is_superseded_since_its_update_date(self):
+        """
+        GIVEN a confirmed certificate replaced by a key update.
+        WHEN the current CRL and an OCSP response for it are built.
+        THEN both list it as revoked with the stored update date and the reason `superseded`.
+        """
+        db = CertificateDB()
+        db.add_cert(cert=self.example_cert, cert_state=CertStateEnum.CONFIRMED)
+        db.change_cert_state(cert=self.example_cert, new_state=CertStateEnum.UPDATED, updated_cert=self.example_cert2)
+        updated_date = db.get_cert(self.example_cert).updated_date
+
+        crl_entry, ocsp_response = self._crl_entry_and_ocsp(db, self.example_cert)
+        self.assertEqual(crl_entry.revocation_date_utc, updated_date)
+        crl_reason = crl_entry.extensions.get_extension_for_class(x509.CRLReason).value.reason
+        self.assertEqual(crl_reason, x509.ReasonFlags.superseded)
+        self.assertEqual(ocsp_response.revocation_time_utc, updated_date)
+        self.assertEqual(ocsp_response.revocation_reason, x509.ReasonFlags.superseded)
