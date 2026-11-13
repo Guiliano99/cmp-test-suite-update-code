@@ -84,11 +84,11 @@ def build_pkimessage(body_type="p10cr", **params):
         return cmputils.build_cmp_error_message(**params)
 
     if body_type == "cr":
-        params["signing_key"] = params.get("signing_key", params.get("key")) or generate_key()
+        params["signing_key"] = params.get("signing_key", params.pop("key", None)) or generate_key()
         return cmputils.build_cr_from_key(**params)
 
     if body_type == "ir":
-        params["signing_key"] = params.get("signing_key", params.get("key")) or generate_key()
+        params["signing_key"] = params.get("signing_key", params.pop("key", None)) or generate_key()
         return cmputils.build_cr_from_key(**params)
 
     raise NotImplementedError("Only used for building the `p10cr` PKIBody.")

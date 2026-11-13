@@ -15,7 +15,9 @@ from resources.cmputils import (
     build_key_update_request,
     build_krr_from_key,
 )
-from resources.keyutils import load_private_key_from_file
+from resources.keyutils import load_private_key_from_file, load_public_key_from_cert_template
+
+from unit_tests.utils_for_test import build_pkimessage
 
 # The PKIHeader keys every builder hands to the shared PKIMessage code, with their default values.
 _HEADER_PARAMS = {
@@ -88,6 +90,18 @@ class TestBuildCertReqUnknownParams(unittest.TestCase):
             with self.subTest(keyword=name):
                 pki_message = build(exclude_fields="sender,senderKID", **_HEADER_PARAMS, **_REQ_PARAMS, **extra)
                 self.assertFalse(pki_message["header"]["senderKID"].isValue)
+
+    def test_unit_test_helper_passes_key_as_signing_key(self):
+        """
+        GIVEN the unit test helper `build_pkimessage`, which documents `key` for a `cr` or `ir` body.
+        WHEN it is called with `key` for both body types.
+        THEN it builds the request for that key instead of passing `key` on as an unknown argument.
+        """
+        for body_type in ("cr", "ir"):
+            with self.subTest(body_type=body_type):
+                pki_message = build_pkimessage(body_type=body_type, key=self.key)
+                cert_template = pki_message["body"]["cr"][0]["certReq"]["certTemplate"]
+                self.assertEqual(load_public_key_from_cert_template(cert_template), self.key.public_key())
 
 
 if __name__ == "__main__":
