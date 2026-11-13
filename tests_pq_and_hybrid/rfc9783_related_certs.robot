@@ -241,10 +241,12 @@ CA MUST Reject Related Cert With Non-EE Cert
     PKIStatusInfo Failinfo Bit Must Be    ${response}    badCertTemplate,badRequest
 
 CA MUST Reject Related Cert For Non-EE Cert
-    [Documentation]    As defined in Cert-binding-for-multiple-auth Section 3, we generate a CSR with the related
-    ...                certificate attribute. We send a valid CSR, with an valid POP, and an valid related certificate
-    ...                from the same CA. The CA MUST accept the request and issue a valid certificate.
-    [Tags]         multiple-auth   csr   positive
+    [Documentation]    As defined in RFC 9763 Section 4.1, the `RelatedCertificate` extension MUST only be included in
+    ...                the end-entity certificate. We generate a CSR with the related certificate attribute, a valid
+    ...                POP and a valid related certificate, but the CSR requests a CA certificate (`cA` set to `True`).
+    ...                The CA MUST detect this error and reject the request and MAY respond with the optional failInfo
+    ...                `badCertTemplate`.
+    [Tags]         multiple-auth   csr   negative
     Skip If   '${URI_RELATED_CERT}' == None   The URI for related cert is not defined.
     ${cert_url}=  Prepare Related Cert URL    ${ISSUED_CERT}
     ${extns}=   Prepare Extensions    is_ca=True
