@@ -60,7 +60,7 @@ def _build_rp_error_response(
     kwargs = set_ca_header_fields(request, kwargs)
 
     logging.warning(exception)
-    logging.warning(exception.failinfo)
+    logging.warning(exception.get_failinfo())
     body = rfc9480.PKIBody()
     status_info = cmputils.prepare_pkistatusinfo(
         status="rejection",

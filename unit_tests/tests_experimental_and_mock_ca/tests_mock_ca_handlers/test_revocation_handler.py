@@ -8,9 +8,11 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from mock_ca.mock_fun import CertificateDB, CertStateEnum
 from mock_ca.rev_handler import RevocationHandler
 
+from resources.asn1utils import get_set_bitstring_names
 from resources.certbuildutils import build_certificate
 from resources.certutils import cert_in_list
 from resources.cmputils import build_cmp_revoke_request, get_pkistatusinfo
+from resources.exceptions import BadRequest
 from resources.keyutils import generate_key
 from resources.protectionutils import protect_hybrid_pkimessage
 from unit_tests.utils_for_test import load_ca_cert_and_key
@@ -160,6 +162,18 @@ class TestRevocationHandler(unittest.TestCase):
         status = get_pkistatusinfo(response)
         self.assertEqual(str(status["status"]), "rejection", status.prettyPrint())
         self.assertEqual(len(revived_certs), 0)
+
+    def test_error_response_logs_instance_failinfo(self):
+        """
+        GIVEN an error with its own failinfo.
+        WHEN the revocation handler builds the error response for it.
+        THEN the log and the response carry that failinfo, not the default of the error class.
+        """
+        error = BadRequest("The certificate template is invalid.", failinfo="badCertTemplate")
+        with self.assertLogs(level="WARNING") as logs:
+            response = RevocationHandler.build_rp_error_response(self._build_revoke_request("keyCompromise"), error)
+        self.assertIn("WARNING:root:badCertTemplate", logs.output)
+        self.assertEqual(get_set_bitstring_names(get_pkistatusinfo(response)["failInfo"]), "badCertTemplate")
 
 
 if __name__ == "__main__":

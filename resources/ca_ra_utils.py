@@ -3626,7 +3626,7 @@ def build_rp_from_rr(  # noqa: D417 missing argument descriptions in the docstri
         except CMPTestSuiteError as e:
             status_info = cmputils.prepare_pkistatusinfo(
                 status="rejection",
-                failinfo=e.failinfo,
+                failinfo=e.get_failinfo(),
                 texts=e.message,
             )
             entry = {}

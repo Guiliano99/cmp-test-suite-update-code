@@ -3,12 +3,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import unittest
+from unittest.mock import patch
 
-from resources.asn1utils import is_bit_set
+from resources import ca_ra_utils
+from resources.asn1utils import get_set_bitstring_names, is_bit_set
 from resources.ca_ra_utils import build_rp_from_rr
 from resources.certutils import parse_certificate
 from resources.cmputils import build_cmp_revoke_request
-from resources.exceptions import BadMessageCheck
+from resources.exceptions import BadMessageCheck, BadRequest
 from resources.keyutils import load_private_key_from_file
 from resources.protectionutils import protect_pkimessage
 from resources.utils import load_and_decode_pem_file
@@ -80,3 +82,17 @@ class TestBuildRpFromRr(unittest.TestCase):
                 request=self.rr,
                 certs=[self.cert],
             )
+
+    def test_build_rp_from_rr_keeps_instance_failinfo(self):
+        """
+        GIVEN a revocation request whose entry check raises an error with its own failinfo.
+        WHEN building a revocation response from the request.
+        THEN the status of the entry is rejected with exactly that failinfo, not the default of the error class.
+        """
+        error = BadRequest("The certificate template is invalid.", failinfo="badCertTemplate")
+        with patch.object(ca_ra_utils, "validate_rev_details", side_effect=error):
+            rp, _ = build_rp_from_rr(request=self.rr, certs=[self.cert], verify=False)
+
+        status_info = rp["body"]["rp"]["status"][0]
+        self.assertEqual(str(status_info["status"]), "rejection")
+        self.assertEqual(get_set_bitstring_names(status_info["failInfo"]), "badCertTemplate")
