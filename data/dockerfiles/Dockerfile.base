@@ -6,8 +6,10 @@
 
 FROM ubuntu:25.10
 
+# `make` is listed on its own, so it stays installed when build-essential is
+# removed below; the Makefile targets need it.
 RUN apt-get update && \
-    apt-get install -y python3 python3-pip python3-venv openssl libssl-dev cmake git build-essential ca-certificates && \
+    apt-get install -y python3 python3-pip python3-venv openssl libssl-dev cmake git build-essential make ca-certificates && \
     apt-get clean
 
 # Use a dedicated virtual environment to avoid PEP 668 (externally-managed-environment)
