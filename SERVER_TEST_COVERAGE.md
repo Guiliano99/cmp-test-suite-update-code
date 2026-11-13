@@ -459,7 +459,7 @@ Tests that exercise the support-message behavior defined in Section 4.3 are loca
 
 | Test Case                                                                  | File                   |
 | -------------------------------------------------------------------------- | ---------------------- |
-| CA MUST Reject Protected Genm With Get CA Certs                            | support_messages.robot |
+| CA MUST Respond To Protected Genm With Get CA Certs                        | support_messages.robot |
 | CA MUST Respond To Protected Genm With Get CA Certs With Invalid InfoValue | support_messages.robot |
 
 ### Section 4.3.2

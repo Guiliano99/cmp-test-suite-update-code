@@ -24,7 +24,7 @@ Test Tags           general-message    support-messages
 
 ## Section 4.3.1. Get CA Certificates
 
-CA MUST Reject Protected Genm With Get CA Certs
+CA MUST Respond To Protected Genm With Get CA Certs
     [Documentation]    According to RFC 9483 Section 4.3.1, an End-Entity can request the CA's certificate chain using
     ...    a general message with the `id-it-caCerts` InfoType, where the `infoValue` field must not be set.
     ...    We send a protected general message containing a valid `InfoTypeAndValue` for get ca
