@@ -2284,7 +2284,7 @@ def build_key_update_request(  # noqa D417 undocumented-param
         - `ra_verified` (bool): Flag indicating if the RA has verified the Proof of Possession.
         - `for_kga` (bool): Indicates if the request is for key generation authentication.
         - `cert_template` (rfc4211.CertTemplate): Custom certificate template.
-        - `popo_structure` (rfc4211.ProofOfPossession): Custom Proof of Possession structure.
+        - `popo` (rfc4211.ProofOfPossession): Custom Proof of Possession structure.
         - The `PKIHeader` fields can also be set.
         - `for_mac` (bool): Flag indicating if the message is for MAC. Defaults to `False`.
        ( set the sender inside the directoryName choice of the GeneralName structure)
@@ -2369,6 +2369,37 @@ def _parse_pvno(pvno: Optional[Strint], for_kga: bool, default: int = 2) -> int:
     return pvno
 
 
+# The keys the request builders below read from `**params`, plus the `PKIHeader` keys read here.
+# One set for all eight builders: a key only some of them read (cert_request, cert_template, spki,
+# include_cert_extensions, bad_pop for Build Cr From CSR) still passes unnoticed on the others.
+_CERT_REQ_MSG_PARAMS = frozenset(
+    {
+        "bad_pop",
+        "cert_req_id",
+        "cert_request",
+        "cert_template",
+        "controls",
+        "extensions",
+        "for_kga",
+        "hash_alg",
+        "include_cert_extensions",
+        "popo",
+        "ra_verified",
+        "spki",
+        "exclude_fields",
+        "for_mac",
+        "implicit_confirm",
+        "message_time",
+        "pvno",
+        "recip_kid",
+        "recip_nonce",
+        "sender_kid",
+        "sender_nonce",
+        "transaction_id",
+    }
+)
+
+
 def _prepare_build_cert_req_msgs_pkimessage(
     body_name: str,
     cert_req_msg: Union[List[rfc4211.CertReqMsg], rfc4211.CertReqMsg],
@@ -2382,7 +2413,12 @@ def _prepare_build_cert_req_msgs_pkimessage(
     :param cert_req_msg: The `CertReqMsg` or list of `CertReqMsg` objects to include in the body.
     :param params: Additional parameters for customization.
     :return: The constructed `PKIMessage`.
+    :raises ValueError: If `params` contains a key that no request builder reads.
     """
+    unknown = sorted(set(params) - _CERT_REQ_MSG_PARAMS)
+    if unknown:
+        raise ValueError(f"Unknown parameter(s) for the `{body_name}` request: {unknown}")
+
     pki_body = _prepare_cert_req_msg_body(body_name)
     pki_body[body_name].extend(utils.ensure_list(cert_req_msg))
 
@@ -2528,7 +2564,7 @@ def build_cr_from_key(  # noqa D417 undocumented-param
         - `ra_verified` (bool): Flag indicating if the RA has verified the Proof of Possession.
         - `for_kga` (bool): Indicates if the request is for key generation authentication.
         - `cert_template` (rfc4211.CertTemplate): Custom certificate template.
-        - `popo_structure` (rfc4211.ProofOfPossession): Custom Proof of Possession structure.
+        - `popo` (rfc4211.ProofOfPossession): Custom Proof of Possession structure.
         - The `PKIHeader` fields can also be set.
         - `for_mac` (bool): Flag indicating if the message is for MAC. Defaults to `False`.
        ( set the sender inside the directoryName choice of the GeneralName structure)
@@ -2604,7 +2640,7 @@ def build_krr_from_key(  # noqa D417 undocumented-param
         - `ra_verified` (bool): Flag indicating if the RA has verified the Proof of Possession.
         - `for_kga` (bool): Indicates if the request is for key generation authentication.
         - `cert_template` (rfc4211.CertTemplate): Custom certificate template.
-        - `popo_structure` (rfc4211.ProofOfPossession): Custom Proof of Possession structure.
+        - `popo` (rfc4211.ProofOfPossession): Custom Proof of Possession structure.
         - The `PKIHeader` fields can also be set.
         - `for_mac` (bool): Flag indicating if the message is for MAC. Defaults to `False`.
        ( set the sender inside the directoryName choice of the GeneralName structure)
@@ -2683,7 +2719,7 @@ def build_ccr_from_key(  # noqa D417 undocumented-param
         - `ra_verified` (bool): Flag indicating if the RA has verified the Proof of Possession.
         - `for_kga` (bool): Indicates if the request is for key generation authentication.
         - `cert_template` (rfc4211.CertTemplate): Custom certificate template.
-        - `popo_structure` (rfc4211.ProofOfPossession): Custom Proof of Possession structure.
+        - `popo` (rfc4211.ProofOfPossession): Custom Proof of Possession structure.
         - The `PKIHeader` fields can also be set.
         - `for_mac` (bool): Flag indicating if the message is for MAC. Defaults to `False`.
        ( set the sender inside the directoryName choice of the GeneralName structure)
@@ -2761,7 +2797,7 @@ def build_ir_from_csr(  # noqa D417 undocumented-param
         - `controls` (rfc4211.Controls): Controls for the `CertReqMsg`.
         - `ra_verified` (bool): Flag indicating if the RA has verified the Proof of Possession.
         - `for_kga` (bool): Indicates if the request is for key generation authentication.
-        - `popo_structure` (rfc4211.ProofOfPossession): Custom Proof of Possession structure.
+        - `popo` (rfc4211.ProofOfPossession): Custom Proof of Possession structure.
         - The `PKIHeader` fields can also be set.
         - `for_mac` (bool): Flag indicating if the message is for MAC. Defaults to `False`.
        ( set the sender inside the directoryName choice of the GeneralName structure)
@@ -2777,7 +2813,6 @@ def build_ir_from_csr(  # noqa D417 undocumented-param
     Examples:
     --------
     | ${ir}= | Build Ir From CSR | ${csr} | ${signing_key} |
-    | ${ir}= | Build Ir From CSR | ${csr} | ${signing_key} | common_name=${cm} |
     | ${ir}= | Build Ir From CSR | ${csr} | ${signing_key} | sender=${sender} |
     | ${ir}= | Build Ir From CSR | ${csr} | ${signing_key} | exclude_fields=transactionID,senderNonce |
 
@@ -2841,7 +2876,7 @@ def build_cr_from_csr(  # noqa D417 undocumented-param
         - `controls` (rfc4211.Controls): Controls for the `CertReqMsg`.
         - `ra_verified` (bool): Flag indicating if the RA has verified the Proof of Possession.
         - `for_kga` (bool): Indicates if the request is for key generation authentication.
-        - `popo_structure` (rfc4211.ProofOfPossession): Custom Proof of Possession structure.
+        - `popo` (rfc4211.ProofOfPossession): Custom Proof of Possession structure.
         - The `PKIHeader` fields can also be set.
         - `for_mac` (bool): Flag indicating if the message is for MAC. Defaults to `False`.
        ( set the sender inside the directoryName choice of the GeneralName structure)
@@ -2922,7 +2957,7 @@ def build_ccr_from_csr(  # noqa D417 undocumented-param
         - `controls` (rfc4211.Controls): Controls for the `CertReqMsg`.
         - `ra_verified` (bool): Flag indicating if the RA has verified the Proof of Possession.
         - `for_kga` (bool): Indicates if the request is for key generation authentication.
-        - `popo_structure` (rfc4211.ProofOfPossession): Custom Proof of Possession structure.
+        - `popo` (rfc4211.ProofOfPossession): Custom Proof of Possession structure.
         - The `PKIHeader` fields can also be set.
         - `for_mac` (bool): Flag indicating if the message is for MAC. Defaults to `False`.
        ( set the sender inside the directoryName choice of the GeneralName structure)
@@ -2938,7 +2973,6 @@ def build_ccr_from_csr(  # noqa D417 undocumented-param
     Examples:
     --------
     | ${ccr}= | Build Ccr From CSR | ${csr} | ${signing_key} |
-    | ${ccr}= | Build Ccr From CSR | ${csr} | ${signing_key} | common_name=${cm} |
     | ${ccr}= | Build Ccr From CSR | ${csr} | ${signing_key} | sender=${sender} |
     | ${ccr}= | Build Ccr From CSR | ${csr} | ${signing_key} | exclude_fields=transactionID,senderNonce |
 

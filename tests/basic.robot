@@ -435,7 +435,7 @@ CA MUST Not Allow New Request with not confirm Updated Cert
     [Tags]    kur    negative  sec-awareness
     ${_}  ${old_cert}  ${old_key}=   Send New Key Update Request
     ${fresh_key2}=    Generate Unique Key    ${DEFAULT_ALGORITHM}
-    ${ir}=  Build Ir From Key   ${fresh_key2}   cert=${old_cert}   recipient=${RECIPIENT}
+    ${ir}=  Build Ir From Key   ${fresh_key2}   recipient=${RECIPIENT}
     ...      exclude_fields=sender,senderKID
     ${prot_ir}=  Protect PKIMessage   ${ir}   signature   private_key=${old_key}   cert=${old_cert}
     ${response}=    Exchange PKIMessage    ${prot_ir}
@@ -452,7 +452,7 @@ CA Should not allow New Request After Timeout with not confirmed KUR
     ${_}  ${old_cert}  ${old_key}=   Send New Key Update Request
     Wait Until Server Deletes Update Request
     ${fresh_key}=    Generate Unique Key    ${DEFAULT_ALGORITHM}
-    ${ir}=  Build Ir From Key   ${fresh_key}   cert=${old_cert}   recipient=${RECIPIENT}   exclude_fields=sender,senderKID
+    ${ir}=  Build Ir From Key   ${fresh_key}   recipient=${RECIPIENT}   exclude_fields=sender,senderKID
     ${prot_ir}=  Protect PKIMessage   ${ir}   signature   private_key=${old_key}   cert=${old_cert}
     ${response}=    Exchange PKIMessage    ${prot_ir}
     PKIStatus Must Be    ${response}    rejection
@@ -527,7 +527,6 @@ CA MUST Reject Valid Key Update Request With Already Updated Certificate
     ${pki_message}=    Build Key Update Request
     ...    ${new_private_key}
     ...    cert=${UPDATED_CERT}
-    ...    private_key=${new_private_key}
     ...    sender=${SENDER}
     ...    recipient=${RECIPIENT}
     ...    implicit_confirm=True

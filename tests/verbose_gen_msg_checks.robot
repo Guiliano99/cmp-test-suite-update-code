@@ -30,6 +30,9 @@ ${RE_USE_P10CR}   False
 ${RE_USE_CCR}    False
 ${RE_USE_IR}    False
 ${RE_USE_CR}    False
+# Flags for the protection and patching keywords; the request builders reject arguments they do not know.
+@{PROT_FLAGS}    use_mac    do_patch    bad_sender    bad_sender_kid    bad_mac_sender    bad_ski    use_issuer
+...    exclude_certs    exclude_protection    set_mac_algorithm    without_cert_chain    bad_message_check
 
 
 *** Test Cases ***
@@ -2611,21 +2614,23 @@ Protect With Trusted CA
 Build Fresh Inner Body
     [Documentation]    Build a fresh inner body with the default signature protection
     [Arguments]    ${inner_name}   &{params}
+    ${req_params}=    Copy Dictionary    ${params}
+    Remove From Dictionary    ${req_params}    @{PROT_FLAGS}
     IF  '${inner_name}' == 'ir'
         ${cert_template}   ${key}=    Generate CertTemplate For Testing
         ${ir}=   Build Cr From Key    ${key}   cert_template=${cert_template}
-        ...             recipient=${RECIPIENT}   &{params}
+        ...             recipient=${RECIPIENT}   &{req_params}
         ${protected}=    Default Protect For Build Body    ${ir}   &{params}
     ELSE IF   '${inner_name}' == 'cr'
         ${cert_template}   ${key}=    Generate CertTemplate For Testing
         ${ir}=   Build Cr From Key    ${key}   cert_template=${cert_template}
-        ...             recipient=${RECIPIENT}   &{params}
+        ...             recipient=${RECIPIENT}   &{req_params}
         ${protected}=    Default Protect For Build Body    ${ir}   &{params}
     ELSE IF   '${inner_name}' == 'kur'
         ${cert}   ${key}=    Issue New Cert For Testing
         ${cert_template}   ${new_key}=    Generate CertTemplate For Testing
         ${ir}=    Build Key Update Request   ${new_key}  cert_template=${cert_template}
-        ...       recipient=${RECIPIENT}   &{params}
+        ...       recipient=${RECIPIENT}   &{req_params}
         ${protected}=    Default Protect For Build Body RR OR KUR   ${ir}   ${cert}   ${key}   &{params}
     ELSE IF   '${inner_name}' == 'p10cr'
         ${cm}=  Get Next Common Name
@@ -2636,7 +2641,7 @@ Build Fresh Inner Body
     ELSE IF   '${inner_name}' == 'ccr'
         ${cert_template}   ${key}=    Generate CCR CertTemplate For Testing
         ${ir}=   Build Ccr From Key     ${key}   cert_template=${cert_template}
-        ...             recipient=${RECIPIENT}   &{params}
+        ...             recipient=${RECIPIENT}   &{req_params}
         ${protected}=    Protect With Trusted CA     ${ir}   &{params}
     ELSE
         Fail    Unknown inner name: ${inner_name}
@@ -2834,6 +2839,8 @@ Default Protect For Build Body RR OR KUR
 Build Body By Name
     [Documentation]    Build a body by name
     [Arguments]    ${body_name}  ${exclude_fields}   &{params}
+    ${req_params}=    Copy Dictionary    ${params}
+    Remove From Dictionary    ${req_params}    @{PROT_FLAGS}
     ${without_cert_chain}=   Get From Dictionary    ${params}   without_cert_chain  ${False}
     ${exclude_protection}=   Get From Dictionary    ${params}   exclude_protection  ${False}
     IF   '${body_name}' == "cr"
@@ -2845,7 +2852,7 @@ Build Body By Name
         END
         ${body}=   Build Cr From Key    ${CR_KEY}   cert_template=${CR_TEMPLATE}
         ...             exclude_fields=${exclude_fields}   recipient=${RECIPIENT}
-        ...             &{params}
+        ...             &{req_params}
         ${prot_body}=    Default Protect For Build Body    ${body}   &{params}
     ELSE IF    '${body_name}' == "ir"
         IF   '${RE_USE_IR}' == '${False}'
@@ -2856,7 +2863,7 @@ Build Body By Name
         END
         ${body}=   Build Ir From Key    ${IR_KEY}   cert_template=${IR_TEMPLATE}
         ...             exclude_fields=${exclude_fields}   recipient=${RECIPIENT}
-        ...             &{params}
+        ...             &{req_params}
         ${prot_body}=    Default Protect For Build Body    ${body}   &{params}  # robocop: off=VAR03 -- false positive, each assignment is in a mutually exclusive ELSE IF branch
     ELSE IF    '${body_name}' == "ccr"
         IF   '${RE_USE_CCR}' == '${False}'
@@ -2867,7 +2874,7 @@ Build Body By Name
         END
         ${body}=   Build Ccr From Key    ${CCR_KEY}   cert_template=${CCR_TEMPLATE}
         ...             exclude_fields=${exclude_fields}   recipient=${RECIPIENT}
-        ...             &{params}
+        ...             &{req_params}
         IF    ${exclude_protection}    RETURN    ${body}
         ${prot_body}=    Protect With Trusted CA    ${body}  &{params}  # robocop: off=VAR03 -- false positive, each assignment is in a mutually exclusive ELSE IF branch
         IF   ${without_cert_chain}
@@ -2885,7 +2892,7 @@ Build Body By Name
         END
         ${body}=   Build Key Update Request   ${KUR_NEW_KEY}   cert_template=${KUR_TEMPLATE}
         ...        exclude_fields=${exclude_fields}   recipient=${RECIPIENT}
-        ...        &{params}
+        ...        &{req_params}
         ${prot_body}=   Default Protect For Build Body RR OR KUR    ${body}   ${KUR_CERT}   ${KUR_KEY}   &{params}  # robocop: off=VAR03 -- false positive, each assignment is in a mutually exclusive ELSE IF branch
     ELSE IF    '${body_name}' == 'p10cr'
         IF  '${RE_USE_P10CR}' == '${False}'

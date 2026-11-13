@@ -49,7 +49,7 @@ class TestProcessBatchMessage(unittest.TestCase):
 
         ir2 = build_ir_from_key(
             self.key,
-            cm=self.cm,
+            common_name=self.cm,
             sender=self.cm,
             transaction_id=trans_id[0],
             sender_nonce=sender_nonce[0],
@@ -60,7 +60,7 @@ class TestProcessBatchMessage(unittest.TestCase):
 
         ir = build_ir_from_key(
             self.key,
-            cm=self.cm + "1",
+            common_name=self.cm + "1",
             sender=self.cm + "1",
             transaction_id=trans_id[1],
             sender_nonce=sender_nonce[1],

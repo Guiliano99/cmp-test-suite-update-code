@@ -155,7 +155,6 @@ CA MUST Reject KGA Request For KTRI Without keyEncipherment KeyUsage
     ${key}=    Generate Default Key
     ${ir}=    Build Ir From Key
     ...    signing_key=${key}
-    ...    cert=${NEG_KTRI_CERT}
     ...    for_kga=True
     ...    pvno=3
     ...    common_name=${cm}
@@ -244,7 +243,6 @@ A MUST Reject KGA IR Request For KARI Without keyAgreement KeyUsage
     ${key}=    Generate Default Key
     ${ir}=    Build Ir From Key
     ...    signing_key=${key}
-    ...    cert=${NEG_KARI_CERT}
     ...    for_kga=True
     ...    common_name=${cm}
     ...    recipient=${RECIPIENT}

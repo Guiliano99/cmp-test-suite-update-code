@@ -141,7 +141,7 @@ CA MUST Reject PKIMessage With Version Other Than 2 Or 3
     ...    ${EXP_KEY}
     ...    pvno=1
     ...    recipient=${RECIPIENT}
-    ...    omit_field=sender,senderKID
+    ...    exclude_fields=sender,senderKID
     ${pki_message}=    Protect PKIMessage
     ...    pki_message=${pki_message}
     ...    protection=signature
@@ -874,7 +874,6 @@ CA MUST Reject Valid IR With Same Key
     ...    include_fields=publicKey,subject,extensions
     ${ir}=    Build IR From Key
     ...    ${ISSUED_KEY}
-    ...    cert=${ISSUED_CERT}
     ...    cert_template=${cert_template}
     ...    sender=${SENDER}
     ...    recipient=${RECIPIENT}

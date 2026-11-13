@@ -30,7 +30,7 @@ class TestProcessPKIMessageWithPopDecc(unittest.TestCase):
         popo = prepare_popo_challenge_for_non_signing_key(use_encr_cert=False, use_key_enc=True)
         ir = build_ir_from_key(signing_key=self.rsa_key,
                                pvno=2,
-                               popo_structure=popo)
+                               popo=popo)
         popdecc, num = build_popdecc_from_request(request=ir,
                                                   rand_sender="CN=CMP-TEST-SUITE",
                                                   rand_int=rand_num,
@@ -57,7 +57,7 @@ class TestProcessPKIMessageWithPopDecc(unittest.TestCase):
         popo = prepare_popo_challenge_for_non_signing_key(use_encr_cert=False, use_key_enc=True)
         ir = build_ir_from_key(signing_key=self.rsa_key,
                                pvno=3,
-                               popo_structure=popo)
+                               popo=popo)
 
         popdecc, num = build_popdecc_from_request(request=ir,
                                                   rand_sender="CN=CMP-TEST-SUITE",
@@ -86,7 +86,7 @@ class TestProcessPKIMessageWithPopDecc(unittest.TestCase):
         popo = prepare_popo_challenge_for_non_signing_key(use_encr_cert=True, use_key_enc=True)
         ir = build_ir_from_key(signing_key=self.rsa_key,
                                pvno=2,
-                               popo_structure=popo)
+                               popo=popo)
 
         popdecc, num = build_popdecc_from_request(request=ir, for_pvno=3, ca_key=self.rsa_key)
         encoded_popdecc = encoder.encode(popdecc)
@@ -110,7 +110,7 @@ class TestProcessPKIMessageWithPopDecc(unittest.TestCase):
         popo = prepare_popo_challenge_for_non_signing_key(use_encr_cert=True, use_key_enc=True)
         ir = build_ir_from_key(signing_key=self.rsa_key,
                                pvno=2,
-                               popo_structure=popo)
+                               popo=popo)
 
         popdecc, num = build_popdecc_from_request(request=ir, for_pvno=3, ca_key=self.rsa_key)
         encoded_popdecc = encoder.encode(popdecc)
@@ -133,7 +133,7 @@ class TestProcessPKIMessageWithPopDecc(unittest.TestCase):
         popo = prepare_popo_challenge_for_non_signing_key(use_encr_cert=False, use_key_enc=False)
         ir = build_ir_from_key(signing_key=self.rsa_key,
                                pvno=3,
-                               popo_structure=popo)
+                               popo=popo)
 
         popdecc, num = build_popdecc_from_request(request=ir, ca_key=self.rsa_key, challenge=b"1234")
 

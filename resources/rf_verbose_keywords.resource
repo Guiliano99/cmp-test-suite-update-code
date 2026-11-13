@@ -212,6 +212,8 @@ Build Single Body By Name
     ...
     [Tags]    build_request   build_body
     [Arguments]    ${body_name}   ${key}   &{params}
+    # The request builders reject arguments they do not know; the kur branch removes these keys itself.
+    IF    '${body_name}' in ('ir', 'cr', 'ccr', 'krr')    Remove From Dictionary    ${params}    old_cert    old_key    new_key
     IF  '${body_name}' == 'ir'
         ${body}=   Build Ir From Key    ${key}   sender=${SENDER}  recipient=${RECIPIENT}   &{params}
     ELSE IF    '${body_name}' == 'cr'
@@ -228,7 +230,7 @@ Build Single Body By Name
         ${old_cert}=   Get From Dictionary    ${params}    old_cert
         ${old_key}=   Get From Dictionary    ${params}    old_key
         ${key}=  Get Or Generate Kur Key   &{params}
-        REMOVE From Dictionary    ${params}    new_key
+        Remove From Dictionary    ${params}    new_key    old_cert    old_key
         ${body}=   Build Key Update Request   ${key}   recipient=${RECIPIENT}   &{params}
         ${protected_body}=   Protect PKIMessage    ${body}   signature    cert=${old_cert}  private_key=${old_key}
         RETURN    ${protected_body}

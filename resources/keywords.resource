@@ -1124,6 +1124,7 @@ Generate Default IR Sig Protected
     ...                ----------
     ...                - `transaction_id` (str, bytes) :Optional the transaction ID for the IR. Default is `None`.
     ...                - `sender_nonce` (str, bytes): Optional the sender's nonce for the IR. Default is `None`.
+    ...                - `bad_message_check` (bool): Whether to manipulate the message protection. Default is `False`.
     ...                - `params` (dict, mapping): Optional key-value pairs to set additional parameters for the IR.
     ...
     ...                Returns:
@@ -1135,7 +1136,7 @@ Generate Default IR Sig Protected
     ...                sender_nonce=${nonce} |
     ...
     [Tags]    ir    signature   setup
-    [Arguments]    ${transaction_id}=${None}    ${sender_nonce}=${None}   &{params}
+    [Arguments]    ${transaction_id}=${None}    ${sender_nonce}=${None}    ${bad_message_check}=${False}   &{params}
     ${cert_template}    ${key}=    Generate CertTemplate For Testing
     ${ir}=    Build Ir From Key
     ...       ${key}
@@ -1151,6 +1152,7 @@ Generate Default IR Sig Protected
     ...                 protection=signature
     ...                 private_key=${ISSUED_KEY}
     ...                 cert=${ISSUED_CERT}
+    ...                 bad_message_check=${bad_message_check}
     ...                 &{params}
     RETURN    ${protected_ir}
 

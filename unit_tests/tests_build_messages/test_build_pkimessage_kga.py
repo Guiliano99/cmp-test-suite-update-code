@@ -34,13 +34,11 @@ class TestPKIMessageKGA(unittest.TestCase):
         THEN the message type should still be 'cr' and no additional data should remain.
         """
         pki_message = build_cr_from_key(
-            body="cr",
             sender=self.sender,
             recipient=self.recipient,
             common_name=self.common_name,
             signing_key=self.key_kga,
             for_kga=True,
-            cert=self.certificate,
             exclude_fields=self.omit_fields,
         )
         decoded_message = de_and_encode_pkimessage(pki_message)
@@ -78,7 +76,6 @@ class TestPKIMessageKGA(unittest.TestCase):
             common_name=self.common_name,
             signing_key=self.key_kga,
             for_kga=True,
-            cert=self.certificate,
             exclude_fields=self.omit_fields,
         )
         decoded_message = de_and_encode_pkimessage(pki_message)

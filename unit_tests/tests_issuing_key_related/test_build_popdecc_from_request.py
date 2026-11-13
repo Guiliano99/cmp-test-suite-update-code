@@ -29,7 +29,7 @@ class TestBuildPoPDeccFromRequest(unittest.TestCase):
         popo = prepare_popo_challenge_for_non_signing_key(use_encr_cert=False, use_key_enc=False)
         ir = build_ir_from_key(signing_key=self.rsa_key,
                                pvno=2,
-                               popo_structure=popo)
+                               popo=popo)
 
         popdecc, num = build_popdecc_from_request(request=ir, ca_key=self.rsa_key)
         der_data = encoder.encode(popdecc["body"]["popdecc"][0])
@@ -45,7 +45,7 @@ class TestBuildPoPDeccFromRequest(unittest.TestCase):
         popo = prepare_popo_challenge_for_non_signing_key(use_encr_cert=False, use_key_enc=True)
         ir = build_ir_from_key(signing_key=self.rsa_key,
                                  pvno=2,
-                               popo_structure=popo)
+                               popo=popo)
         popdecc, num = build_popdecc_from_request(request=ir, ca_key=self.rsa_key)
         decoded_popdecc = de_and_encode_pkimessage(popdecc)
 
@@ -58,7 +58,7 @@ class TestBuildPoPDeccFromRequest(unittest.TestCase):
         popo = prepare_popo_challenge_for_non_signing_key(use_encr_cert=True, use_key_enc=True)
         ir = build_ir_from_key(signing_key=self.rsa_key,
                                pvno=3,
-                               popo_structure=popo)
+                               popo=popo)
 
         popdecc, num = build_popdecc_from_request(request=ir, ca_key=self.rsa_key)
         decoded_popdecc = de_and_encode_pkimessage(popdecc)
@@ -72,7 +72,7 @@ class TestBuildPoPDeccFromRequest(unittest.TestCase):
         popo = prepare_popo_challenge_for_non_signing_key(use_encr_cert=True, use_key_enc=True)
         ir = build_ir_from_key(signing_key=self.rsa_key,
                                pvno=2,
-                               popo_structure=popo)
+                               popo=popo)
 
         popdecc, num = build_popdecc_from_request(request=ir, for_pvno=3, ca_key=self.rsa_key)
 
@@ -89,7 +89,7 @@ class TestBuildPoPDeccFromRequest(unittest.TestCase):
         popo = prepare_popo_challenge_for_non_signing_key(use_encr_cert=False, use_key_enc=False)
         ir = build_ir_from_key(signing_key=self.rsa_key,
                                pvno=3,
-                               popo_structure=popo)
+                               popo=popo)
 
         popdecc, num = build_popdecc_from_request(request=ir, ca_key=self.rsa_key, challenge=b"1234")
 

@@ -14,7 +14,7 @@ class TestPKIMessageProtection(unittest.TestCase):
     @classmethod
     def setUp(cls):
         private_key = load_private_key_from_file("./data/keys/private-key-rsa.pem", password=None)
-        cls.pki_message = build_pkimessage(body_type="cr", private_key=private_key)
+        cls.pki_message = build_pkimessage(body_type="cr", signing_key=private_key)
         cls.private_key = private_key
         cls.PASSWORD = bytes.fromhex("AA" * 32)
         cls.SALT = bytes.fromhex("AA" * 16)

@@ -57,7 +57,6 @@ class TestBuildIPWithEncrKey(unittest.TestCase):
         ir = build_ir_from_key(
             signing_key=new_key,
             cert_request=cert_request,
-            private_key=new_key,
             popo=popo,
             sender="CN=Hans the Tester",
             exclude_fields="sender,senderKID" if not for_mac else None,
