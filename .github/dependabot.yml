@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: Copyright 2026 Siemens AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# The workflows pin each action to a commit SHA. Dependabot proposes the newer
+# SHA and updates the version comment next to it. The cooldown skips releases
+# younger than 7 days, so a compromised release is usually pulled before it
+# reaches CI.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
