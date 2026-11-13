@@ -1626,7 +1626,7 @@ def _get_reason_flags(reason: Optional[str]) -> Optional[ReasonFlags]:
 
 @not_keyword
 def build_ocsp_response(
-    cert: rfc9480.CMPCertificate,
+    cert: Optional[rfc9480.CMPCertificate],
     ca_cert: rfc9480.CMPCertificate,
     responder_key: SignKey,
     status: str,
@@ -1638,10 +1638,12 @@ def build_ocsp_response(
     this_update: Optional[datetime] = None,
     build_by_key: bool = True,
     nonce: Optional[bytes] = None,
+    ocsp_request: Optional[ocsp.OCSPRequest] = None,
 ) -> ocsp.OCSPResponse:
     """Build an OCSP response for a list of certificates.
 
-    :param cert: The certificate to check.
+    :param cert: The certificate to check. `None` answers for the certificate ID of `ocsp_request`, as for a
+    certificate the responder does not know.
     :param ca_cert: The issuer's certificate.
     :param responder_key: The responder private key.
     :param status: The status of the certificate. **Must** be one of "good", "revoked", or "unknown".
@@ -1654,14 +1656,14 @@ def build_ocsp_response(
     :param this_update: The time of the OCSP response. Defaults to `None` (now).
     :param build_by_key: Whether to build the OCSP response by hash of the key or name. Defaults to `True`.
     :param nonce: The nonce to include in the OCSP response. Defaults to 16 random bytes.
+    :param ocsp_request: The OCSP request whose certificate ID is answered if `cert` is `None`. Defaults to `None`.
     :return: The OCSP response.
-    :raises ValueError: If the status is invalid.
+    :raises ValueError: If the status is invalid, or if neither `cert` nor `ocsp_request` is given.
     """
     crypto_ca_cert = _convert_to_crypto_lib_cert(ca_cert)
     builder = ocsp.OCSPResponseBuilder()
     resp_hash_inst = oid_mapping.hash_name_to_instance(responder_hash_alg)
 
-    crypto_cert = _convert_to_crypto_lib_cert(cert)
     cert_status = _get_cert_status(status)
     reason = _get_reason_flags(revocation_reason)
 
@@ -1669,16 +1671,31 @@ def build_ocsp_response(
         # must be present if the certificate is revoked.
         revocation_time = datetime.now(timezone.utc) - timedelta(seconds=30)
 
-    builder = builder.add_response(
-        cert=crypto_cert,
-        issuer=crypto_ca_cert,
-        algorithm=resp_hash_inst,
-        cert_status=cert_status,
-        revocation_reason=reason,
-        this_update=this_update or datetime.now(tz=timezone.utc),
-        next_update=None,
-        revocation_time=revocation_time,
-    )
+    if cert is not None:
+        builder = builder.add_response(
+            cert=_convert_to_crypto_lib_cert(cert),
+            issuer=crypto_ca_cert,
+            algorithm=resp_hash_inst,
+            cert_status=cert_status,
+            revocation_reason=reason,
+            this_update=this_update or datetime.now(tz=timezone.utc),
+            next_update=None,
+            revocation_time=revocation_time,
+        )
+    elif ocsp_request is not None:
+        builder = builder.add_response_by_hash(
+            issuer_name_hash=ocsp_request.issuer_name_hash,
+            issuer_key_hash=ocsp_request.issuer_key_hash,
+            serial_number=ocsp_request.serial_number,
+            algorithm=ocsp_request.hash_algorithm,
+            cert_status=cert_status,
+            this_update=this_update or datetime.now(tz=timezone.utc),
+            next_update=None,
+            revocation_time=revocation_time,
+            revocation_reason=reason,
+        )
+    else:
+        raise ValueError("Either the certificate or the OCSP request must be given.")
     crypto_responder_cert = None if responder_cert is None else _convert_to_crypto_lib_cert(responder_cert)
     crypto_responder_cert = crypto_responder_cert or crypto_ca_cert
 

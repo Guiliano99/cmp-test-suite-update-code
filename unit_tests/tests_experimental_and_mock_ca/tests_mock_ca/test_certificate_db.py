@@ -256,3 +256,19 @@ class TestCertificateDB(unittest.TestCase):
         self.assertEqual(crl_reason, x509.ReasonFlags.superseded)
         self.assertEqual(ocsp_response.revocation_time_utc, updated_date)
         self.assertEqual(ocsp_response.revocation_reason, x509.ReasonFlags.superseded)
+
+    def test_ocsp_for_unknown_serial_is_unknown(self):
+        """
+        GIVEN a CertificateDB which never stored the certificate.
+        WHEN an OCSP response for it is built.
+        THEN the response is successful with the status `unknown` and the certificate ID of the request (RFC 6960
+        Section 2.2: "unknown" indicates that the responder doesn't know about the certificate being requested).
+        """
+        db = CertificateDB()
+        ocsp_request, _ = create_ocsp_request(self.example_cert, self.ca_cert, must_be_present=False)
+        ocsp_response = db.get_ocsp_response(request=ocsp_request, sign_key=self.ca_key, ca_cert=self.ca_cert)
+        self.assertEqual(ocsp_response.response_status, ocsp.OCSPResponseStatus.SUCCESSFUL)
+        self.assertEqual(ocsp_response.certificate_status, ocsp.OCSPCertStatus.UNKNOWN)
+        self.assertEqual(ocsp_response.serial_number, ocsp_request.serial_number)
+        self.assertEqual(ocsp_response.issuer_key_hash, ocsp_request.issuer_key_hash)
+        self.assertEqual(ocsp_response.issuer_name_hash, ocsp_request.issuer_name_hash)

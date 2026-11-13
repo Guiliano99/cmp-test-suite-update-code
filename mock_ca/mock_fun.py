@@ -312,8 +312,7 @@ class CertRevStateDB:
     ) -> Tuple[Optional[rfc9480.CMPCertificate], str, Optional[RevokedEntry]]:
         """Check the OCSP request for the certificate status.
 
-        If the certificate is not found in the list of issued certificates,
-        is the status set to "unauthorized".
+        If the certificate is neither revoked nor in the list of issued certificates, the status is "unknown".
 
         :param request: The OCSP request.
         :param issued_certs: The list of issued certificates.
@@ -329,7 +328,7 @@ class CertRevStateDB:
             if num == int(cert["tbsCertificate"]["serialNumber"]):
                 return cert, "good", None
 
-        return None, "unauthorized", None
+        return None, "unknown", None
 
     def get_ocsp_response(
         self,
@@ -339,17 +338,12 @@ class CertRevStateDB:
         issued_certs: List[rfc9480.CMPCertificate],
         responder_cert: Optional[rfc9480.CMPCertificate] = None,
     ) -> ocsp.OCSPResponse:
-        """Get the OCSP response for the request."""
+        """Get the OCSP response for the request.
+
+        A certificate the CA does not know is answered with the status "unknown" (RFC 6960 Section 2.2), for the
+        certificate ID of the request.
+        """
         found_cert, status, revoked_entry = self._check_ocps_request_cert_status(request, issued_certs)
-
-        if found_cert is None:
-            # If the extension is not present:
-            # As of RFC 6960, section 2.3
-            # The response "unauthorized" is returned in cases where the client is
-            # not authorized to make this query to this server or the server is not
-            # capable of responding authoritatively (cf. [RFC5019], Section 2.2.3).
-            return ocsp.OCSPResponseBuilder.build_unsuccessful(ocsp.OCSPResponseStatus.UNAUTHORIZED)
-
         nonce = self._get_nonce(request)
 
         return certutils.build_ocsp_response(
@@ -364,6 +358,7 @@ class CertRevStateDB:
             responder_key=sign_key,
             responder_cert=responder_cert,
             nonce=nonce,
+            ocsp_request=request,
         )
 
     def get_crl_response(
