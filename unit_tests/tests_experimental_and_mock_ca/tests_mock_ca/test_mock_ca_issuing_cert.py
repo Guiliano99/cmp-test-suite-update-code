@@ -5,7 +5,7 @@ import os
 import unittest
 
 from mock_ca.ca_handler import CAHandler
-from pyasn1_alt_modules import rfc9480
+from pyasn1_alt_modules import rfc5280, rfc9480
 
 from mock_ca.db_config_vars import CertConfConfigVars
 from resources.asn1utils import is_bit_set
@@ -50,6 +50,24 @@ class TestMockCAIssuing(unittest.TestCase):
         self.assertEqual(str(status["status"]), "accepted", status.prettyPrint())
         result = find_oid_in_general_info(response, str(rfc9480.id_it_implicitConfirm))
         self.assertTrue(result)
+
+    def test_issued_cert_has_no_issuing_distribution_point(self):
+        """
+        GIVEN a MAC-protected ir.
+        WHEN the Mock CA issues the certificate.
+        THEN the certificate has the CRL distribution points extension but no issuing distribution point, which
+        RFC 5280 Section 5.2.5 defines as a CRL extension.
+        """
+        key = generate_key("ecc")
+        ir = build_ir_from_key(
+            key, common_name="CN=Hans the Tester", sender="CN=Hans the Tester", implicit_confirm=True, for_mac=True
+        )
+        response = self.ca_handler.process_normal_request(protect_pkimessage(ir, "pbmac1", password="SiemensIT"))
+        self.assertEqual(response["body"].getName(), "ip", response["body"].prettyPrint())
+        cert = get_cert_from_pkimessage(response)
+        extn_ids = [extn["extnID"] for extn in cert["tbsCertificate"]["extensions"]]
+        self.assertIn(rfc5280.id_ce_cRLDistributionPoints, extn_ids)
+        self.assertNotIn(rfc5280.id_ce_issuingDistributionPoint, extn_ids)
 
     def test_issue_cert_without_implicit_confirm(self):
         """

@@ -70,8 +70,6 @@ from resources.certbuildutils import (
     prepare_cert_template,
     prepare_crl_distribution_point_extension,
     prepare_distribution_point,
-    prepare_issuing_distribution_point,
-    prepare_issuing_distribution_point_extension,
     prepare_ocsp_extension,
 )
 from resources.certutils import load_public_key_from_cert, parse_certificate
@@ -236,22 +234,8 @@ class CAHandler:
             critical=False,
         )
 
-        idp = prepare_issuing_distribution_point(
-            full_name=crl_url,
-            only_some_reasons=None,
-            only_contains_user_certs=False,
-            only_contains_ca_certs=False,
-            only_contains_attribute_certs=False,
-            indirect_crl=False,
-        )
-
-        idp_extn = prepare_issuing_distribution_point_extension(
-            iss_dis_point=idp,
-            critical=False,
-        )
-
         extensions = rfc9480.Extensions()
-        extensions.extend([aki_extn, self.ocsp_extn, self.crl_extn, idp_extn])
+        extensions.extend([aki_extn, self.ocsp_extn, self.crl_extn])
         if cfg_extensions is not None:
             extensions.extend(cfg_extensions)
         return extensions
@@ -281,7 +265,7 @@ class CAHandler:
         :param port: The port for the CA, used for the Extensions preparation. Defaults to `5000`.
         :param use_openssl: If OpenSSL should be used for verification. Defaults to `True`.
         :param config: The configuration for the CA Handler.
-        :param base_url: The base URL for the CA ONLY used to prepare the extensions (CRL-DP, OCSP, IDP, Sun-Hybrid).
+        :param base_url: The base URL for the CA ONLY used to prepare the extensions (CRL-DP, OCSP, Sun-Hybrid).
         Defaults to `http://localhost`.
         :param enforce_rfc9481: Whether to enforce the RFC 9481 algorithm profile,
         for MAC and traditional protected PKIMessages. Defaults to `False`.
