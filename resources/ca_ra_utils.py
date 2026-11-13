@@ -443,7 +443,7 @@ def get_cert_req_msg_from_pkimessage(  # noqa: D417 Missing argument description
     raise ValueError(f"Invalid PKIMessage body: {body_name} Expected: ir, cr, kur, ccr")
 
 
-@keyword(name="Validate certReqId")
+@not_keyword
 def validate_cert_req_id(  # noqa: D417 Missing argument descriptions in the docstring
     pki_message: PKIMessageTMP, cert_req_id: Strint = 0
 ) -> None:
@@ -461,10 +461,6 @@ def validate_cert_req_id(  # noqa: D417 Missing argument descriptions in the doc
     ------
         - `BadRequest`: If the certificate request ID in the PKIMessage is invalid.
         - `ValueError`: If the body was not of the expected type.
-
-    Examples:
-    --------
-    | Validate certReqId | ${pki_message} | 0 |
 
     """
     cert_req_id = int(cert_req_id)
