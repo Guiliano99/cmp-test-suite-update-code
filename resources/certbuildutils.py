@@ -2524,7 +2524,7 @@ def verify_ca_basic_constraints(  # noqa D417 undocumented-param
     Raises:
     ------
         - `BadCertTemplate`: If the `BasicConstraints` extension cannot be decoded.
-        - `BadCertTemplate`: If the CA was set to False but pathLenConstraint was not 0 or absent.
+        - `BadCertTemplate`: If the CA was set to False but pathLenConstraint was present.
         - `BadCertTemplate`: If the CA was set to True but pathLenConstraint was 0 or less.
         - `BadCertTemplate`: If the `BasicConstraints` extension must be marked as critical and was not.
 
@@ -2553,11 +2553,10 @@ def verify_ca_basic_constraints(  # noqa D417 undocumented-param
         logging.info("Basic constraints extension was not present in the parsed certificate.")
         return None
 
-    path_len = 0 if not basic_con["pathLenConstraint"].isValue else int(basic_con["pathLenConstraint"])
-    if not basic_con["cA"] and path_len != 0:
+    # RFC 5280 Section 4.2.1.9: pathLenConstraint is only allowed when cA is TRUE, whatever its value.
+    if not basic_con["cA"] and basic_con["pathLenConstraint"].isValue:
         raise BadCertTemplate(
-            "The `BasicConstraints` extension is not valid. CA was set to False but `pathLenConstraint` "
-            "was not 0 or absent."
+            "The `BasicConstraints` extension is not valid. CA was set to False but `pathLenConstraint` was present."
         )
 
     if basic_con["pathLenConstraint"].isValue:
