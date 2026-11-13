@@ -364,7 +364,8 @@ class TestMockCAFlows(unittest.TestCase):
         """
         GIVEN a certificate issued over the well-known route.
         WHEN the read-only routes are asked.
-        THEN they return the issued certificate, the root certificate and the Sun-Hybrid data.
+        THEN they return the issued certificate as `application/pkix-cert` (RFC 2585 Section 4.1), the root
+        certificate and the Sun-Hybrid data.
         """
         ir, _ = build_example_rsa_mac_request(_SENDER)
         response = self._post("/.well-known/cmp/p/ir", ir)
@@ -373,6 +374,7 @@ class TestMockCAFlows(unittest.TestCase):
 
         cert_response = self.client.get(f"/cert/{serial_number}")
         self.assertEqual(cert_response.status_code, 200)
+        self.assertEqual(cert_response.content_type, "application/pkix-cert")
         self.assertEqual(int(parse_certificate(cert_response.data)["tbsCertificate"]["serialNumber"]), serial_number)
 
         root_response = self.client.get("/root-cert")

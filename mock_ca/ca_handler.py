@@ -1499,7 +1499,7 @@ def get_cert(serial_number):
     """Get the Sun-Hybrid certificate for the specified serial number."""
     serial_number = int(serial_number)
     cert = state.get_cert_by_serial_number(serial_number)
-    return _build_response(cert)
+    return _build_response(cert, for_msg=False)
 
 
 @app.route("/pubkey/<serial_number>", methods=["GET"])
