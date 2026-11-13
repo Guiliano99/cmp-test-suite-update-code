@@ -4,7 +4,7 @@
 # To experiment locally, build it with:
 # `docker build -t cmptest-base -f data/dockerfiles/Dockerfile.base .`
 
-FROM ubuntu:25.10
+FROM ubuntu:26.04
 
 # `make` is listed on its own, so it stays installed when build-essential is
 # removed below; the Makefile targets need it.
