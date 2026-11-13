@@ -1103,7 +1103,7 @@ class CAHandler:
                 "The newly issued certificate can either be implicit confirmed ormust be confirmed, but not both."
             )
 
-        logging.debug("Issued certs is confined:", issued_cert is not None)
+        logging.debug("Issued certs is confined: %s", issued_cert is not None)
 
         self._after_request(
             request_msg=pki_message,

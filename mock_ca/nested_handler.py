@@ -176,7 +176,7 @@ class NestedHandler:
         request2 = parse_pkimessage(der_data2)
 
         cert_conf_nonces = False
-        logging.info("called", "_check_nonces_depth")
+        logging.info("called %s", "_check_nonces_depth")
         logging.info(len(request["body"]["nested"]))
 
         for entry in request2["body"]["nested"]:
