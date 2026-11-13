@@ -409,10 +409,8 @@ class HybridIssuingHandler:
             return
 
         if result == "chameleon":
+            # The delta key is checked by `ChameleonHandler.is_delta_key_revoked` in `process_chameleon`.
             self.chameleon_handler.is_revoked(request=request)
-            public_key, sender = load_chameleon_csr_delta_key_and_sender(csr=request["body"]["p10cr"])
-
-            self.revocation_handler.public_key_is_revoked(public_key, sender)
 
         elif result == "catalyst":
             pass
@@ -423,21 +421,26 @@ class HybridIssuingHandler:
             if result:
                 raise CertRevoked("The Sun hybrid certificate is revoked.")
 
-        elif result == "related_cert":
-            self.revocation_handler.is_revoked(cert)
+        elif result == "related-cert":
+            if self.revocation_handler.is_revoked(cert):
+                raise CertRevoked("The certificate is revoked.")
             if used_both_certs:
                 related_cert = get_related_cert_from_list(cert_a=cert, certs=request["extraCerts"][1:])
-                self.revocation_handler.is_revoked(related_cert)
+                if self.revocation_handler.is_revoked(related_cert):
+                    raise CertRevoked("The related certificate is revoked.")
         elif result.startswith("composite-sig"):
-            self.revocation_handler.is_revoked(cert)
+            if self.revocation_handler.is_revoked(cert):
+                raise CertRevoked("The composite signature certificate is revoked.")
 
-        elif result == "cert_discovery":
-            self.revocation_handler.is_revoked(cert)
+        elif result == "cert-discovery":
+            if self.revocation_handler.is_revoked(cert):
+                raise CertRevoked("The certificate is revoked.")
             if used_both_certs:
                 related_cert = get_cert_discovery_cert(cert)
                 if related_cert is None:
                     raise BadMessageCheck("The related certificate is not found, or could not be extracted.")
-                self.revocation_handler.is_revoked(related_cert)
+                if self.revocation_handler.is_revoked(related_cert):
+                    raise CertRevoked("The cert discovery certificate is revoked.")
 
         else:
             raise NotImplementedError(f"Unknown hybrid certificate type: {result}")

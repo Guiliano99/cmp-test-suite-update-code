@@ -3,8 +3,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import unittest
+from unittest.mock import patch
 
 from mock_ca.ca_handler import CAHandler
+from mock_ca.mock_fun import CertStateEnum
+from resources.certbuildutils import build_certificate
 from resources.certutils import cert_in_list
 
 from resources.cmputils import (
@@ -14,6 +17,7 @@ from resources.cmputils import (
     get_pkistatusinfo,
     parse_pkimessage,
 )
+from resources.exceptions import CertRevoked
 from resources.keyutils import generate_key
 from resources.protectionutils import protect_pkimessage
 from unit_tests.utils_for_test import load_ca_cert_and_key, try_encode_pyasn1
@@ -24,6 +28,32 @@ class TestMockCaRevokedRevive(unittest.TestCase):
     def setUpClass(cls):
         cls.ca_cert, cls.ca_key = load_ca_cert_and_key()
         cls.ca_handler = CAHandler(ca_cert=cls.ca_cert, ca_key=cls.ca_key)
+
+    def test_hybrid_issuing_rejects_revoked_certificate(self):
+        """
+        GIVEN a composite signature certificate issued by the CA and revoked, in the first extraCerts entry.
+        WHEN the hybrid handler checks the request before issuing, as a composite signature, a related
+        certificate and a cert discovery certificate.
+        THEN each check raises `CertRevoked`.
+        """
+        key = generate_key("composite-sig")
+        cert, _ = build_certificate(
+            private_key=key, common_name="CN=Hans the Tester", ca_key=self.ca_key, ca_cert=self.ca_cert
+        )
+        self.ca_handler.state.certificate_db.add_cert(cert=cert, cert_state=CertStateEnum.CONFIRMED)
+        self.ca_handler.rev_handler.mark_as_revoked(cert, reason="keyCompromise")
+        request = build_ir_from_key(key, common_name="CN=Hans the Tester", sender="CN=Hans the Tester", for_mac=True)
+        request["extraCerts"].append(cert)
+
+        with self.subTest(hybrid_type="composite-sig"):
+            with self.assertRaises(CertRevoked):
+                self.ca_handler.hybrid_handler.is_revoked_for_issuing(request=request)
+
+        for hybrid_type in ["related-cert", "cert-discovery"]:
+            with self.subTest(hybrid_type=hybrid_type):
+                with patch("mock_ca.hybrid_handler.is_hybrid_cert", return_value=hybrid_type):
+                    with self.assertRaises(CertRevoked):
+                        self.ca_handler.hybrid_handler.is_revoked_for_issuing(request=request)
 
     def test_revocation_and_revive(self):
         """
