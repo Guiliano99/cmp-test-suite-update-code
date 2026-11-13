@@ -682,18 +682,6 @@ class CAHandler:
                     error_details=[f"The certificate at index {i} is not confirmed."],
                 )
 
-    def process_cert_request(self, pki_message: PKIMessageTMP) -> PKIMessageTMP:
-        """Process the normal request.
-
-        :return: The PKI message containing the response.
-        """
-        try:
-            response = self.cert_req_handler.process_cert_request(pki_message)
-        except CMPTestSuiteError as e:
-            logging.info("An error occurred: %s", str(e.message))
-            return self.build_error_from_exception(e, pki_message)
-        return self.sign_response(response=response, request_msg=pki_message)
-
     def process_normal_request(self, pki_message: PKIMessageTMP) -> PKIMessageTMP:
         """Process the normal request.
 
