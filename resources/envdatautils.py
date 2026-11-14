@@ -32,6 +32,8 @@ from keyutils_py.types import (
     Strint,
     VerifyKey,
 )
+from pkixutils import cms
+from pkixutils.x509 import subject_key_identifier
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import tag, univ
 from pyasn1.type.base import Asn1Item
@@ -61,14 +63,11 @@ from resources import (
     prepare_alg_ids,
     utils,
 )
-from resources.convertutils import copy_asn1_certificate, ensure_is_kem_pub_key, str_to_bytes
+from resources.convertutils import ensure_is_kem_pub_key, str_to_bytes
 from resources.exceptions import BadAsn1Data, InvalidKeyCombination
 from resources.oid_mapping import (
-    compute_hash,
-    get_alg_oid_from_key_hash,
     get_hash_from_oid,
     may_return_oid_to_name,
-    sha_alg_name_to_oid,
 )
 from resources.oidutils import (
     ECMQV_NAME_2_OID,
@@ -345,89 +344,19 @@ def prepare_recipient_identifier(  # noqa D417 undocumented-param
     return recip_id
 
 
-@not_keyword
-def prepare_signer_identifier(cert: rfc9480.CMPCertificate) -> rfc5652.SignerIdentifier:
-    """Create a `SignerIdentifier` to identify the CMP protection certificate.
+def _signer_info_alg_id(signing_key: SignKey, sig_hash_name: str) -> rfc9480.AlgorithmIdentifier:
+    """Return the signature algorithm of a `SignerInfo` for a key and the hash of its signature.
 
-    Prepares the `SignerIdentifier` used in the `SignerInfo` structure
-    to specify the certificate corresponding to the signing key (CMP protection certificate).
-    It uses the SubjectKeyIdentifier extension if present; otherwise, it falls back to
-    using the issuer and serial number.
+    A post-quantum, stateful hash-based or composite key signs the data itself: `keyutils_py` signs by
+    AlgorithmIdentifier without a pre-hash, so the identifier must not name one.
 
-    :param cert: Certificate to derive the identifier from (CMP protection certificate).
-    :return: A `SignerIdentifier` structure identifying the signer.
+    :param signing_key: The private key that signs.
+    :param sig_hash_name: The hash algorithm of the signature, for a traditional key.
+    :return: The `AlgorithmIdentifier` for the `signatureAlgorithm` field.
     """
-    ski = certextractutils.get_field_from_certificate(cert, extension="ski")
-    sid = rfc5652.SignerIdentifier()
-    if ski is not None:
-        val = rfc5652.SubjectKeyIdentifier(ski).subtype(
-            implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0)
-        )
-        sid["subjectKeyIdentifier"] = val
-    else:
-        sid["issuerAndSerialNumber"] = certbuildutils.prepare_issuer_and_serial_number(cert)
-
-    return sid
-
-
-@not_keyword
-def prepare_signed_attributes(message_digest: bytes) -> rfc5652.SignedAttributes:
-    """Create `SignedAttributes` with content type and message digest.
-
-    The `SignedAttributes` structure includes attributes that are signed along with the content.
-    This function prepares the mandatory attributes: content type and message digest, which are
-    necessary for signature verification in CMP.
-
-    :param message_digest: Digest of the content to be signed.
-    :return: A `SignedAttributes` structure containing the necessary attributes.
-    """
-    signed_attrs = rfc5652.SignedAttributes().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0))
-
-    attr_content_type = rfc5652.Attribute()
-    attr_content_type.setComponentByName("attrType", rfc5652.id_contentType)
-    # must be set like this.
-    attr_content_type.setComponentByName(
-        "attrValues", univ.SetOf().setComponentByPosition(0, rfc5958.id_ct_KP_aKeyPackage)
-    )
-
-    attr_msg_dig = rfc5652.Attribute()
-    attr_msg_dig.setComponentByName("attrType", rfc5652.id_messageDigest)
-    # must be set like this.
-    attr_msg_dig.setComponentByName(
-        "attrValues", univ.SetOf().setComponentByPosition(0, univ.OctetString(message_digest))
-    )
-
-    signed_attrs.setComponentByPosition(0, attr_content_type)
-    signed_attrs.setComponentByPosition(1, attr_msg_dig)
-
-    signed_attrs2 = rfc5652.SignedAttributes().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0))
-
-    der_data = encoder.encode(signed_attrs)
-    data, rest = decoder.decode(der_data, signed_attrs2)
-    if rest != b"":
-        raise ValueError("The decoding of the SignedAttributes failed")
-
-    return data
-
-
-@not_keyword
-def prepare_encapsulated_content_info(content: bytes, override_oid: bool = False) -> rfc5652.EncapsulatedContentInfo:
-    """Create an `EncapsulatedContentInfo` with the provided content.
-
-    The `EncapsulatedContentInfo` structure wraps the content that is to be signed or encrypted.
-    This function prepares this structure with the specified content type and the actual content.
-
-    :param content: Content data to encapsulate.
-    :param override_oid: If True, use an alternate OID for negative testing (e.g., to simulate errors).
-    Which is `id_at_commonName`. Defaults to False. The correct OID is `id_ct_KP_aKeyPackage`.
-    :return: An `EncapsulatedContentInfo` structure containing the content.
-    """
-    encap_content_info = rfc5652.EncapsulatedContentInfo()
-    encap_content_info["eContentType"] = rfc5958.id_ct_KP_aKeyPackage if not override_oid else rfc5280.id_at_commonName
-    econtent = univ.OctetString(content).subtype(explicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0))
-    encap_content_info["eContent"] = econtent
-
-    return encap_content_info
+    if isinstance(signing_key, (PQSignaturePrivateKey, PQHashStatefulSigPrivateKey, CompositeSigPrivateKey)):
+        return prepare_alg_ids.prepare_sig_alg_id(signing_key, hash_alg=None)
+    return prepare_alg_ids.prepare_sig_alg_id(signing_key, hash_alg=sig_hash_name)
 
 
 @keyword(name="Prepare SignerInfo")
@@ -437,26 +366,23 @@ def prepare_signer_info(  # noqa D417 undocumented-param
     e_content: bytes,
     sig_hash_name: Optional[str],
     digest_hash_name: Optional[str] = None,
-    bad_sig: bool = False,
-    version: int = 3,
 ) -> rfc5652.SignerInfo:
-    """Create a `SignerInfo` structure for signing content.
+    """Create and sign the `SignerInfo` of a `SignedData` that carries an `AsymmetricKeyPackage`.
 
-    The `SignerInfo` structure provides information about the signer and the signature.
-    This function prepares the `SignerInfo`, including setting the appropriate version,
-    digest algorithm, signature algorithm, and signed attributes. It also generates the
-    signature over the encapsulated content.
+    The `SignerInfo` has the two signed attributes content type (`id-ct-KP-aKeyPackage`) and message digest, and
+    the signature is computed over the signed attributes (RFC 5652 Section 5.4). The signer is named by the
+    SubjectKeyIdentifier of the certificate, or by issuer and serial number if the certificate has none; the
+    version is 3 or 1 accordingly. The structure is built by `pkixutils.cms`, which writes what RFC 5652 allows:
+    a test that needs an invalid `SignerInfo` changes the result.
 
     Arguments:
     ---------
         - `signing_key`: The private key used for signing.
-        - `cert`: The certificate corresponding to the signing key (CMP protection certificate).
-        - `e_content`: The content to sign (typically the DER-encoded `EncapsulatedContentInfo`).
+        - `cert`: The certificate corresponding to the signing key (the KGA certificate).
+        - `e_content`: The content that is signed (the DER-encoded `AsymmetricKeyPackage`).
         - `sig_hash_name`: The hash algorithm for the signature (e.g., "sha256"). If not provided,
         it is derived from the signing key.
         - `digest_hash_name`: The hash algorithm for digest calculation. Defaults to `sig_hash_name`.
-        - `bad_sig`: If True, modifies the signature of the signed_info. Defaults to `False`.
-        - `version`: The CMSVersion for the structure. Defaults to 3.
 
     Returns:
     -------
@@ -464,126 +390,25 @@ def prepare_signer_info(  # noqa D417 undocumented-param
 
     Raises:
     ------
-        - `ValueError`: If the `signing_key` is not a valid key type or if the `sig_hash_name` is not supported.
+        - `ValueError`: If the hash algorithm does not fit the signing key.
 
     Examples:
     --------
-    | ${signer_info}= | Prepare SignerInfo | ${signing_key} | ${cert} | e_content=${e_content} | "sha256" |
+    | ${signer_info}= | Prepare SignerInfo | ${signing_key} | ${cert} | e_content=${e_content} | sha256 |
 
     """
     if sig_hash_name is None:
         sig_hash_name = get_digest_from_key_hash(signing_key)
 
-    digest_hash_name = digest_hash_name or sig_hash_name
-    message_digest = compute_hash(digest_hash_name, e_content)
-
-    # Prepare signature and digest algorithm identifiers
-    sig_alg_id = rfc5652.SignatureAlgorithmIdentifier()
-    sig_alg_id["algorithm"] = get_alg_oid_from_key_hash(signing_key, hash_alg=sig_hash_name)
-
-    dig_alg_id = rfc5652.DigestAlgorithmIdentifier()
-    dig_alg_id["algorithm"] = sha_alg_name_to_oid(digest_hash_name)
-
-    # Create SignerInfo structure
-    signer_info = rfc5652.SignerInfo()
-    signer_info["version"] = version
-    signer_info["digestAlgorithm"] = dig_alg_id
-    signer_info["signatureAlgorithm"] = sig_alg_id
-    signer_info["signedAttrs"] = prepare_signed_attributes(message_digest)
-    signer_info["sid"] = prepare_signer_identifier(cert)
-
-    # Generate signature over the signed attributes
-    encap_content_info = prepare_encapsulated_content_info(e_content)
-    der_encap_content_info = encoder.encode(encap_content_info)
-
-    signature = cryptoutils.sign_data(data=der_encap_content_info, key=signing_key, hash_alg=sig_hash_name)
-    signature += b"" if not bad_sig else b"AA"
-    signer_info["signature"] = univ.OctetString(signature)
-
-    return signer_info
-
-
-@not_keyword
-def prepare_signer_infos(
-    signing_key: SignKey,
-    cert: rfc9480.CMPCertificate,
-    e_content: bytes,
-    sig_hash_name: Optional[str],
-    digest_hash_name: Optional[str] = None,
-    add_another: bool = False,
-    negative_signature: bool = False,
-) -> rfc5652.SignerInfos:
-    """Create a `SignerInfos` set with one or more `SignerInfo` entries.
-
-    The `SignerInfos` structure is a set of `SignerInfo` entries. This function prepares
-    this structure, optionally adding multiple `SignerInfo` entries for negative testing.
-
-    :param signing_key: Private key used for signing.
-    :param cert: Certificate corresponding to the signing key (CMP protection certificate).
-    :param e_content: Content to sign.
-    :param sig_hash_name: Hash algorithm for signature.
-    :param digest_hash_name: Hash algorithm for digest calculation. Defaults to `sig_hash_name`.
-    :param add_another: If `True`, add another `SignerInfo` for negative testing.
-    :param negative_signature: A boolean flag that, if True, modifies the signature of the signed_info.
-    `EncapsulatedContentInfo` inside the `SignerInfo` structure.  Defaults to False.
-    :return: A `SignerInfos` structure containing one or more `SignerInfo` entries.
-    """
-    signer_infos = rfc5652.SignerInfos()
-
-    if sig_hash_name is None:
-        sig_hash_name = get_digest_from_key_hash(signing_key)
-
-    signer_info = prepare_signer_info(
-        signing_key=signing_key,
-        cert=cert,
-        e_content=e_content,
-        digest_hash_name=digest_hash_name,
-        sig_hash_name=sig_hash_name,
-        bad_sig=negative_signature,
+    return cms.prepare_cms_signer_info(
+        signing_key,
+        cert,
+        e_content,
+        content_type=rfc5958.id_ct_KP_aKeyPackage,
+        hash_alg=digest_hash_name or sig_hash_name,
+        use_ski=subject_key_identifier(cert) is not None,
+        sig_alg_id=_signer_info_alg_id(signing_key, sig_hash_name),
     )
-    signer_infos.append(signer_info)
-
-    if add_another:
-        signer_infos.append(signer_info)
-
-    return signer_infos
-
-
-@not_keyword
-def prepare_certificate_set(certs: List[rfc9480.CMPCertificate]) -> rfc5652.CertificateSet:
-    """Prepare a `CertificateSet` for a list of certificates.
-
-    Constructs a `CertificateSet` containing multiple certificates, enabling
-    recipient systems to verify that the certificate identifying the KGA is trusted and
-    allow to generate a private key for us.
-
-    :param certs: List of certificates to include (e.g., KGA certificate chain).
-    :return: The populated `CertificateSet` structure, with the correct tagging.
-    """
-    certificates = rfc5652.CertificateSet().subtype(implicitTag=tag.Tag(tag.tagClassContext, tag.tagFormatSimple, 0))
-
-    for cert in certs:
-        new_cert = rfc5652.CertificateChoices()
-        new_cert["certificate"] = copy_asn1_certificate(cert, rfc9480.CMPCertificate())
-        certificates.append(new_cert)
-
-    return certificates
-
-
-def _prepare_digest_alg_ids(hash_algs: str) -> rfc5652.DigestAlgorithmIdentifiers:
-    """Prepare a set of `DigestAlgorithmIdentifiers` for the specified hash algorithms.
-
-    :param hash_algs: A list of hash algorithm names (e.g., "sha256", "sha384").
-    :return: A `DigestAlgorithmIdentifiers` structure containing the specified hash algorithms.
-    """
-    digest_alg_set = rfc5652.DigestAlgorithmIdentifiers()
-    for alg_name in hash_algs.split(","):
-        alg_name = alg_name.strip()
-        digest_alg_id = rfc5652.DigestAlgorithmIdentifier()
-        digest_alg_id["algorithm"] = sha_alg_name_to_oid(alg_name)
-        digest_alg_set.append(digest_alg_id)
-
-    return digest_alg_set
 
 
 @keyword(name="Prepare SignedData")
@@ -593,27 +418,25 @@ def prepare_signed_data(  # noqa D417 undocumented-param
     sig_hash_name: Optional[str],
     e_content: Optional[bytes] = None,
     digest_hash_name: Optional[str] = None,
-    bad_sig: bool = False,
     cert_chain: Optional[List[rfc9480.CMPCertificate]] = None,
     private_keys: Optional[_PrivateKeyCast] = None,
-    signer_infos: Optional[Union[rfc5652.SignerInfo, List[rfc5652.SignerInfo]]] = None,
 ) -> rfc5652.SignedData:
     """Prepare a `SignedData` structure for the provided content, key, and certificate.
 
-    Creates `SignedData` structure as defined in RFC 5652, including digest
-    algorithm identifiers, encapsulated content, certificates, and signer information.
+    Creates the `SignedData` structure as defined in RFC 5652 with the content type `id-ct-KP-aKeyPackage`:
+    digest algorithm identifiers, encapsulated content, certificates, and one `SignerInfo`, see
+    `Prepare SignerInfo`. The structure is built by `pkixutils.cms`.
 
     Arguments:
     ---------
-        - `e_content`: The content to be signed, provided as a byte string.
         - `signing_key`: The private key used for signing.
         - `cert`: A `CMPCertificate` object used for KGA.
-        - `sig_hash_name`: The hash algorithm name to use for signing.
+        - `sig_hash_name`: The hash algorithm name to use for signing. If not provided, it is derived from
+        the signing key.
+        - `e_content`: The content to be signed, provided as a byte string.
         - `digest_hash_name`: The hash algorithm name to use for digest calculation. Defaults to `sig_hash_name`.
-        - `bad_sig`: A boolean flag that, if True, modifies the signature of the signed_info.
         - `cert_chain`: Optional The certificate chain of the KGA `CMPCertificate`. Defaults to cert.
         - `private_keys`: A list of private keys to parse inside the asymmetric key package structure.
-        - `signer_infos`: Optional SignerInfo structure or list of SignerInfo structures to include. Defaults to `None`.
 
     Returns:
     -------
@@ -625,55 +448,29 @@ def prepare_signed_data(  # noqa D417 undocumented-param
 
     Examples:
     --------
-    | ${signed_data}= | Prepare SignedData | ${signing_key} | ${cert} | e_content=${e_content} | "sha256" |
+    | ${signed_data}= | Prepare SignedData | ${signing_key} | ${cert} | sha256 | e_content=${e_content} |
 
     """
     if e_content is None and private_keys is None:
         raise ValueError("Either `e_content` or `private_keys` must be provided.")
 
-    if sig_hash_name is None:
-        sig_hash_name = get_digest_from_key_hash(signing_key)
-
-    digest_hash_name = digest_hash_name or sig_hash_name
-
     if private_keys is not None:
         # Generate content from private keys if provided
         e_content = asn1utils.encode_to_der(prepare_asymmetric_key_package(private_keys))
 
-    signed_data = rfc5652.SignedData()
-    signed_data["version"] = 3
+    if sig_hash_name is None:
+        sig_hash_name = get_digest_from_key_hash(signing_key)
 
-    digest_alg_set = _prepare_digest_alg_ids(digest_hash_name)
-    signed_data["digestAlgorithms"] = digest_alg_set
-
-    if cert_chain is None:
-        cert_chain = [cert]
-
-    # pyasn1-alt-modules automatically re-orders them after decoding.
-    # print_chain_subject_and_issuer([cert["certificate"] for cert in certs])
-    signed_data["certificates"] = prepare_certificate_set(cert_chain)
-
-    signed_data["encapContentInfo"] = prepare_encapsulated_content_info(e_content)  # type: ignore
-
-    if signer_infos is not None:
-        if isinstance(signer_infos, rfc5652.SignerInfo):
-            signer_infos = [signer_infos]
-
-        signed_data["signerInfos"].extend(signer_infos)
-    else:
-        signed_data["signerInfos"] = prepare_signer_infos(
-            signing_key=signing_key,
-            cert=cert,
-            e_content=e_content,  # type: ignore
-            sig_hash_name=sig_hash_name,
-            digest_hash_name=digest_hash_name,
-            add_another=False,
-            negative_signature=bad_sig,
-        )
-
-    # to show the different order after decoding
-    # print_chain_subject_and_issuer([cert["certificate"] for cert in data["certificates"]])
-    return signed_data
+    return cms.build_cms_signed_data(
+        e_content,  # type: ignore
+        signing_key,
+        cert,
+        content_type=rfc5958.id_ct_KP_aKeyPackage,
+        hash_alg=digest_hash_name or sig_hash_name,
+        use_ski=subject_key_identifier(cert) is not None,
+        certs=cert_chain,
+        sig_alg_id=_signer_info_alg_id(signing_key, sig_hash_name),
+    )
 
 
 @not_keyword

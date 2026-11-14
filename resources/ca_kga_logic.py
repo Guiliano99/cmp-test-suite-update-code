@@ -27,6 +27,8 @@ from keyutils_py.types import (
     RSADecapKey,
     Strint,
 )
+from pkixutils import cms
+from pkixutils.exceptions import DigestMismatch, PkixError, SignerCertificateNotFound
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type import univ
 from pyasn1_alt_modules import (
@@ -62,7 +64,6 @@ from resources.asn1utils import try_decode_pyasn1
 from resources.convertutils import str_to_bytes
 from resources.exceptions import BadAlg, BadAsn1Data, InvalidKeyData, MismatchingKey
 from resources.oid_mapping import (
-    compute_hash,
     get_digest_hash_alg_from_alg_id,
     get_hash_from_oid,
     may_return_oid_to_name,
@@ -1148,33 +1149,31 @@ def get_certificates_from_signed_data(certificates: rfc5652.CertificateSet) -> L
     return out_chain
 
 
-def _validate_signature_and_algorithm_in_signed_data(
-    data: dict, asym_key_package_bytes: bytes, encap_content_info_data: bytes, kga_certificate: rfc9480.CMPCertificate
-) -> None:
-    """Validate the signature and algorithm in the SignedData structure.
+def _verify_signed_data(signed_data: rfc5652.SignedData) -> rfc9480.CMPCertificate:
+    """Verify the digest, the signed attributes and the signature of a `SignedData` structure.
 
-    :param data: A dictionary containing signature data extracted from the SignerInfo.
-    :param asym_key_package_bytes: The bytes of the AsymmetricKeyPackage used for digest comparison.
-    :param encap_content_info_data: The encoded EncapsulatedContentInfo data.
-    :param kga_certificate: The KGA certificate used to verify the signature.
-    :raises ValueError: If the digest does not match or signature verification fails.
+    The check is the one of RFC 5652 Sections 5.4 and 5.6, done by `pkixutils.cms`: the message digest attribute
+    has to be the digest of the content, the content type attribute has to equal the `eContentType`, and the
+    signature has to verify over the signed attributes with the key of the certificate that the
+    `SignerIdentifier` names.
+
+    :param signed_data: The `SignedData` structure to verify.
+    :return: The certificate of the signer, taken from the `certificates` field.
+    :raises ValueError: If the signer certificate is absent, or the digest or the signed attributes are wrong.
+    :raises InvalidSignature: If the signature does not verify.
     """
-    signature = data["signature"]
-    digest_econtent = data["digest_eContent"]
-
-    hash_alg = cmputils.get_digest_alg_for_cmp(data["signatureAlgorithm"], kga_certificate)
-
-    digest = compute_hash(hash_alg, asym_key_package_bytes)
-    if digest_econtent != digest:
-        logging.info("Digest inside the SignerInfo structure: %s", digest_econtent.hex())
-        logging.info("Newly calculated digest with %s: %s", hash_alg, digest.hex())
-        raise ValueError("The digest of the eContent is different!")
-
-    logging.info("Hash algorithm used for signing the `encapContentInfo`: %s", hash_alg)
-    logging.info("Signature of `encapContentInfo`: %s", signature.hex())
-    certutils.verify_signature_with_cert(
-        signature=signature, asn1cert=kga_certificate, data=encap_content_info_data, hash_alg=hash_alg
-    )
+    try:
+        signers = cms.verify_cms_signed_data(signed_data)
+    except SignerCertificateNotFound as err:
+        raise ValueError(
+            "The `certificates` structure inside `SignedData` did not contain the certificate "
+            "used for signing the `SignedData` content."
+        ) from err
+    except DigestMismatch as err:
+        raise ValueError("The digest of the eContent is different!") from err
+    except PkixError as err:
+        raise ValueError(f"The `SignedData` structure is invalid: {err}") from err
+    return signers[0]
 
 
 @not_keyword
@@ -1226,26 +1225,13 @@ def validate_signed_data_structure(
     certs = get_certificates_from_signed_data(signed_data["certificates"])
     kga_certificate = certs[0]
 
-    data = check_signer_infos(
+    check_signer_infos(
         signed_data["signerInfos"], dig_alg_id, kga_certificate=kga_certificate, expected_digests=expected_size
     )
 
-    encap_content_info_data = encoder.encode(signed_data["encapContentInfo"])
+    signer_cert = _verify_signed_data(signed_data)
 
-    _validate_signature_and_algorithm_in_signed_data(
-        data=data,
-        asym_key_package_bytes=asym_key_package_bytes,
-        encap_content_info_data=encap_content_info_data,
-        kga_certificate=kga_certificate,
-    )
-
-    _validate_kga_certificate(
-        certs=certs,
-        asym_key_package_bytes=encap_content_info_data,
-        signature=data["signature"],
-        hash_alg=get_hash_from_oid(data["signatureAlgorithm"]["algorithm"], only_hash=True),
-        trustanchors=trustanchors,
-    )
+    _validate_kga_certificate(certs=certs, signer_cert=signer_cert, trustanchors=trustanchors)
 
     certutils.validate_cmp_extended_key_usage(kga_certificate, strictness=2, ext_key_usages="cmKGA")
 
@@ -1267,19 +1253,15 @@ def _check_is_hybrid_or_pq_sig_alg_cert_chain(certs: List[rfc9480.CMPCertificate
 
 def _validate_kga_certificate(
     certs: List[rfc9480.CMPCertificate],
-    asym_key_package_bytes: bytes,
-    signature: bytes,
-    hash_alg: Optional[str],
+    signer_cert: rfc9480.CMPCertificate,
     trustanchors: str,
 ):
     """Validate the Key Generation Authority (KGA) certificate chain.
 
     :param certs: A list of certificates from the `SignedData` structure.
-    :param asym_key_package_bytes: The bytes of the `AsymmetricKeyPackage` used for signature validation.
-    :param signature: The signature applied to the `SignedData` content.
-    :param hash_alg: The hash algorithm used to compute the signature, if necessary.
+    :param signer_cert: The certificate whose key verified the signature of the `SignedData` content.
     :param trustanchors: The path to the directory where the trust anchors are saved.
-    :raises ValueError: If the signing certificate is not found, not trusted, or not in the expected position.
+    :raises ValueError: If the signing certificate is not trusted or not in the expected position.
     """
     # TODO: ask Alex if self-signed certificates are acceptable for the Test-Suite.
     if len(certs) == 0:
@@ -1298,23 +1280,11 @@ def _validate_kga_certificate(
                     "The certificate chain is not valid! "
                     "The first certificate in the chain must be the KGA certificate."
                 )
-            return
+        else:
+            certutils.verify_cert_chain_openssl(cert_chain=certs)
 
-        certutils.verify_cert_chain_openssl(cert_chain=certs)
-        signer_cert_index = checkutils.find_right_cert_pos(
-            certs, asym_key_package_bytes, signature=signature, hash_alg=hash_alg
-        )
-        if signer_cert_index == -1:
-            raise ValueError(
-                "The `certificates` structure inside `SignedData` did not contain the certificate "
-                "used for signing the `SignedData` content."
-            )
-
-        if signer_cert_index != 0:
-            raise ValueError(
-                f"Certificate used to sign the `SignedData` content was not at position 0 "
-                f"but at position: {signer_cert_index}"
-            )
+        if encoder.encode(signer_cert) != encoder.encode(certs[0]):
+            raise ValueError("Certificate used to sign the `SignedData` content was not at position 0.")
 
 
 @not_keyword

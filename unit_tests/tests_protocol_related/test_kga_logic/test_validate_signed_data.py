@@ -93,8 +93,9 @@ class TestCheckSignedData(unittest.TestCase):
             cert=self.kga_certificate,
             e_content=e_content_data,
             sig_hash_name="sha512",
-            bad_sig=True,
         )
+        signer_info = self.signed_data["signerInfos"][0]
+        signer_info["signature"] = signer_info["signature"].asOctets() + b"AA"
 
         with self.assertRaises(cryptography.exceptions.InvalidSignature):
             validate_signed_data_structure(self.signed_data, trustanchors=self.trustanchors)
@@ -113,7 +114,6 @@ class TestCheckSignedData(unittest.TestCase):
             e_content=e_content_data,
             digest_hash_name="sha384",
             sig_hash_name="sha512",
-            bad_sig=True,
         )
 
         with self.assertRaises(ValueError):

@@ -7,10 +7,20 @@ import unittest
 from pyasn1_alt_modules import rfc5652
 from resources.ca_kga_logic import check_signer_infos
 from resources.certutils import parse_certificate
-from resources.envdatautils import prepare_signer_infos
+from resources.envdatautils import prepare_signer_info
 from resources.keyutils import load_private_key_from_file
 from resources.oid_mapping import compute_hash, sha_alg_name_to_oid
 from resources.utils import load_and_decode_pem_file
+
+
+def prepare_signer_infos(add_another: bool = False, **kwargs) -> rfc5652.SignerInfos:
+    """Return a `SignerInfos` set with one `SignerInfo`, or with the same one twice."""
+    signer_infos = rfc5652.SignerInfos()
+    signer_info = prepare_signer_info(**kwargs)
+    signer_infos.append(signer_info)
+    if add_another:
+        signer_infos.append(signer_info)
+    return signer_infos
 
 
 class TestCheckSignerInfos(unittest.TestCase):

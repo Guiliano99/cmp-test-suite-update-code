@@ -34,6 +34,10 @@ SPDX-License-Identifier: Apache-2.0
 - Rename the test "CA MUST Reject Protected Genm With Get CA Certs" to "CA MUST Respond To Protected Genm With Get CA Certs"
 - Tag "CA MUST Reject Related Cert For Non-EE Cert" negative instead of positive, and correct its documentation
 - Register the keyword "Validate certReqId" only once, drop the wrong failinfo declarations from the exceptions, and remove unused code
+- Sign and verify the KGA `SignedData` over its signed attributes (RFC 5652 Section 5.4): the signature was computed and checked over the encoding of `encapContentInfo`, so the `SignedData` of a conformant CA did not verify
+- Verify the KGA `SignedData` with the certificate that its `SignerIdentifier` names, and build and verify the structure with `pkixutils.cms`
+- Remove the arguments `bad_sig`, `version` and `signer_infos` of `Prepare SignedData` and `Prepare SignerInfo`; a test that needs an invalid structure changes the result
+- Mock CA: write `SignerInfo` version 1 when the KGA certificate has no SubjectKeyIdentifier and is named by issuer and serial number
 
 # 0.0.2 - 2025-Apr-24
 - Add PQ support
