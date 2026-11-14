@@ -68,7 +68,7 @@ class TestMLDSAKGASigner(unittest.TestCase):
             ca_cert=self.ca_cert,
             ca_key=self.ca_key,
             kga_key=kga_key,
-            kga_cert_chain=[self.ca_cert, kga_cert],
+            kga_cert_chain=[kga_cert, self.ca_cert],
             password=self.pre_shared_secret,
         )
         response = protect_pkimessage(response, "password_based_mac", self.pre_shared_secret)
