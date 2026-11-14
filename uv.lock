@@ -319,6 +319,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "keyutils-py" },
     { name = "pkilint" },
+    { name = "pkixutils" },
     { name = "pyasn1" },
     { name = "pyasn1-alt-modules" },
     { name = "pycryptodome" },
@@ -358,6 +359,7 @@ requires-dist = [
     { name = "keyutils-py", git = "https://github.com/Guiliano99/keyutils-py.git?rev=3b91e25d194ead2e443328ae6d0e088f74a729e3" },
     { name = "liboqs-python", marker = "extra == 'pq'", specifier = "==0.16.0.1" },
     { name = "pkilint", specifier = "==0.13.3" },
+    { name = "pkixutils", git = "file:///home/debian/IdeaProjects/pkixutils-py?rev=d5f7a37644c96bac65c8a340bd811d3eb4fc6cdf" },
     { name = "pyasn1", specifier = "==0.6.4" },
     { name = "pyasn1-alt-modules", specifier = "==0.4.10" },
     { name = "pycryptodome", specifier = "==4.2.0" },
@@ -990,6 +992,17 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/92/0a/1d6b2e196359540631b2a1689c904afcd86ac4bab7d3906770b959cf0f8b/pkilint-0.13.3.tar.gz", hash = "sha256:360d9f55e36392cae461dfbe8ca1fb45f27aa9bea9710ba1b94d78fd86efc883", size = 160711, upload-time = "2026-04-23T14:09:36.7Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b1/6e/982cb1989997594ce545d6b28089a389fbae01b974b6ae51122c32aa510f/pkilint-0.13.3-py3-none-any.whl", hash = "sha256:3e4e8f59d53236277cb051f9afa4ec3f91e429ba109f480eac31435b49e7ee39", size = 178869, upload-time = "2026-04-23T14:09:35.213Z" },
+]
+
+[[package]]
+name = "pkixutils"
+version = "0.0.1"
+source = { git = "file:///home/debian/IdeaProjects/pkixutils-py?rev=d5f7a37644c96bac65c8a340bd811d3eb4fc6cdf#d5f7a37644c96bac65c8a340bd811d3eb4fc6cdf" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "keyutils-py" },
+    { name = "pyasn1" },
+    { name = "pyasn1-alt-modules" },
 ]
 
 [[package]]
