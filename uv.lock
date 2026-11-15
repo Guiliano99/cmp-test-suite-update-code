@@ -359,7 +359,7 @@ requires-dist = [
     { name = "keyutils-py", git = "https://github.com/Guiliano99/keyutils-py.git?rev=3b91e25d194ead2e443328ae6d0e088f74a729e3" },
     { name = "liboqs-python", marker = "extra == 'pq'", specifier = "==0.16.0.1" },
     { name = "pkilint", specifier = "==0.13.3" },
-    { name = "pkixutils", git = "file:///home/debian/IdeaProjects/pkixutils-py?rev=d5f7a37644c96bac65c8a340bd811d3eb4fc6cdf" },
+    { name = "pkixutils", git = "https://github.com/Guiliano99/pkixutils-py.git?rev=d5f7a37644c96bac65c8a340bd811d3eb4fc6cdf" },
     { name = "pyasn1", specifier = "==0.6.4" },
     { name = "pyasn1-alt-modules", specifier = "==0.4.10" },
     { name = "pycryptodome", specifier = "==4.2.0" },
@@ -997,7 +997,7 @@ wheels = [
 [[package]]
 name = "pkixutils"
 version = "0.0.1"
-source = { git = "file:///home/debian/IdeaProjects/pkixutils-py?rev=d5f7a37644c96bac65c8a340bd811d3eb4fc6cdf#d5f7a37644c96bac65c8a340bd811d3eb4fc6cdf" }
+source = { git = "https://github.com/Guiliano99/pkixutils-py.git?rev=d5f7a37644c96bac65c8a340bd811d3eb4fc6cdf#d5f7a37644c96bac65c8a340bd811d3eb4fc6cdf" }
 dependencies = [
     { name = "cryptography" },
     { name = "keyutils-py" },
