@@ -681,7 +681,8 @@ def process_simple_challenge(
             desired_length=32,
             owf="sha256",
         )
-        logging.debug("ECDH Challenge computed shared secret: %d bytes", len(ss))
+        # The shared secret is logged on purpose, see the python-logger-credential-disclosure exclusion in semgrep.toml.
+        logging.debug("ECDH Challenge computed shared secret: %s", ss.hex())
     elif is_kem_private_key(ee_key):
         ss = ee_key.decaps(kemct)  # type: ignore
     else:
