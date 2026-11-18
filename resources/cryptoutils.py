@@ -967,7 +967,8 @@ def perform_static_dh(
     key_length = length // 8
     other_info = encoder.encode(ecc_cms_info)
     shared_secret = perform_ecdh(private_key, public_key, use_cofactor=use_cofactor)
-    logging.info("shared_secret for static-dh: %d bytes", len(shared_secret))
+    # The shared secret is logged on purpose, see the python-logger-credential-disclosure exclusion in semgrep.toml.
+    logging.info("shared_secret for static-dh: %s", shared_secret.hex())
 
     k = compute_ansi_x9_63_kdf(shared_secret, key_length, other_info=other_info, hash_alg=hash_alg, use_version_2=True)
     return k
@@ -1080,7 +1081,8 @@ def perform_one_pass_mqv(
         static_public_key=peer_cert,
     )
 
-    logging.info("MQV shared secret: %d bytes", len(z))
+    # The shared secret is logged on purpose, see the python-logger-credential-disclosure exclusion in semgrep.toml.
+    logging.info("MQV shared secret: %s", z.hex())
     # Derive the key using the ANSI X9.63 KDF
     k = derive_shared_secret_ec(z, key_wrap_oid, hash_alg=hash_alg, ukm=ukm)
     logging.info("Derived One-Pass-MQV key: %s", k.hex())

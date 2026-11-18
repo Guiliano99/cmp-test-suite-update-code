@@ -2252,7 +2252,8 @@ def process_kem_recip_info(
             ct=validated_info["kemct"],
             key_length=validated_info["length"],
         )
-    logging.info("Shared secret: %d bytes", len(shared_secret))
+    # The shared secret is logged on purpose, see the python-logger-credential-disclosure exclusion in semgrep.toml.
+    logging.info("Shared secret: %s", shared_secret.hex())
 
     ukm_der = envdatautils.prepare_cmsori_for_kem_other_info(
         wrap_algorithm=validated_info["wrap"],

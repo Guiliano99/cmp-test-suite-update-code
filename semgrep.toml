@@ -63,11 +63,18 @@ regex. Both findings (resources/cryptoutils.py:248, :435) were false positives -
 ordinary type-annotated function signatures.
 """
 
+[[exclude]]
+id = "python-logger-credential-disclosure"
+reason = """
+Shared secrets (ECDH, MQV, KEM) SHOULD be logged. This code is used to debug
+production implementations, and the logged values let a later analysis find issues
+and mistakes. Do not replace them with byte lengths or remove them to quiet this rule.
+"""
+
 # Notes on rules that were evaluated and KEPT (no deactivation), so the decision
 # is visible next to the deactivations:
 #
-#   logger-credential-disclosure   -> FIXED IN CODE: 5 log lines printed the hex of
-#     ECDH/MQV/KEM shared secrets; they now log the byte length only (see git log).
+#   (The logging of shared secrets is not a finding to fix: see the exclusion above.)
 #   hardcoded-password-default-argument -> KEPT (3 findings): "11111" / b"SiemensIT"
 #     are intentional test fixture defaults shared with the unit tests. Not a real
 #     credential; review before any production use of these helpers.
