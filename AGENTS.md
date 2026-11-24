@@ -32,13 +32,13 @@ server, and validates responses. Results are written as `report.html`.
 
 ## Setup
 
+Install [`uv`](https://docs.astral.sh/uv/getting-started/installation/), then run one of the `uv sync` commands. It creates `.venv`.
+
 ```bash
-python3 -m venv venv-cmp-tests
-source venv-cmp-tests/bin/activate
-pip install uv
 uv sync               # core dependencies
 uv sync --extra pq    # optional post-quantum support
 uv sync --all-extras  # development dependencies
+source .venv/bin/activate
 ```
 
 ## Common commands

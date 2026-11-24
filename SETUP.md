@@ -10,8 +10,7 @@ Protocol Compliance Test Suite against a user-provided CMP server implementation
 ## 1. Software requirements
 
 - Python 3.10+ recommended, installed and available as `python3`
-- A Python virtual environment (example: `venv-cmp-tests`)
-- `uv` installed in the virtual environment
+- [`uv`](https://docs.astral.sh/uv/getting-started/installation/), which creates the virtual environment `.venv`
 - Robot Framework runtime dependencies from `pyproject.toml` / `uv.lock`
 - Optional extras:
   - `uv sync --extra pq` for post-quantum support
@@ -20,13 +19,11 @@ Protocol Compliance Test Suite against a user-provided CMP server implementation
 ## 2. Basic installation
 
 ```sh
-python3 -m venv venv-cmp-tests
-source venv-cmp-tests/bin/activate
-pip install uv
 uv sync
 # or:
 # uv sync --extra pq
 # uv sync --all-extras
+source .venv/bin/activate
 ```
 
 ## 3. Environment configuration
