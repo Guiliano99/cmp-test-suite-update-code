@@ -18,7 +18,7 @@ compares pyasn1 objects.
 2. Prefer reuse of existing helpers in `prepareutils.py`, `asn1utils.py`,
    and `asn1obj.py`.
 3. Verify datetime preparation strips microseconds/seconds appropriately.
-4. Do not use truthiness on optional pyasn1 objects.
+4. Check optional pyasn1 fields with `isValue`, not truthiness or `is None`.
 5. Use accessors from `resources/asn1utils.py` for value and Python-type
    extraction.
 6. Run unit tests and, where possible, DER round-trip checks.
@@ -39,25 +39,36 @@ Do not:
 - pass `datetime.now()` directly without stripping microseconds
 - accidentally use a float timestamp carrying sub-second precision
 
-### 2. Never use truthiness for pyasn1 optionals
-An unpopulated pyasn1 object may evaluate as false even though it is not
-`None`.
+### 2. Check optional pyasn1 fields with `isValue`
+Reading an absent optional field does not return `None`. pyasn1 returns a schema
+object without a value, so `is None` is never true for it. Truthiness is wrong
+too: `if value:` raises `PyAsn1Error` for most absent types, and it is false for a
+field that is present but empty.
 
 Use:
 ```python
-if value is None:
+if structure["field"].isValue:      # present, possibly empty
     ...
-if value is not None:
+if not structure["field"].isValue:  # absent
     ...
 ```
 
 Do not use:
 ```python
-if value:
+if structure["field"] is None:
     ...
-if not value:
+if structure["field"]:
     ...
 ```
+
+Exceptions:
+- A SEQUENCE whose fields are all optional (for example `validity` in
+  `CertTemplate`) has `isValue == True` even when it is absent. Check its fields:
+  `any(value[name].isValue for name in value)`.
+- A DEFAULT field (for example `cA` in `BasicConstraints`) always has
+  `isValue == True`. Compare its value instead.
+- `is None` is correct for Python values that can be `None`, such as optional
+  function arguments and the results of helper functions.
 
 This applies to optional pyasn1 fields, certificate extensions, OCTET STRINGs,
 and BitStrings.
@@ -96,7 +107,7 @@ When adding or changing prepare helpers:
 - test all relevant shape and input combinations
 - test canonical tagging and tag context correctness
 - test milliseconds are removed for GeneralizedTime
-- test `None` behavior explicitly
+- test absent and present-but-empty fields, and `None` arguments, explicitly
 
 New code must not only call a helper successfully. It must also prove that the
 resulting value round-trips through DER encoding and decoding, and that the
@@ -121,7 +132,7 @@ use it instead of redefining the same structure in local code.
 ## Completion checklist
 
 - [ ] GeneralizedTime inputs do not retain milliseconds.
-- [ ] Optional pyasn1 objects use `is None`/`is not None`.
+- [ ] Optional pyasn1 fields use `isValue`; `is None` is only used for Python values.
 - [ ] BitString/OctetString values use `.asOctets()` or asn1utils accessors.
 - [ ] New code uses `asn1utils.py` accessors where applicable.
 - [ ] DER encoding and decoding is covered for prepared values.
