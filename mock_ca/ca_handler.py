@@ -125,12 +125,17 @@ from unit_tests.utils_for_test import load_ca_cert_and_key, load_env_data_certs
 def _build_error_from_exception(e: CMPTestSuiteError, request_msg: Optional[PKIMessageTMP] = None) -> PKIMessageTMP:
     """Build an error response from an exception.
 
+    The `pvno` is the one of the request, limited to the versions which the Mock CA supports (2 and 3),
+    see RFC 9810 Section 7. Without a request the `pvno` is 2.
+
     :param e: The exception.
     :param request_msg: The PKIMessage request.
     :return: The build error response.
     """
     exclude_fields = []
     if request_msg is not None:
+        pvno = min(max(int(request_msg["header"]["pvno"]), 2), 3)
+
         if not request_msg["header"]["senderNonce"].isValue:
             recip_nonce = None
             exclude_fields.append("recipNonce")
@@ -143,6 +148,7 @@ def _build_error_from_exception(e: CMPTestSuiteError, request_msg: Optional[PKIM
         else:
             tx_id = request_msg["header"]["transactionID"].asOctets()
     else:
+        pvno = 2
         recip_nonce = None
         tx_id = None
 
@@ -154,6 +160,7 @@ def _build_error_from_exception(e: CMPTestSuiteError, request_msg: Optional[PKIM
         recip_nonce=recip_nonce,
         transaction_id=tx_id,
         exclude_fields=", ".join(exclude_fields) if exclude_fields else None,
+        pvno=pvno,
     )
     return msg
 
@@ -1001,7 +1008,7 @@ class CAHandler:
                 )
             except CMPTestSuiteError as e:
                 logging.info("An error occurred: %s", str(e.message))
-                return self.build_error_from_exception(e)
+                return self.build_error_from_exception(e, request_msg=pki_message)
             except Exception as e:
                 logging.info("An error occurred: %s", str(e))
                 return self.build_error_from_exception(
