@@ -9,7 +9,7 @@ import base64
 import logging
 import os
 import sys
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
@@ -98,7 +98,6 @@ from resources.exceptions import (
     InvalidKeyData,
     NotAuthorized,
     UnknownOID,
-    UnsupportedVersion,
 )
 from resources.general_msg_utils import build_genp_kem_ct_info_from_genm
 from resources.keyutils import generate_key, load_private_key_from_file, load_public_key_from_spki
@@ -714,8 +713,7 @@ class CAHandler:
         logging.debug("Processing request with body: %s", pki_message["body"].getName())
 
         try:
-            if pki_message["header"]["pvno"] not in (1,2,3):
-                raise UnsupportedVersion(f"Unsupported CMP version: {pki_message['header']['pvno']}")
+            self.cert_req_handler.validate_pvno(pki_message)
 
             if pki_message["extraCerts"].isValue:
                 self.rev_handler.is_not_allowed_to_request(
@@ -1582,95 +1580,56 @@ def handle_issuing() -> Response:
         return Response(f"Error: {str(e)}", status=500, content_type="text/plain")
 
 
+def _process_hybrid(process: Callable[[PKIMessageTMP], PKIMessageTMP]) -> Response:
+    """Parse the request, reject an unsupported pvno and respond with the result of `process`."""
+    pki_message = parse_pkimessage(request.get_data())
+    try:
+        CertReqHandler.validate_pvno(pki_message)
+    except CMPTestSuiteError as e:
+        return _build_response(handler.build_error_from_exception(e, pki_message))
+    return _build_response(process(pki_message))
+
+
 @app.route("/chameleon", methods=["POST"])
 def handle_chameleon():
-    """Handle the chameleon request.
-
-    :return: The DER-encoded response.
-    """
-    data = request.get_data()
-    pki_message = parse_pkimessage(data)
-    pki_message = handler.process_chameleon(
-        pki_message=pki_message,
-    )
-    return _build_response(pki_message)
+    """Handle the chameleon request."""
+    return _process_hybrid(handler.process_chameleon)
 
 
 @app.route("/sun-hybrid", methods=["POST"])
 def handle_sun_hybrid():
-    """Handle the Sun Hybrid request.
-
-    :return: The DER-encoded response.
-    """
-    data = request.get_data()
-    pki_message = parse_pkimessage(data)
-    response = handler.process_sun_hybrid(
-        pki_message=pki_message,
-    )
-    return _build_response(response)
+    """Handle the Sun Hybrid request."""
+    return _process_hybrid(handler.process_sun_hybrid)
 
 
 @app.route("/multi-auth", methods=["POST"])
 def handle_multi_auth():
-    """Handle the multi-auth request.
-
-    :return: The DER-encoded response.
-    """
-    data = request.get_data()
-
-    pki_message = parse_pkimessage(data)
-    pki_message = handler.process_multi_auth(
-        pki_message=pki_message,
-    )
-    return _build_response(pki_message)
+    """Handle the multi-auth request."""
+    return _process_hybrid(handler.process_multi_auth)
 
 
 @app.route("/cert-discovery", methods=["POST"])
 def handle_cert_discovery():
-    """Handle the cert discovery request.
-
-    :return: The DER-encoded response.
-    """
-    data = request.get_data()
-    pki_message = parse_pkimessage(data)
-    pki_message = handler.process_cert_discovery(pki_message)
-    return _build_response(pki_message)
+    """Handle the cert discovery request."""
+    return _process_hybrid(handler.process_cert_discovery)
 
 
 @app.route("/related-cert", methods=["POST"])
 def handle_related_cert():
-    """Handle the related cert request.
-
-    :return: The DER-encoded response.
-    """
-    data = request.get_data()
-    pki_message = parse_pkimessage(data)
-    pki_message = handler.process_related_cert(pki_message)
-    return _build_response(pki_message)
+    """Handle the related cert request."""
+    return _process_hybrid(handler.process_related_cert)
 
 
 @app.route("/catalyst-sig", methods=["POST"])
 def handle_catalyst_sig():
-    """Handle the catalyst sig request.
-
-    :return: The DER-encoded response.
-    """
-    data = request.get_data()
-    pki_message = parse_pkimessage(data)
-    pki_message = handler.process_catalyst_sig(pki_message)
-    return _build_response(pki_message)
+    """Handle the catalyst sig request."""
+    return _process_hybrid(handler.process_catalyst_sig)
 
 
 @app.route("/catalyst-issuing", methods=["POST"])
 def handle_catalyst_issuing():
-    """Handle the catalyst request.
-
-    :return: The DER-encoded response.
-    """
-    data = request.get_data()
-    pki_message = parse_pkimessage(data)
-    pki_message = handler.process_catalyst_issuing(pki_message)
-    return _build_response(pki_message)
+    """Handle the catalyst request."""
+    return _process_hybrid(handler.process_catalyst_issuing)
 
 
 BODY_NAMES_2_EXPECTED_NAME: dict[str, List[str]] = {

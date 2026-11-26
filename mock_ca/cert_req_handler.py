@@ -582,6 +582,19 @@ class CertReqHandler:
         # Allows the CMP protection certificate to have an unset key usage.
         validate_key_usage(cert_chain[0], key_usages="digitalSignature", strictness="LAX")
 
+    @staticmethod
+    def validate_pvno(pki_message: PKIMessageTMP) -> None:
+        """Reject a pvno other than cmp2000(2) or cmp2021(3) with `unsupportedVersion` (RFC 9483 Section 3.5).
+
+        Also checks every inner message of a `nested` body, recursively, so that nothing is processed first.
+        """
+        if int(pki_message["header"]["pvno"]) not in [2, 3]:
+            raise UnsupportedVersion("The protocol version number was not 2 or 3.")
+
+        if pki_message["body"].isValue and pki_message["body"].getName() == "nested":
+            for inner_message in pki_message["body"]["nested"]:
+                CertReqHandler.validate_pvno(inner_message)
+
     def validate_header(
         self,
         pki_message: PKIMessageTMP,
@@ -589,8 +602,7 @@ class CertReqHandler:
         for_nested: bool = False,
     ) -> None:
         """Validate the header of a PKIMessage."""
-        if int(pki_message["header"]["pvno"]) not in [2, 3]:
-            raise UnsupportedVersion("The protocol version number was not 2 or 3.")
+        self.validate_pvno(pki_message)
 
         if must_be_protected is None:
             must_be_protected = self.must_be_protected
