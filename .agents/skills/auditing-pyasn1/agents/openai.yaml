@@ -1,3 +1,3 @@
 interface:
   display_name: "Auditing pyasn1"
-  short_description: "Help with auditing pyasn1 tasks"
+  short_description: "Audit code that builds, reads, copies or compares pyasn1 objects."

@@ -6,5 +6,7 @@ prepare
 datetime
 bitstring
 octetstring
+clone
+deepcopy
 asn1utils
 tests

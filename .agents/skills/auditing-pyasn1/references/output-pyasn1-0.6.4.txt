@@ -1,0 +1,76 @@
+pyasn1 0.6.4, Python 3.14.3
+HOLDS  [1] NULL untagged: clone() without arguments returns the same object, not a copy
+       clone is value: True, DER 0500 -> 0500
+HOLDS  [2] NULL untagged: clone('') is a new object with the same type and tags
+       new object: True, same tagSet: True, DER 0500
+HOLDS  [3] NULL IMPLICIT [0]: clone() without arguments returns the same object, not a copy
+       clone is value: True, DER 8000 -> 8000
+HOLDS  [4] NULL IMPLICIT [0]: clone('') is a new object with the same type and tags
+       new object: True, same tagSet: True, DER 8000
+HOLDS  [5] NULL EXPLICIT [0]: clone() without arguments returns the same object, not a copy
+       clone is value: True, DER a0020500 -> a0020500
+HOLDS  [6] NULL EXPLICIT [0]: clone('') is a new object with the same type and tags
+       new object: True, same tagSet: True, DER a0020500
+HOLDS  [7] SEQUENCE untagged: clone() copies the type and the tags, not the fields (no value, no DER)
+       same tagSet: True, isValue True -> False, DER 300d06092a864886f70d01010b0500 -> raises PyAsn1Error
+HOLDS  [8] SEQUENCE untagged: clone(cloneValueFlag=True) is a new object with the same DER
+       new object: True, DER 300d06092a864886f70d01010b0500
+HOLDS  [9] SEQUENCE untagged: clone(cloneValueFlag=True) shares the simple components
+       clone['algorithm'] is value['algorithm']: True
+HOLDS  [10] SEQUENCE IMPLICIT [1]: clone() copies the type and the tags, not the fields (no value, no DER)
+       same tagSet: True, isValue True -> False, DER a10d06092a864886f70d01010b0500 -> raises PyAsn1Error
+HOLDS  [11] SEQUENCE IMPLICIT [1]: clone(cloneValueFlag=True) is a new object with the same DER
+       new object: True, DER a10d06092a864886f70d01010b0500
+HOLDS  [12] SEQUENCE IMPLICIT [1]: clone(cloneValueFlag=True) shares the simple components
+       clone['algorithm'] is value['algorithm']: True
+HOLDS  [13] SEQUENCE EXPLICIT [2]: clone() copies the type and the tags, not the fields (no value, no DER)
+       same tagSet: True, isValue True -> False, DER a20f300d06092a864886f70d01010b0500 -> raises PyAsn1Error
+HOLDS  [14] SEQUENCE EXPLICIT [2]: clone(cloneValueFlag=True) is a new object with the same DER
+       new object: True, DER a20f300d06092a864886f70d01010b0500
+HOLDS  [15] SEQUENCE EXPLICIT [2]: clone(cloneValueFlag=True) shares the simple components
+       clone['algorithm'] is value['algorithm']: True
+HOLDS  [16] The clone of the directoryName field ([4] EXPLICIT) keeps the field tag; a new Name has none
+       DER of the clone a4023000, of a new rfc5280.Name 3000
+HOLDS  [17] An untagged Name assigned to the directoryName field ([4] EXPLICIT) raises KeyError (tag-incompatible)
+       raises KeyError: PyAsn1Error('Component value is tag-incompatible: 
+HOLDS  [18] A new, empty SEQUENCE OF in a field encodes, but clone(cloneValueFlag=True) of the field raises
+       DER a4023000, clone(cloneValueFlag=True) raises PyAsn1Error: Attempted "items" operation on ASN.1 schema object
+HOLDS  [19] copy.deepcopy of INTEGER and NULL values gives the same DER
+       020105, 0500
+HOLDS  [20] copy.deepcopy of a SEQUENCE or SEQUENCE OF raises PyAsn1Error, even with every field set
+       raises PyAsn1Error: Attempted "__deepcopy__" operation on ASN.1 schema object; raises PyAsn1Error: Attempted "__deepcopy__" operation on ASN.1 schema object
+HOLDS  [21] copy.copy of a SEQUENCE is a new object with the same DER that shares the components
+       new object: True, DER 300d06092a864886f70d01010b0500, shares components: True
+HOLDS  [22] getComponentByName(name, instantiate=False) is noValue for a set field whose isValue is False
+       read NoValue, DER of the description 300e06082b06010505073001a4023000
+HOLDS  [23] encode(omitEmptyOptionals=False) writes an absent CertTemplate validity as a400
+       default 3003800102, omitEmptyOptionals=False 3005800102a400
+HOLDS  [24] An absent OPTIONAL field: `is None` is False, isValue is False, bool() raises PyAsn1Error
+       is None False, isValue False, bool raises PyAsn1Error: Attempted "__bool__" operation on ASN.1 schema object
+HOLDS  [25] Valid values count as false: INTEGER 0, BOOLEAN FALSE, empty OCTET STRING, empty SEQUENCE OF
+       020100 false, 010100 false, 0400 false, 3000 false
+HOLDS  [26] BitString('101').asOctets() is 05, while the DER of the named bits 101 is 030205a0
+       asOctets 05, DER 030205a0
+HOLDS  [27] A DEFAULT field (cA of BasicConstraints) has isValue True when it was never set
+       isValue True, value False, DER 3000
+HOLDS  [28] A SEQUENCE whose fields are all OPTIONAL has isValue True when none is set
+       isValue True, DER 3000
+HOLDS  [29] An object without a value: bool() is False for SEQUENCE and CHOICE, raises for INTEGER, OCTET STRING, SEQUENCE OF
+       SEQUENCE False, CHOICE False, INTEGER raises, OCTET STRING raises, SEQUENCE OF raises
+HOLDS  [30] Decoding the DER of a SEQUENCE with clone() of it as the spec gives an independent copy
+       untagged: 300d06092a864886f70d01010b0500, shares nothing: True; IMPLICIT [1]: a10d06092a864886f70d01010b0500, shares nothing: True; EXPLICIT [2]: a20f300d06092a864886f70d01010b0500, shares nothing: True
+HOLDS  [31] The decoder returns bytes after the structure as `rest` and raises no error
+       rest 00
+HOLDS  [32] getName() of a CHOICE without a component raises PyAsn1Error: Component not chosen
+       isValue False, getName() raises PyAsn1Error: Component not chosen
+HOLDS  [33] obj['field'] and getComponentByName('field') return the same object
+       same object: True
+HOLDS  [34] asOctets() returns the bytes of an OCTET STRING; str() returns a text, prettyPrint() a hex text
+       asOctets 01ff, str() is a text of 2 characters, prettyPrint 0x01ff
+HOLDS  [35] INTEGER values with different tags compare equal, but their DER differs
+       equal: True, DER 020105 and 800105
+HOLDS  [36] GeneralizedTime.fromDateTime writes microseconds as a fraction; replace(microsecond=0) removes it
+       with microseconds 20260102030405.678Z, without 20260102030405Z, the DER encoder accepts the fraction: 181332303236303130323033303430352e3637385a
+HOLDS  [37] GeneralizedTime.fromDateTime writes a naive time as Z and an offset as +HHMM; DER refuses the offset
+       naive 20260102030405Z, +02:00 20260102030405+0200, in UTC 20260102010405Z, DER of the +02:00 time raises PyAsn1Error
+37 of 37 claims hold

@@ -2,13 +2,10 @@ robotframework
 rf-cmp
 cmp
 test-case
-auth
 authorization
 protection
 mac
 signature
-rfc9481
 rfc9483
-rfc9810
-scripts
+tags
 documentation

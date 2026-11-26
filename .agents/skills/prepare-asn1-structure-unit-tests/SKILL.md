@@ -1,76 +1,78 @@
 ---
 name: prepare-asn1-structure-unit-tests
-description: "Add or update Python unit tests for prepare_* pyasn1 builders, requiring DER encode/decode round-trip assertions plus behavior and negative-path checks. Use when testing ASN.1 structure builder functions in this CMP repository. Do not use for generic unittest style-only tasks that lack prepare_* DER round-trip requirements."
+description: "Add or update Python unit tests for functions that build or parse pyasn1 ASN.1 structures, such as prepare_* builders. The tests need a DER encode and decode round trip, positive field assertions and negative-path checks, and a reading by another implementation where the repository asks for it. Use when testing ASN.1 structure builders in the cmp-test-suite. Do not use for generic unittest style tasks that have no DER round trip."
 metadata:
   internal: true
 ---
 
 # Prepare ASN.1 Structure Unit Tests
 
-Use this skill when writing tests for `prepare_*` functions that build ASN.1
-objects.
+Use this skill when writing tests for functions that build or parse ASN.1 structures.
 
-## Boundary and handoff
+## Start here
 
-- Use this skill only for `prepare_*` pyasn1 builder tests with DER round-trip requirements.
-- Use [python-unit-test-given-when-then](../../python-skills/python-unit-test-given-when-then/SKILL.md) for generic GWT style enforcement in non-ASN.1 tests.
-- Use [write-unit-tests](../../python-skills/write-unit-tests/SKILL.md) for new single-function test file placement when DER round-trip is not required.
+Read the profile of your repository first. It names the builders, the test folders, the calls a test uses to encode
+and decode, the commands, and what else has to read the structure.
+
+- `profiles/cmp-test-suite.md` for the cmp-test-suite.
+
+Skills that help, if they are installed next to this one: `python-unit-test-given-when-then` for the
+GIVEN/WHEN/THEN style of a test, `write-unit-tests` for where a test of one new function goes, and `auditing-pyasn1`
+for the pyasn1 rules of the code under test.
 
 ## Quick workflow
 
-1. Select the owning `unit_tests/tests_*` suite near the target `prepare_*` function.
-2. Draft scenarios with [FORMS.md](FORMS.md).
-3. Add at least one DER round-trip test per `prepare_*` target:
-   - `encoder.encode(structure)`
-   - `decoder.decode(..., asn1Spec=<ExpectedType>())`
-   - assert `rest == b""`
-4. Add positive field assertions for required components.
+1. Select the test folder and a neighboring test file (profile).
+2. Draft the scenarios with [FORMS.md](FORMS.md).
+3. Add at least one DER round-trip test per target (rule below).
+4. Add positive field assertions for the required components.
 5. Add one negative-path test for invalid input or missing required values.
-6. Run commands from [reference.md](reference.md), including the checker script.
+6. Run the checker and the tests (commands in the profile).
 
-## Files in this skill
+## Round-trip rule
 
-- Workflow: `SKILL.md`
-- Draft form and checklist: `FORMS.md`
-- Copy/adapt examples: `examples.md`
-- Validation commands: `reference.md`
-- Round-trip presence checker: `scripts/check_prepare_asn1_roundtrip.py`
-- Checker unit tests: `unit_tests/test_check_prepare_asn1_roundtrip.py`
+In each test file for builders, at least one test function:
 
-## Required round-trip rule
+1. creates a structure with the builder;
+2. encodes it: `encoder.encode(...)`, `encode_to_der(...)`;
+3. decodes it with its spec, and shows that no bytes remain: `decoder.decode(data, asn1Spec=<Type>())` and
+   `rest == b""`, or `decode_der(data, <Type>())`, which refuses bytes after the structure and BER that is not DER;
+4. asserts the fields it decoded.
 
-For each new `test_prepare_*.py` file, include at least one test case that:
+A round trip proves only that encoder and decoder agree. The profile says what else has to read what the builder
+makes, and what the builder has to read.
 
-1. Creates a structure via `prepare_*`.
-2. Encodes it with `encoder.encode(...)`.
-3. Decodes it with `decoder.decode(..., asn1Spec=<expected>)`.
-4. Asserts `rest == b""`.
+## The checker
+
+```bash
+.venv/bin/python .agents/skills/prepare-asn1-structure-unit-tests/scripts/check_prepare_asn1_roundtrip.py <path>... [--pattern GLOB]
+```
+
+- It checks the files below the paths whose name matches `--pattern` (default `test_prepare_*.py`).
+- A file passes if one of its test functions has an encode call, a decode call with a spec, and either an assertion
+  that `rest` is empty or a call of `decode_der`. The calls it knows: `encoder.encode`, `encode_to_der`,
+  `try_encode_pyasn1`, `decoder.decode`, `try_decode_pyasn1`, `decode_der`.
+- Exit codes: 0 no violation, 1 a violation, 2 no file matched the pattern (the message is on stderr).
+- It looks inside the test functions only. A round trip in a helper function of the file is not seen.
+- It shows that a round trip exists, not that it is the right one.
 
 ## Validation loop
 
-1. Run the round-trip checker on changed test files.
-2. Run focused `unittest` discovery for the changed suite.
-3. Fix failures and rerun until green.
-4. Run broader `unit_tests` discovery before finishing.
+1. Run the checker on the changed test files.
+2. Run the changed tests, then the whole suite of the repository (profile).
+3. Fix failures and run again.
 
-## Implementation checklist
+## Files in this skill
 
-1. Pick target suite and neighboring test file.
-2. Add or update `test_prepare_*.py`.
-3. Add GIVEN/WHEN/THEN docstrings for new test methods.
-4. Add required DER encode/decode round-trip test.
-5. Add positive field assertions.
-6. Add negative-path test.
-7. Run round-trip checker script.
-8. Run focused `unittest`.
-9. Run broader `unit_tests` discovery.
-10. Report coverage added.
+- `SKILL.md` - workflow and rules.
+- `FORMS.md` - draft form and test templates.
+- `profiles/` - what is specific to a repository.
+- `scripts/check_prepare_asn1_roundtrip.py` - the checker.
 
 ## Completion checklist
 
-- [ ] The target `prepare_*` builder and owning test suite were identified correctly.
-- [ ] DER round-trip coverage was added for the changed structure.
-- [ ] Positive field assertions and negative-path tests were included.
-- [ ] GIVEN/WHEN/THEN docstrings were used for new test methods.
-- [ ] Focused and broader validation commands were run or explicitly reported as pending.
-
+- [ ] The builder and the test file or folder were found.
+- [ ] A DER round-trip test covers the structure, and the checker passes on the file.
+- [ ] The tests read the structure with the other implementation that the profile names.
+- [ ] Positive field assertions and a negative-path test are there.
+- [ ] The changed tests and the whole suite were run, or the report says they are pending.

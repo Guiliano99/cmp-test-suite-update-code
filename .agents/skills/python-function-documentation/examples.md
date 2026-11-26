@@ -1,122 +1,104 @@
-# Python Function Documentation Examples
+# Docstring examples
 
-Copy and adapt these patterns when adding or updating Python functions.
+Copy these patterns. They are real functions of the cmp-test-suite.
 
-## Example 1: Private or `@not_keyword` helper with one-line docstring
+## Private or `@not_keyword` function: one line
 
-Use for straightforward internal helpers.
+`resources/convertutils.py`:
 
 ```python
 @not_keyword
-def _normalize_sender_kid(sender_kid: str | bytes) -> bytes:
-    """Normalize senderKID to bytes."""
-    if isinstance(sender_kid, str):
-        sender_kid = sender_kid.encode("utf-8")
-    if not sender_kid:
-        raise ValueError("senderKID must not be empty.")
-    return sender_kid
+def ensure_is_sign_key(key: Any) -> SignKey:
+    """Ensure provided key is allowed to sign."""
 ```
 
-## Example 2: Internal helper with Sphinx docstring (no `:rtype:`)
+## Private or `@not_keyword` function: Sphinx without `:rtype:`
 
-Use for low-level helpers not called directly by Robot keywords.
+`resources/prepareutils.py`:
 
 ```python
-def _normalize_sender_kid(sender_kid: str | bytes) -> bytes:
-    """Normalize senderKID to bytes.
+def _prepare_date_time_object(
+    date: Optional[Union[str, float, datetime]] = None,
+) -> datetime:
+    """Prepare a date time object.
 
-    :param sender_kid: senderKID as `str` or `bytes`.
-    :return: Normalized senderKID as bytes.
-    :raises ValueError: If senderKID is empty.
+    :param date: The date to use. If None, the current date is used.
+    :return: The populated `datetime` object.
     """
-    if isinstance(sender_kid, str):
-        sender_kid = sender_kid.encode("utf-8")
-    if not sender_kid:
-        raise ValueError("senderKID must not be empty.")
-    return sender_kid
 ```
 
-## Example 3: User-facing utility with RobotFramework docstring
+## Keyword: all four sections
 
-Use for functions consumed by test authors or by higher-level public flows.
+`resources/keyutils.py`. The comment on the `def` line tells `ruff` that the docstring is written for RF.
 
 ```python
-def prepare_example_info_value(fill_value: bool = False) -> rfc9480.InfoTypeAndValue:
-    """Prepare the `InfoTypeAndValue` structure for an example message.
+def load_public_key_from_file(filepath: str) -> PublicKey:  # noqa: D417 for RF docs
+    """Load a public key from a file.
+
+    Load a cryptographic public key from a PEM-encoded file.
 
     Arguments:
     ---------
-        - `fill_value`: If set to `True`, includes placeholder data.
+        - `filepath`: the path to the file containing the key data.
 
     Returns:
     -------
-        - A populated `InfoTypeAndValue` structure.
+        - An instance of the loaded public key, such as `RSAPublicKey`, `X448PublicKey`, or `X25519PublicKey`.
 
     Raises:
     ------
-        - `ValueError`: If a required field cannot be generated.
+        - `FileNotFoundError`: If the file does not exist.
+        - `ValueError`: If the file content is not a valid public key format.
 
     Examples:
     --------
-    | ${itv}= | Prepare Example Info Value |
-    | ${itv}= | Prepare Example Info Value | fill_value=True |
+    | ${public_key}= | Load Public Key From File | /path/to/public_key.pem |
+    | ${x448_key}= | Load Public Key From File | /path/to/x448_public_key.pem | key_type=x448 |
 
     """
-    value = rfc9480.InfoTypeAndValue()
-    value["infoType"] = rfc9480.id_it_caCerts
-    if fill_value:
-        value["infoValue"] = univ.OctetString(b"example")
-    return value
 ```
 
-## Example 4: Error behavior must be documented explicitly
+## Keyword that returns nothing and raises nothing: Arguments and Examples
 
-When input validation exists, name the exact failure condition.
+`resources/cmputils.py`:
 
 ```python
-def parse_positive_int(value: str) -> int:
-    """Parse a positive integer from string input.
+def try_to_log_pkimessage(data: Union[str, bytes, base.Asn1Type]):  # noqa: D417 for RF docs
+    """Try to decode a DER-encoded PKIMessage and log the ASN1 structure in a human-readable way.
 
-    :param value: String expected to contain a positive integer.
-    :return: Parsed integer.
-    :raises ValueError: If value is not numeric or less than 1.
+    Will also accept inputs that are pyasn1 objects or strings, for the convenience of invocation from RF tests.
+
+    Arguments:
+    ---------
+        - `data`: something that is assumed to be a PKIMessage structure, either DER-encoded or a pyasn1 object.
+
+    Examples:
+    --------
+    | Try To Log PKIMessage | ${der_data} |
+    | Try To Log PKIMessage | ${message} |
+
     """
-    parsed = int(value)
-    if parsed < 1:
-        raise ValueError("value must be >= 1")
-    return parsed
 ```
 
-## Example 5: Test coverage for documentation-relevant behavior
+## Keyword that raises nothing itself: no Raises
+
+`resources/httputils.py`, `http_response_contains_pki_message`, has `Arguments:`, `Returns:` and `Examples:`.
+
+## Document the errors that callers see
+
+When the function validates input, name the error and the condition in `Raises:`:
+
+```text
+    Raises:
+    ------
+        - `ValueError`: If value is not numeric or less than 1.
+```
+
+## Run the checker
 
 ```bash
-python -m pytest unit_tests -k "normalize_sender_kid"
-python -m pytest unit_tests -k "prepare_example_info_value"
+.venv/bin/python .agents/skills/python-function-documentation/scripts/check_docstring_style.py resources/keyutils.py
+.venv/bin/python .agents/skills/python-function-documentation/scripts/check_docstring_style.py resources pq_logic --since origin/main
 ```
 
-Coverage to include:
-
-- positive path
-- invalid input path (`ValueError` message check when meaningful)
-- output type/shape checks
-
-## Example 6: Run the docstring style checker
-
-```bash
-python3 .github/skills/python-skills/python-function-documentation/scripts/check_docstring_style.py resources/my_module.py
-```
-
-The script returns violations as a list of error strings and exits with a non-zero status if any violations are found.
-
-## Example 7: User-facing doc update snippet
-
-When behavior is visible to test writers, include a short usage note in docs:
-
-```markdown
-### New helper: `prepare_example_info_value`
-
-Added helper for constructing `InfoTypeAndValue` test payloads.
-
-- Default call produces an empty `infoValue`.
-- `fill_value=True` adds placeholder bytes for negative/path tests.
-```
+The script lists the violations and exits 1 if there is one.

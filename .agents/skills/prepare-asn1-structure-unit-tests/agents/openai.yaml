@@ -1,4 +1,4 @@
 interface:
   display_name: "Prepare ASN1 Structure Unit Tests"
-  short_description: "Test prepare_* ASN.1 builders with DER checks."
+  short_description: "Test ASN.1 builders with DER round trips."
   default_prompt: "Use $prepare-asn1-structure-unit-tests to create unit tests with DER round-trip and negative-path coverage."

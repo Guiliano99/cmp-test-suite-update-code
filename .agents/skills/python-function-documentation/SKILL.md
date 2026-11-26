@@ -1,157 +1,140 @@
 ---
 name: python-function-documentation
-description: "Implement or extend Python functions with correct module placement, typing, docstrings, and user-facing documentation updates in this CMP test-suite codebase. Use when production Python logic and its documentation both change. Do not use when the task is only unit-test authoring or final quality-gate execution."
+description: "Implement or extend Python functions with correct module placement, typing, docstrings, and user-facing documentation updates in the cmp-test-suite. Use when production Python logic and its documentation both change. Do not use when the task is only unit-test authoring or final quality-gate execution. Applies to the cmp-test-suite only: pkixutils uses Sphinx docstrings."
 ---
 
-# Add a Python Function + Documentation Workflow
+# Add a Python Function and its Documentation
 
 ## Overview
 
-Use this workflow to add a Python function that matches repository conventions
-and is documented for both developers and test users.
+Use this workflow to add a Python function that follows the conventions of the cmp-test-suite and is documented for
+developers and for test authors. Commands run from the repository root with `.venv/bin/python`, the environment
+that `uv sync` creates.
 
-## Boundary and handoff
+Related skills, if they are installed: `write-unit-tests` and `python-unit-test-given-when-then` when only tests
+need an update; `python-quality-gate` as the last gate after the implementation.
 
-- Use this skill for production code implementation plus documentation behavior.
-- Use [write-unit-tests](../write-unit-tests/SKILL.md) or [python-unit-test-given-when-then](../python-unit-test-given-when-then/SKILL.md) when only tests need updates.
-- Use [python-quality-gate](../python-quality-gate/SKILL.md) as the final Python completion gate after implementation.
-
-Concrete copy/adapt patterns are in [examples.md](examples.md).
+Patterns to copy are in [examples.md](examples.md).
 
 ## 1) Choose the owning module first
 
-Place the function where similar logic already lives.
-
-- Search for neighboring patterns:
+Place the function where similar logic already lives. Search for neighbors:
 
 ```bash
-rg -n "def .*\(" resources pq_logic unit_tests -g '*.py'
+grep -rn "def " resources pq_logic --include='*.py'
 ```
 
-- Typical ownership:
-    - `resources/*.py`: core CMP utility/building/parsing logic.
-    - `pq_logic/*.py`: PQ/hybrid-specific implementation.
-    - `unit_tests/*`: test helpers only.
+- `resources/*.py`: core CMP utility, building and parsing logic.
+- `pq_logic/*.py`: PQ and hybrid logic.
+- `unit_tests/*`: test helpers only.
 
-Prefer extending an existing module over creating a new one unless the responsibility is clearly new.
+Extend an existing module unless the responsibility is clearly new.
 
-## 2) Define function contract before coding
+## 2) Define the contract before coding
 
-Decide and document:
+Decide the name, the inputs and their types, the return type, the errors, and whether Robot Framework (RF) tests call
+the function as a keyword.
 
-- function name and intent,
-- inputs and accepted types,
-- return type,
-- errors/validation behavior,
-- whether it is internal helper or externally consumed API.
+## 3) Implement with the project style
 
-## 3) Implement with project style
-
-- Add type hints for arguments and return value.
+- Type hints for the arguments and the return value.
 - Reuse existing helpers instead of duplicating logic.
-- Keep side effects explicit and minimal.
-- Avoid broad exception handling unless there is a clear recovery policy.
+- Keep side effects explicit and small.
+- Catch broad exceptions only where there is a recovery policy.
+- RF exposes every public function of a library as a keyword. Mask a function that is no keyword with
+  `@not_keyword` (`robot.api.deco`), see `CONTRIBUTING.md`, "Mask internal-use Python functions".
 
-## 4) Write docstring at implementation time
+## 4) Write the docstring at implementation time
 
-Use a concise docstring that includes:
+CONTRIBUTING.md ("Documenting Python keywords") says that keyword docstrings follow the RF conventions, and that
+`ruff` is silenced for them with `# noqa: D417 for RF docs`, because the docstrings are written for the RF
+documentation. Look for that comment in `resources/` to find examples.
 
-- one-line purpose,
-- argument descriptions,
-- return description,
-- raised exceptions or failure conditions.
+| Function | Docstring |
+|---|---|
+| private (`_name`) or `@not_keyword` | one line, or Sphinx (`:param:`, `:return:`, `:raises:`) without `:rtype:`, or an RF docstring |
+| any other function, and every `@keyword` | RF docstring with the sections that apply |
 
-If the function is user-facing (used by Robot keywords or public utilities), make the docstring usage-oriented.
+An RF docstring has these sections in this order. Each has a dashed underline, and its lines start with `-`
+(`Examples:` has table lines that start with `|`):
 
-Docstring examples:
+| Section | When |
+|---|---|
+| `Arguments:` | the function has parameters |
+| `Returns:` | the function returns a value |
+| `Raises:` | the function contains a `raise`; a function may also name errors of the functions it calls |
+| `Examples:` | always: RF table lines with the keyword name as RF shows it |
 
-- Internal helper and user-facing patterns: [examples.md](examples.md)
+What the practice of the repository shows, measured on the functions marked `# noqa: D417 for RF docs` in
+`resources/` (6 functions): all 6 have `Arguments:` and `Examples:`, 5 have `Returns:` and 4 have `Raises:`. The one
+without `Returns:` returns nothing (`try_to_log_pkimessage`), and the two without `Raises:` raise nothing
+themselves. Counting `pq_logic/` too, there is one more, with all four sections. Of the 354 module-level functions in
+`resources/` that are neither private nor `@not_keyword`, 320 have an RF docstring, 25 a Sphinx one, 8 another form
+and 1 none. In the RF ones `Arguments:` is always there, `Examples:` in 312, `Returns:` in 234 and `Raises:` in 247 (60 of them without a `raise` in the function itself).
+So a section that does not apply is left out, and the checker requires only the ones that apply.
 
 ## 5) Wire call sites and exports
 
-- Update call sites to use the new function.
-- Update module exports/imports where needed.
-- Keep naming consistent with neighboring functions.
+Update the call sites and the imports, and keep the names consistent with the neighbors.
 
 ## 6) Add tests
 
-Add or extend unit tests near the owning module.
-
-Minimum coverage:
-
-- normal/positive path,
-- invalid input path,
-- edge case relevant to function behavior.
-
-Useful commands:
+Add or extend unit tests near the owning module: the normal path, the invalid input path, and an edge case.
 
 ```bash
-python -m pytest unit_tests -k "<function_name_or_feature>"
+PYTHONPATH=./resources .venv/bin/python -m pytest unit_tests -k "<function_name_or_feature>"
 ```
 
-## 7) Update user/developer documentation
+## 7) Update the documentation
 
-When the function changes behavior visible to contributors or test writers, update docs such as:
-
-- `readme.md`,
-- `MockCA_readme.md`,
-- relevant docs in `doc/` or module-level docs.
-
-Document what changed, how to call it, and any constraints.
+When the function changes what contributors or test authors see, update `readme.md`, `MockCA_readme.md` or the
+documents in `doc/`. Say what changed, how to call it and what limits it has. `make docs` regenerates the RF
+documentation in `doc/`.
 
 ## 8) Final validation
 
-Run targeted tests first, then full unit tests:
-
 ```bash
-python -m pytest unit_tests -k "<function_name_or_feature>"
+PYTHONPATH=./resources .venv/bin/python -m pytest unit_tests -k "<function_name_or_feature>"
 make unittest
+.venv/bin/python .agents/skills/python-function-documentation/scripts/check_docstring_style.py <file_or_dir>... [--since <git ref>]
 ```
 
-Run docstring style checks for changed Python files:
+The checker (`scripts/check_docstring_style.py`) checks the module-level functions against the table in step 4:
 
-```bash
-python3 .github/skills/python-skills/python-function-documentation/scripts/check_docstring_style.py <path/to/file_or_dir>
-```
+- Without `--since` it checks every function of the paths. On the commit e409ea82 it gives 75 findings in 18 of the 33
+  files of `resources/`, and 22 in `pq_logic/`.
+- `--since <git ref>` checks only the functions whose lines changed since the ref (`git diff -U0`, which includes
+  uncommitted changes), and the files that git does not track yet. A function counts as changed from its first
+  decorator to its last line. Use it on a branch: `--since origin/main`, or the commit before your work.
+- Exit codes: 0 no violation, 1 a violation or no Python file, 2 git could not tell the changes (for example an
+  unknown ref); the message is on stderr.
 
-Run checker unit tests:
-
-```bash
-python3 -m unittest discover -s .github/skills/python-skills/python-function-documentation/unit_tests -p 'test_*.py'
-```
-
-Validation rules:
-
-- private (`_name`) and `@not_keyword` functions: one-line docstring or Sphinx style without `:rtype:`
-- all other module-level functions (public and/or `@keyword`): RobotFramework style with `Arguments`, `Returns`, `Raises`, and `Examples` sections
+`ruff check` and `make verify` run the repository's own docstring rules as well.
 
 ## Implementation checklist
 
-1. Select owning module.
-2. Define function contract.
-3. Implement function with typing.
-4. Add/update docstring.
-5. Wire call sites/imports.
-6. Add/extend tests.
-7. Update relevant documentation.
-8. Run targeted pytest.
-9. Run `make unittest`.
-10. Run docstyle checker for changed files.
-11. Commit with a clear message.
+1. Select the owning module.
+2. Define the function contract.
+3. Implement with typing; mask it with `@not_keyword` if it is no keyword.
+4. Write the docstring.
+5. Wire call sites and imports.
+6. Add or extend tests.
+7. Update the documentation.
+8. Run the targeted tests and `make unittest`.
+9. Run the docstring checker for the changed files, with `--since`.
 
 ## Files in this skill
 
-- `SKILL.md` - Workflow for adding or extending Python functions with matching documentation updates.
-- `examples.md` - Copy/adapt patterns for implementation and docstring structure.
-- `scripts/check_docstring_style.py` - Docstring style checker used by the workflow.
-- `unit_tests/test_check_docstring_style.py` - Tests for the docstring style checker.
-- `agents/openai.yaml` - Agent-facing display metadata for the skill.
-- `.tags` - Discovery keywords for Python implementation and documentation tasks.
+- `SKILL.md` - workflow and rules.
+- `examples.md` - docstrings to copy.
+- `scripts/check_docstring_style.py` - the docstring checker.
+- `agents/openai.yaml` - discovery metadata.
+- `.tags` - index tags.
 
 ## Completion checklist
 
-- [ ] The function was added to the correct owning module with a clear contract.
-- [ ] Typing, docstrings, and call sites were updated consistently.
-- [ ] User-facing or contributor-facing documentation was updated where behavior changed.
-- [ ] Targeted tests and docstring style checks were run for the affected files.
-- [ ] The final change aligns implementation behavior with documentation.
+- [ ] The function is in the right module and has a clear contract.
+- [ ] Typing, docstring and call sites are consistent; a function that is no keyword has `@not_keyword`.
+- [ ] The docstring has the sections that apply.
+- [ ] The documentation is updated where the behavior is visible to users.
+- [ ] The targeted tests, `make unittest` and the docstring checker (with `--since`) were run.

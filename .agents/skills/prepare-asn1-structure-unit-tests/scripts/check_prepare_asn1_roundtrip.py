@@ -1,76 +1,77 @@
-#!/usr/bin/env python3
-"""Validate presence of DER encode/decode round-trip tests in prepare ASN.1 test files."""
+# SPDX-FileCopyrightText: Copyright 2026
+#
+# SPDX-License-Identifier: Apache-2.0
+"""Check that test files of ASN.1 builders contain a DER round-trip test.
+
+A round trip is a test function that encodes a structure, decodes it with its spec, and shows that no bytes remain:
+
+- `encoder.encode` or `encode_to_der` or `try_encode_pyasn1`, then
+- `decoder.decode` or `try_decode_pyasn1` with a spec, and an assertion that `rest` is empty, or
+- `decode_der(data, spec)`, which refuses bytes after the structure itself, so it needs no `rest` assertion.
+
+Exit codes: 0 no violation, 1 a violation, 2 no file matched the pattern.
+"""
 
 from __future__ import annotations
 
 import argparse
 import ast
+import fnmatch
+import sys
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Iterable, Sequence
+
+DEFAULT_PATTERN = "test_prepare_*.py"
+ENCODE_NAMES = frozenset({"encode", "encode_to_der", "try_encode_pyasn1"})
+DECODE_NAMES = frozenset({"decode", "try_decode_pyasn1"})  # they return the decoded structure and `rest`
+DECODE_DER_NAMES = frozenset({"decode_der"})  # it refuses bytes after the structure
+SPEC_KEYWORDS = frozenset({"asn1Spec", "asn1_spec", "spec"})
+# `x.encode(...)` and `x.decode(...)` are pyasn1 calls only on the modules `encoder` and `decoder`; any other `x` is
+# probably a str or bytes.
+PYASN1_MODULES = frozenset({"encoder", "decoder"})
 
 FunctionNode = ast.FunctionDef | ast.AsyncFunctionDef
 
 
-def _is_prepare_test_file(filename: str) -> bool:
-    """Return whether the file name targets prepare ASN.1 tests."""
-    return Path(filename).name.startswith("test_prepare_")
-
-
 def _iter_test_nodes(tree: ast.AST) -> list[tuple[str, FunctionNode]]:
-    """Return discovered `test_*` functions/methods with display labels."""
+    """Return the `test_*` functions and methods with display labels."""
     discovered: list[tuple[str, FunctionNode]] = []
     if not isinstance(tree, ast.Module):
         return discovered
 
     for node in tree.body:
-        if isinstance(
-            node, (ast.FunctionDef, ast.AsyncFunctionDef)
-        ) and node.name.startswith("test_"):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_"):
             discovered.append((node.name, node))
-            continue
-
-        if isinstance(node, ast.ClassDef):
+        elif isinstance(node, ast.ClassDef):
             for member in node.body:
-                if isinstance(
-                    member, (ast.FunctionDef, ast.AsyncFunctionDef)
-                ) and member.name.startswith("test_"):
+                if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)) and member.name.startswith("test_"):
                     discovered.append((f"{node.name}.{member.name}", member))
     return discovered
 
 
-def _is_encoder_encode_call(call: ast.Call) -> bool:
-    """Return whether call is `encoder.encode(...)` or imported `encode(...)`."""
-    if isinstance(call.func, ast.Name):
-        return call.func.id == "encode"
-    return (
-        isinstance(call.func, ast.Attribute)
-        and isinstance(call.func.value, ast.Name)
-        and call.func.value.id == "encoder"
-        and call.func.attr == "encode"
-    )
+def _called_name(call: ast.Call) -> str | None:
+    """Return the name of the function that `call` calls, or None if it is not one of the pyasn1 calls.
+
+    `encode(...)`, `encode_to_der(...)` and `module.encode_to_der(...)` give their name. `encoder.encode(...)` and
+    `decoder.decode(...)` give `encode` and `decode`; `text.encode(...)` gives None.
+    """
+    func = call.func
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        on_pyasn1_module = isinstance(func.value, ast.Name) and func.value.id in PYASN1_MODULES
+        if on_pyasn1_module or func.attr not in {"encode", "decode"}:
+            return func.attr
+    return None
 
 
-def _is_decoder_decode_call(call: ast.Call) -> bool:
-    """Return whether call is `decoder.decode(...)` or imported `decode(...)`."""
-    if isinstance(call.func, ast.Name):
-        return call.func.id == "decode"
-    return (
-        isinstance(call.func, ast.Attribute)
-        and isinstance(call.func.value, ast.Name)
-        and call.func.value.id == "decoder"
-        and call.func.attr == "decode"
-    )
-
-
-def _decode_has_asn1_spec(call: ast.Call) -> bool:
-    """Return whether `decoder.decode` call provides ASN.1 spec via kwarg or positional arg."""
-    has_kw_spec = any(keyword.arg == "asn1Spec" for keyword in call.keywords)
-    has_positional_spec = len(call.args) >= 2
-    return has_kw_spec or has_positional_spec
+def _has_spec(call: ast.Call) -> bool:
+    """Return whether the decode call gets its spec as keyword or as second positional argument."""
+    return any(keyword.arg in SPEC_KEYWORDS for keyword in call.keywords) or len(call.args) >= 2
 
 
 def _is_rest_assert_call(call: ast.Call) -> bool:
-    """Return whether call asserts decoded `rest` is empty."""
+    """Return whether the call asserts that the decoded `rest` is empty."""
     if not isinstance(call.func, ast.Attribute):
         return False
 
@@ -84,68 +85,59 @@ def _is_rest_assert_call(call: ast.Call) -> bool:
         right_is_rest = isinstance(right, ast.Name) and right.id == "rest"
         left_is_empty_bytes = isinstance(left, ast.Constant) and left.value == b""
         right_is_empty_bytes = isinstance(right, ast.Constant) and right.value == b""
-        return (left_is_rest and right_is_empty_bytes) or (
-            right_is_rest and left_is_empty_bytes
-        )
+        return (left_is_rest and right_is_empty_bytes) or (right_is_rest and left_is_empty_bytes)
 
     return False
 
 
 def _analyze_test_node(node: FunctionNode) -> tuple[bool, bool, bool]:
-    """Return flags for encode usage, decode+spec usage, and rest assertion."""
+    """Return flags for: encode call, decode call with spec, and proof that no bytes remain."""
     has_encode = False
     has_decode_with_spec = False
-    has_rest_assert = False
+    no_rest = False
 
     for child in ast.walk(node):
-        if isinstance(child, ast.Call):
-            if _is_encoder_encode_call(child):
-                has_encode = True
-            if _is_decoder_decode_call(child) and _decode_has_asn1_spec(child):
-                has_decode_with_spec = True
-            if _is_rest_assert_call(child):
-                has_rest_assert = True
+        if not isinstance(child, ast.Call):
+            continue
+        name = _called_name(child)
+        if name in ENCODE_NAMES:
+            has_encode = True
+        elif name in DECODE_NAMES and _has_spec(child):
+            has_decode_with_spec = True
+        elif name in DECODE_DER_NAMES and _has_spec(child):
+            has_decode_with_spec = True
+            no_rest = True
+        if _is_rest_assert_call(child):
+            no_rest = True
 
-    return has_encode, has_decode_with_spec, has_rest_assert
+    return has_encode, has_decode_with_spec, no_rest
 
 
 def check_python_source(source: str, filename: str = "<string>") -> list[str]:
-    """Validate one Python source string for required round-trip test coverage."""
-    if not _is_prepare_test_file(filename):
-        return []
-
+    """Return the violations of one test file: it needs a round-trip test."""
     try:
         tree = ast.parse(source, filename=filename)
     except SyntaxError as exc:
-        line = exc.lineno or 0
-        column = exc.offset or 0
-        return [f"{filename}:{line}:{column}: unable to parse Python source: {exc.msg}"]
+        return [f"{filename}:{exc.lineno or 0}:{exc.offset or 0}: unable to parse Python source: {exc.msg}"]
 
     test_nodes = _iter_test_nodes(tree)
     if not test_nodes:
-        return [f"{filename}: no `test_*` functions found in prepare test file."]
+        return [f"{filename}: no `test_*` functions found."]
 
-    has_required_roundtrip = False
     for _name, node in test_nodes:
-        has_encode, has_decode_with_spec, has_rest_assert = _analyze_test_node(node)
-        if has_encode and has_decode_with_spec and has_rest_assert:
-            has_required_roundtrip = True
-            break
-
-    if has_required_roundtrip:
-        return []
+        has_encode, has_decode_with_spec, no_rest = _analyze_test_node(node)
+        if has_encode and has_decode_with_spec and no_rest:
+            return []
 
     return [
-        (
-            f"{filename}: missing required round-trip test. Add at least one test_* using "
-            "`encoder.encode`, `decoder.decode(..., asn1Spec=...)` (or second positional spec), "
-            "and an assertion that `rest` is empty."
-        )
+        f"{filename}: missing required round-trip test. Add at least one test_* that encodes the structure "
+        "(`encoder.encode`, `encode_to_der`), decodes it with its spec (`decoder.decode(..., asn1Spec=...)` and an "
+        "assertion that `rest` is empty, or `decode_der(data, spec)`)."
     ]
 
 
 def check_python_file(file_path: Path) -> list[str]:
-    """Validate one Python file."""
+    """Return the violations of one Python file."""
     try:
         source = file_path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -153,58 +145,44 @@ def check_python_file(file_path: Path) -> list[str]:
     return check_python_source(source=source, filename=str(file_path))
 
 
-def _collect_python_files(paths: Iterable[Path]) -> list[Path]:
-    """Collect Python files from files/directories."""
+def collect_test_files(paths: Iterable[Path], pattern: str = DEFAULT_PATTERN) -> list[Path]:
+    """Return the files below `paths` (a file or a directory) whose name matches `pattern`."""
     files: set[Path] = set()
     for path in paths:
-        if path.is_file() and path.suffix == ".py":
-            files.add(path)
-            continue
-        if path.is_dir():
-            files.update(
-                candidate for candidate in path.rglob("*.py") if candidate.is_file()
-            )
+        candidates = path.rglob("*.py") if path.is_dir() else [path] if path.is_file() else []
+        files.update(candidate for candidate in candidates if fnmatch.fnmatch(candidate.name, pattern))
     return sorted(files)
 
 
-def check_paths(paths: Sequence[str | Path]) -> list[str]:
-    """Validate round-trip requirements for supplied paths."""
-    normalized = [Path(path) if not isinstance(path, Path) else path for path in paths]
-    python_files = _collect_python_files(normalized)
-    if not python_files:
-        joined = ", ".join(str(path) for path in normalized)
-        return [f"No Python files found in: {joined}"]
-
-    errors: list[str] = []
-    for file_path in python_files:
-        errors.extend(check_python_file(file_path))
-    return errors
-
-
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
-    """Parse CLI arguments."""
+    """Parse the command-line arguments."""
     parser = argparse.ArgumentParser(
-        description=(
-            "Validate prepare ASN.1 test files include at least one DER round-trip test: "
-            "encoder.encode + decoder.decode(asn1Spec) + rest-empty assertion."
-        )
+        description="Check that the test files of ASN.1 builders contain a DER round-trip test. "
+        "Exit code 2 if no file matches the pattern."
     )
+    parser.add_argument("paths", nargs="+", help="Python files or directories to check.")
     parser.add_argument(
-        "paths", nargs="+", help="Python file or directory paths to validate."
+        "--pattern",
+        default=DEFAULT_PATTERN,
+        help="Name pattern of the test files to check (fnmatch); default: %(default)s.",
     )
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run CLI checker."""
+    """Run the checker; return 0 for no violation, 1 for a violation, 2 if no file matched the pattern."""
     args = _parse_args(argv)
-    errors = check_paths(args.paths)
+    files = collect_test_files([Path(path) for path in args.paths], args.pattern)
+    if not files:
+        sys.stderr.write(f"No file matching {args.pattern} found in: {', '.join(args.paths)}\n")
+        return 2
+
+    errors = [error for file_path in files for error in check_python_file(file_path)]
     if errors:
-        for error in errors:
-            print(error)
+        sys.stdout.write("\n".join(errors) + "\n")
         return 1
 
-    print("No prepare ASN.1 round-trip violations found.")
+    sys.stdout.write(f"{len(files)} files checked, no round-trip violation found.\n")
     return 0
 
 

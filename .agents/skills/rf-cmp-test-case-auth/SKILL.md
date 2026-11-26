@@ -6,166 +6,162 @@ description: >-
   codebase. Use when adding or revising RFC-driven CMP tests for sender and
   recipient validation, MAC protection, signature protection, unauthorized
   senders, invalid or duplicate protected requests, PKIStatus handling, and
-  failInfo assertions.
+  failInfo assertions. Applies to the cmp-test-suite only.
 ---
 
 # RF CMP Test Case Authoring: Auth and Protection
 
-Use this skill when changing Robot Framework CMP tests that exercise
-authentication or message protection behavior. Prefer existing keywords and
-helpers over adding new CMP logic.
+Use this skill when changing Robot Framework CMP tests that exercise authentication or message protection behavior.
+Prefer existing keywords and helpers over adding new CMP logic. Commands run from the repository root with
+`.venv/bin/python`, the environment that `uv sync` creates.
 
 ## Files in this skill
 
-- `SKILL.md` - Skill definition and workflow guidance.
-- `agents/openai.yaml` - Display metadata for skill discovery.
-- `.tags` - Discovery tags for repository indexing.
+- `SKILL.md` - skill definition and workflow guidance.
+- `agents/openai.yaml` - display metadata for skill discovery.
+- `.tags` - discovery tags for repository indexing.
 
 ## Quick workflow
 
 1. Choose the owning suite:
    - General CMP behavior: `tests/basic.robot`, `tests/lwcmp.robot`.
-   - MAC/PKI protection: `tests/mac_alg_pki_prot_tests.robot`.
-   - Signature/PKI protection: `tests/trad_alg_pki_prot_tests.robot`.
-   - PQ/hybrid protection: `tests_pq_and_hybrid/pq_sig_pkiprotection.robot`.
-2. Search existing keywords before writing new ones:
+   - MAC protection: `tests/mac_alg_pki_prot_tests.robot`.
+   - Signature protection: `tests/trad_alg_pki_prot_tests.robot`.
+   - PQ and hybrid protection: `tests_pq_and_hybrid/pq_sig_pkiprotection.robot`.
+2. Search existing keywords before you write new ones:
    - `resources/keywords.resource`
    - `resources/protectionutils.py`
    - `resources/checkutils.py`
    - `resources/cmputils.py`
    - `resources/certbuildutils.py`
-3. Add or modify the test case with:
+3. Check whether a generator writes the test cases you change. `scripts/generate_pki_prot_tests.py` writes
+   PKIProtection test cases; change the generator, not only the `.robot` file.
+4. Add or modify the test case with:
    - a descriptive test case name
    - `[Documentation]`
-   - meaningful `[Tags]`
+   - `[Tags]` from the table below
    - explicit assertions
-   - RFC section or errata references in documentation
-4. Keep tests deterministic:
-   - use existing key/certificate fixtures
-   - avoid hidden state and implicit global variables
-   - reuse established protection patterns
-5. Update documentation artifacts when behavior coverage changes:
-   - `make docs`
-   - `make unittest`
-   - `scripts/check_docs_keyword_duplicates.py` when applicable
-6. Run relevant targeted Robot suites.
-7. Verify source formatting and linting where applicable:
-   - `ruff check resources/`
-   - Robocop on changed `.robot` and `.resource` files
+   - RFC section or errata references in the documentation
+5. Keep tests deterministic: use existing key and certificate fixtures, avoid hidden state and implicit global
+   variables, and reuse established protection patterns.
+6. Update the generated documentation when the coverage changes: `make docs`, and `make unittest` for the Python
+   code.
+7. Run the relevant Robot suites.
+8. Check the source files:
+   - `.venv/bin/ruff check resources/`
+   - `.venv/bin/robocop check <changed .robot and .resource files>`
 
 ## Test case requirements
 
-Every auth or protection test should include:
+Every auth or protection test has:
 
 - `[Documentation]` with the expected CMP behavior.
-- `[Tags]` for protocol, protection mechanism, positive/negative result,
-  execution profile, and RFC traceability.
+- `[Tags]` for the result (`positive` or `negative`), the execution class, the message type, the protection and the
+  RFC traceability.
 - explicit status and failInfo assertions.
-- deterministic nonce/password/certificate handling.
+- deterministic nonce, password and certificate handling.
 - no duplicated keyword names in the same source file.
-- no duplicated LibDoc keywords across generated documentation sources when
-  documentation changes.
 
 ## Common assertion patterns
 
-Use existing patterns such as:
+Keywords from `resources/keywords.resource` and `resources/checkutils.py`, as the tests use them:
 
 - `PKIMessage Body Type Must Be    ${response}    error`
+- `PKIMessage Body Type Must Be    ${response}    ip`
 - `PKIStatus Must Be    ${response}    rejection`
-- `PKIStatusInfo Failinfo Bit Must Be    ${response}    failinfo=badAlg,systemFailure    exclusive=True`
-- `PKIMessage Body Type Must Be    ${response}    cp`
 - `PKIStatus Must Be    ${response}    accepted`
+- `PKIStatusInfo failinfo Bit Must Be    ${response}    failinfo=notAuthorized    exclusive=True`
+- `PKIStatusInfo failinfo Bit Must Be    ${response}    failinfo=badRequest,wrongIntegrity    exclusive=True`
 - `Validate Sender And Recipient Nonce    ${response}    ${request}`
 - `Sender And Recipient Nonces Must Match    ${request}    ${response}`
 - `SenderNonce Must Be At Least 128 Bits Long    ${response}`
 - `Certificate Must Be Valid    ${cert}`
 
-## Tags used in this repository
+## Tags
 
-Primary auth/protection tags:
+These are the tags that tests carry, counted with `robot.api.TestSuiteBuilder` over `tests/`,
+`tests_pq_and_hybrid/` and `tests_mock_ca/` on the commit e409ea82: 1932 tests. Robot Framework matches a tag
+without regard to case and underscores, so `--include pkiprotection` selects `PKIProtection`, and `transactionID` and
+`transactionId` are one tag. `CONTRIBUTING.md`, "Using tags", describes more tags.
 
-- `auth`
-- `unauthorized`
-- `negative`
-- `positive`
-- `crypto`
-- `csr`
-- `p10cr`
-- `mac`
-- `signature`
-- `protection`
-- `failinfo`
-- `status`
-- `duplicate`
-- `pop`
-- `minimal`
-- `verbose-tests`
+| Tag | Tests | Meaning |
+|---|---|---|
+| `positive` | 518 | the CA has to accept |
+| `negative` | 1323 | the CA has to reject |
+| `minimal` | 81 | default coverage |
+| `verbose-tests` | 1484 | exhaustive or multi-configuration tests |
+| `protection` | 118 | protection of a message |
+| `PKIProtection` | 308 | the protection algorithm of the PKIMessage, PQ and hybrid suites |
+| `pki-protection` | 48 | the protection algorithm of the PKIMessage, traditional signatures |
+| `added-protection` | 176 | added protection of a nested message (RFC 9483 Section 5.2.2.1); `adding-protection` of `CONTRIBUTING.md` is on 6 tests |
+| `mac` | 134 | MAC-based protection |
+| `hmac` | 54 | HMAC-based protection |
+| `pbm` | 18 | PasswordBasedMac |
+| `pbmac1` | 18 | PBMAC1 |
+| `signature` | 9 | signature-based protection |
+| `rfc9483-header` | 462 | the `PKIHeader` rules of RFC 9483 |
+| `rfc9483-validation` | 562 | the validation rules of RFC 9483 |
+| `verbose-pkiheader` | 429 | generated `PKIHeader` tests |
+| `PKIHeader` | 38 | the `PKIHeader` field |
+| `sender` | 61 | the `sender` field |
+| `senderKID` | 33 | the `senderKID` field |
+| `senderNonce` | 61 | the `senderNonce` field |
+| `recipNonce` | 20 | the `recipNonce` field |
+| `transactionID` | 59 | the `transactionID` field |
+| `extraCerts` | 38 | the `extraCerts` field |
+| `popo` | 35 | proof of possession |
+| `badPOP` | 22 | the failInfo `badPOP` |
+| `bad_message_check` | 40 | the failInfo `badMessageCheck` |
+| `multiple-auth` | 9 | several authentications in one request |
+| `ir`, `cr`, `p10cr`, `kur`, `ccr`, `rr`, `genm`, `certConf`, `csr` | 197, 92, 176, 95, 90, 24, 30, 106, 12 | the message type |
+| `mock-ca` | 40 | tests for the Mock CA (`tests_mock_ca/`) |
 
-Traceability and profile tags:
+`crypto` (3 tests), `status` (2) and `rfc6712` (1) are used too.
 
-- `rfc6712`
-- `rfc9481`
-- `rfc9483`
-- `rfc9810`
+To count again:
 
-Use `minimal` for good default coverage and `verbose-tests` for exhaustive or
-multi-configuration tests.
+```bash
+.venv/bin/python - <<'PY'
+import collections
+from robot.api import TestSuiteBuilder
+from robot.utils import normalize
+
+count = collections.Counter()
+def walk(suite):
+    for test in suite.tests:
+        count.update({normalize(str(tag), ignore="_") for tag in test.tags})
+    for child in suite.suites:
+        walk(child)
+for folder in ("tests", "tests_pq_and_hybrid", "tests_mock_ca"):
+    walk(TestSuiteBuilder().build(folder))
+print(count.most_common())
+PY
+```
+
+Use `minimal` for good default coverage and `verbose-tests` for exhaustive tests.
 
 ## Proposing new tags
 
-Introduce a new tag only when it represents a stable and useful selection
-dimension. Good candidates are:
+Introduce a new tag only when it is a stable and useful selection dimension, and no tag above or in
+`CONTRIBUTING.md` describes the concept. When you add one:
 
-- a protocol message type: `cr`, `ip`, `kur`, `rr`, `genm`
-- a protection mechanism: `password-based-mac`, `shared-secret`, `cms`, `external`
-- an assertion class: `failinfo`, `status`, `validity`, `nonce`
-- an execution class: `minimal`, `verbose`, `experimental`
-
-Before adding a new tag, check whether an existing tag already describes the
-concept and whether Robot selection, CI, reports, coverage matrices, or tags
-documentation would benefit from it.
-
-## Required actions when adding tags
-
-When a new tag is introduced:
-
-1. Apply it consistently to new and affected tests.
-2. Document its meaning in one or more of:
-   - relevant test suite documentation comments
-   - `SERVER_TEST_COVERAGE.md`
-   - `TODO_TESTS.md` if the change relates to planned work
-3. Verify Robot selection still works:
-   - `robot --include <new-tag> tests/`
-   - `robot --exclude <new-tag> tests/`
-4. Update generated documentation if tags affect testdoc output.
-5. Update generated test matrix scripts or generated tests if the tag or
-   algorithm availability affects matrix generation.
-6. Run Robocop on changed source files.
-7. Update conversion/coverage records if the repository tracks tag counts.
-8. Add the tag to this skill's `.tags` when it is useful for discovery.
-
-## Scripts to consider
-
-Relevant files in `scripts/`:
-
-- `scripts/generate_*_tests.py`
-- `scripts/generate_alg_test_cases.py`
-- `scripts/check_docs_keyword_duplicates.py`
-- `scripts/write_stats.py`
-
-Before adding a new script, extend an existing generator or validator when
-appropriate. Any new script should use `argparse`, include an SPDX header,
-and be documented here and in the Makefile if it becomes part of normal
-validation.
+1. Apply it to the new and the affected tests.
+2. Document its meaning in the "Using tags" table of `CONTRIBUTING.md`, and in `SERVER_TEST_COVERAGE.md` where it
+   changes what is covered.
+3. Check that the selection works without running against a server:
+   `.venv/bin/python -m robot --dryrun --include <new-tag> --output NONE --log NONE --report NONE <suite file>`.
+4. Regenerate the documentation with `make docs`.
+5. Change the generator in `scripts/` if it writes the tests that carry the tag.
+6. Run `.venv/bin/robocop check` on the changed files.
 
 ## Completion checklist
 
-- [ ] Test case has a descriptive name.
-- [ ] `[Documentation]` and `[Tags]` are present.
+- [ ] The test case has a descriptive name.
+- [ ] `[Documentation]` and `[Tags]` are present, and the tags are ones that tests carry.
 - [ ] Existing keywords and helpers are reused.
 - [ ] Assertions are explicit and deterministic.
 - [ ] RFC or errata references are documented.
-- [ ] Targeted Robot suites pass.
-- [ ] Unit tests pass.
-- [ ] Documentation artifacts are regenerated when relevant.
-- [ ] Source files pass applicable lint and quality checks.
+- [ ] The targeted Robot suites pass.
+- [ ] The unit tests pass (`make unittest`).
+- [ ] The documentation is regenerated when it is relevant (`make docs`).
+- [ ] The source files pass `ruff` and `robocop`.
