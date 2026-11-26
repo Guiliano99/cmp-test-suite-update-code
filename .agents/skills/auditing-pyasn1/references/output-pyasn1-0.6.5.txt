@@ -37,7 +37,7 @@ HOLDS  [18] A new, empty SEQUENCE OF in a field encodes, but clone(cloneValueFla
        DER a4023000, clone(cloneValueFlag=True) raises PyAsn1Error: Attempted "items" operation on ASN.1 schema object
 HOLDS  [19] copy.deepcopy of INTEGER and NULL values gives the same DER
        020105, 0500
-HOLDS  [20] copy.deepcopy of a SEQUENCE or SEQUENCE OF raises PyAsn1Error, even with every field set
+HOLDS  [20] copy.deepcopy of an AlgorithmIdentifier and of a SEQUENCE OF raises PyAsn1Error, even with every field set
        raises PyAsn1Error: Attempted "__deepcopy__" operation on ASN.1 schema object; raises PyAsn1Error: Attempted "__deepcopy__" operation on ASN.1 schema object
 HOLDS  [21] copy.copy of a SEQUENCE is a new object with the same DER that shares the components
        new object: True, DER 300d06092a864886f70d01010b0500, shares components: True
@@ -57,12 +57,12 @@ HOLDS  [28] A SEQUENCE whose fields are all OPTIONAL has isValue True when none 
        isValue True, DER 3000
 HOLDS  [29] An object without a value: bool() is False for SEQUENCE and CHOICE, raises for INTEGER, OCTET STRING, SEQUENCE OF
        SEQUENCE False, CHOICE False, INTEGER raises, OCTET STRING raises, SEQUENCE OF raises
-HOLDS  [30] Decoding the DER of a SEQUENCE with clone() of it as the spec gives an independent copy
-       untagged: 300d06092a864886f70d01010b0500, shares nothing: True; IMPLICIT [1]: a10d06092a864886f70d01010b0500, shares nothing: True; EXPLICIT [2]: a20f300d06092a864886f70d01010b0500, shares nothing: True
+HOLDS  [30] Decoding the DER with clone() of the value as the spec gives an independent copy (SEQUENCE, SEQUENCE OF, Name)
+       AlgorithmIdentifier untagged: 300d06092a864886f70d01010b0500, shares nothing: True; AlgorithmIdentifier IMPLICIT [1]: a10d06092a864886f70d01010b0500, shares nothing: True; AlgorithmIdentifier EXPLICIT [2]: a20f300d06092a864886f70d01010b0500, shares nothing: True; RDNSequence untagged: 300c310a300806035504030c0161, shares nothing: True; RDNSequence IMPLICIT [1]: a10c310a300806035504030c0161, shares nothing: True; RDNSequence EXPLICIT [0]: a00e300c310a300806035504030c0161, shares nothing: True
 HOLDS  [31] The decoder returns bytes after the structure as `rest` and raises no error
        rest 00
-HOLDS  [32] getName() of a CHOICE without a component raises PyAsn1Error: Component not chosen
-       isValue False, getName() raises PyAsn1Error: Component not chosen
+HOLDS  [32] getName() and getComponent() of a CHOICE without a component raise PyAsn1Error: Component not chosen
+       isValue False, getName() raises PyAsn1Error: Component not chosen, getComponent() raises PyAsn1Error: Component not chosen
 HOLDS  [33] obj['field'] and getComponentByName('field') return the same object
        same object: True
 HOLDS  [34] asOctets() returns the bytes of an OCTET STRING; str() returns a text, prettyPrint() a hex text
@@ -73,4 +73,14 @@ HOLDS  [36] GeneralizedTime.fromDateTime writes microseconds as a fraction; repl
        with microseconds 20260102030405.678Z, without 20260102030405Z, the DER encoder accepts the fraction: 181332303236303130323033303430352e3637385a
 HOLDS  [37] GeneralizedTime.fromDateTime writes a naive time as Z and an offset as +HHMM; DER refuses the offset
        naive 20260102030405Z, +02:00 20260102030405+0200, in UTC 20260102010405Z, DER of the +02:00 time raises PyAsn1Error
-37 of 37 claims hold
+HOLDS  [38] clone(cloneValueFlag=True) of a filled RDNSequence raises PyAsn1Error, untagged, IMPLICIT and EXPLICIT
+       untagged: raises PyAsn1Error: Component value is tag-incompatible: <RelativeDistinguishedN; IMPLICIT [1]: raises PyAsn1Error: Component value is tag-incompatible: <RelativeDistinguishedN; EXPLICIT [0]: raises PyAsn1Error: Component value is tag-incompatible: <RelativeDistinguishedN
+HOLDS  [39] clone(cloneValueFlag=True) raises for a GeneralName, a TBSCertificate and a Certificate that hold a filled Name
+       GeneralName directoryName: raises PyAsn1Error: Component value is tag-incompatible: <RelativeDistinguishedN; TBSCertificate issuer: raises PyAsn1Error: Component value is tag-incompatible: <RelativeDistinguishedN; Certificate issuer: raises PyAsn1Error: Component value is tag-incompatible: <RelativeDistinguishedN
+HOLDS  [40] clone(cloneValueFlag=True) clones the constructed components again; only the simple components are shared
+       constructed component shared: False, simple component shared: True, SEQUENCE OF element shared: False, original after the clone was changed: 1.2.840.10045.2.1
+HOLDS  [41] copy.copy of a SEQUENCE shares the component list: an assignment to a field of the copy changes the original
+       original after the copy was changed: 1.3.101.112
+HOLDS  [42] clone() of a SEQUENCE with only OPTIONAL fields and of a SEQUENCE OF encodes as an empty SEQUENCE
+       CertTemplate: isValue True, DER 3000; CertTemplate IMPLICIT [1]: isValue True, DER a100; RDNSequence untagged: isValue False, DER 3000; RDNSequence IMPLICIT [1]: isValue False, DER a100; RDNSequence EXPLICIT [0]: isValue False, DER a0023000
+42 of 42 claims hold

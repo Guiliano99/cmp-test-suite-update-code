@@ -223,7 +223,10 @@ def shallow_copy() -> tuple[bool, str]:
 
 
 add("copy.deepcopy of INTEGER and NULL values gives the same DER", deepcopy_simple)
-add("copy.deepcopy of a SEQUENCE or SEQUENCE OF raises PyAsn1Error, even with every field set", deepcopy_constructed)
+add(
+    "copy.deepcopy of an AlgorithmIdentifier and of a SEQUENCE OF raises PyAsn1Error, even with every field set",
+    deepcopy_constructed,
+)
 add("copy.copy of a SEQUENCE is a new object with the same DER that shares the components", shallow_copy)
 
 
@@ -256,8 +259,11 @@ def absent_optional() -> tuple[bool, str]:
     """Measure an absent OPTIONAL field."""
     field = rfc4211.CertTemplate()["serialNumber"]
     truth = raises(lambda: bool(field))
+    absent = field is None
     present = field.isValue
-    return not present and truth.startswith("raises"), f"is None False, isValue {present}, bool {truth}"
+    return not absent and not present and truth.startswith("raises"), (
+        f"is None {absent}, isValue {present}, bool {truth}"
+    )
 
 
 def false_values() -> tuple[bool, str]:
@@ -307,12 +313,14 @@ add("A SEQUENCE whose fields are all OPTIONAL has isValue True when none is set"
 
 
 def decoded_copy() -> tuple[bool, str]:
-    """Measure the copy that is made by decoding the DER of a SEQUENCE with a clone of it as the spec."""
+    """Measure the copy that is made by decoding the DER of a SEQUENCE or SEQUENCE OF with a clone of it as the spec."""
     results = []
     holds = True
-    for name, value in sequences().items():
+    values = {f"AlgorithmIdentifier {name}": value for name, value in sequences().items()}
+    values |= {f"RDNSequence {name}": value for name, value in tagged_rdn_sequences().items()}
+    for name, value in values.items():
         copied, rest = decoder.decode(encoder.encode(value), asn1Spec=value.clone())
-        independent = copied is not value and copied["algorithm"] is not value["algorithm"]
+        independent = copied is not value and copied[0] is not value[0]
         holds = holds and independent and not rest and der(copied) == der(value)
         results.append(f"{name}: {der(copied)}, shares nothing: {independent}")
     return holds, "; ".join(results)
@@ -326,10 +334,13 @@ def trailing_bytes() -> tuple[bool, str]:
 
 
 def unset_choice() -> tuple[bool, str]:
-    """Measure getName() of a CHOICE that has no component."""
+    """Measure getName() and getComponent() of a CHOICE that has no component."""
     choice = rfc5280.GeneralName()
-    result = raises(choice.getName)
-    return not choice.isValue and "Component not chosen" in result, f"isValue {choice.isValue}, getName() {result}"
+    name, component = raises(choice.getName), raises(choice.getComponent)
+    return (
+        not choice.isValue and "Component not chosen" in name and "Component not chosen" in component,
+        f"isValue {choice.isValue}, getName() {name}, getComponent() {component}",
+    )
 
 
 def access_by_name() -> tuple[bool, str]:
@@ -380,9 +391,15 @@ add(
     "An object without a value: bool() is False for SEQUENCE and CHOICE, raises for INTEGER, OCTET STRING, SEQUENCE OF",
     unset_truth_value,
 )
-add("Decoding the DER of a SEQUENCE with clone() of it as the spec gives an independent copy", decoded_copy)
+add(
+    "Decoding the DER with clone() of the value as the spec gives an independent copy (SEQUENCE, SEQUENCE OF, Name)",
+    decoded_copy,
+)
 add("The decoder returns bytes after the structure as `rest` and raises no error", trailing_bytes)
-add("getName() of a CHOICE without a component raises PyAsn1Error: Component not chosen", unset_choice)
+add(
+    "getName() and getComponent() of a CHOICE without a component raise PyAsn1Error: Component not chosen",
+    unset_choice,
+)
 add("obj['field'] and getComponentByName('field') return the same object", access_by_name)
 add("asOctets() returns the bytes of an OCTET STRING; str() returns a text, prettyPrint() a hex text", octets_and_text)
 add("INTEGER values with different tags compare equal, but their DER differs", equal_with_other_tag)
@@ -425,6 +442,125 @@ def time_offset() -> tuple[bool, str]:
 
 add("GeneralizedTime.fromDateTime writes microseconds as a fraction; replace(microsecond=0) removes it", time_fraction)
 add("GeneralizedTime.fromDateTime writes a naive time as Z and an offset as +HHMM; DER refuses the offset", time_offset)
+
+
+# --- clone() and copy of structures that hold more than one level --------------------------------------------------
+
+
+def filled_rdn_sequence(rdn_sequence: rfc5280.RDNSequence | None = None) -> rfc5280.RDNSequence:
+    """Return `rdn_sequence` (default a new RDNSequence) with one RDN, commonName `a`."""
+    value = rfc5280.RDNSequence() if rdn_sequence is None else rdn_sequence
+    attribute = rfc5280.AttributeTypeAndValue()
+    attribute["type"] = rfc5280.id_at_commonName
+    attribute["value"] = b"\x0c\x01a"
+    rdn = rfc5280.RelativeDistinguishedName()
+    rdn.append(attribute)
+    value.append(rdn)
+    return value
+
+
+def tagged_rdn_sequences() -> dict[str, rfc5280.RDNSequence]:
+    """Return a filled RDNSequence untagged, with IMPLICIT [1] and with EXPLICIT [0]."""
+    return {
+        "untagged": filled_rdn_sequence(),
+        "IMPLICIT [1]": filled_rdn_sequence(rfc5280.RDNSequence().subtype(implicitTag=IMPLICIT_1)),
+        "EXPLICIT [0]": filled_rdn_sequence(rfc5280.RDNSequence().subtype(explicitTag=EXPLICIT_0)),
+    }
+
+
+def clone_with_values_of_name() -> tuple[bool, str]:
+    """Measure clone(cloneValueFlag=True) of a filled RDNSequence, which is the content of every Name."""
+    results = {name: raises(lambda v=v: v.clone(cloneValueFlag=True)) for name, v in tagged_rdn_sequences().items()}
+    return all("tag-incompatible" in r for r in results.values()), "; ".join(f"{n}: {r}" for n, r in results.items())
+
+
+def clone_with_values_of_name_holder() -> tuple[bool, str]:
+    """Measure clone(cloneValueFlag=True) of structures that hold a filled Name."""
+    general_name = rfc5280.GeneralName()
+    general_name["directoryName"]["rdnSequence"] = filled_rdn_sequence()
+    tbs_certificate = rfc5280.TBSCertificate()
+    tbs_certificate["issuer"]["rdnSequence"] = filled_rdn_sequence()
+    certificate = rfc5280.Certificate()
+    certificate["tbsCertificate"]["issuer"]["rdnSequence"] = filled_rdn_sequence()
+    results = {
+        "GeneralName directoryName": raises(lambda: general_name.clone(cloneValueFlag=True)),
+        "TBSCertificate issuer": raises(lambda: tbs_certificate.clone(cloneValueFlag=True)),
+        "Certificate issuer": raises(lambda: certificate.clone(cloneValueFlag=True)),
+    }
+    return all("tag-incompatible" in r for r in results.values()), "; ".join(f"{n}: {r}" for n, r in results.items())
+
+
+def clone_with_values_clones_constructed() -> tuple[bool, str]:
+    """Measure that clone(cloneValueFlag=True) clones the constructed components and shares the simple ones."""
+    spki = rfc5280.SubjectPublicKeyInfo()
+    spki["algorithm"]["algorithm"] = univ.ObjectIdentifier("1.2.840.10045.2.1")
+    spki["subjectPublicKey"] = univ.BitString("1010")
+    clone = spki.clone(cloneValueFlag=True)
+    constructed_shared = clone["algorithm"] is spki["algorithm"]
+    simple_shared = clone["algorithm"]["algorithm"] is spki["algorithm"]["algorithm"]
+    clone["algorithm"]["algorithm"] = univ.ObjectIdentifier("1.3.101.112")
+    original = str(spki["algorithm"]["algorithm"])
+    sequence_of = univ.SequenceOf(componentType=rfc5280.AlgorithmIdentifier())
+    sequence_of.append(sequences()["untagged"])
+    element_shared = sequence_of.clone(cloneValueFlag=True)[0] is sequence_of[0]
+    return (
+        not constructed_shared and simple_shared and not element_shared and original == "1.2.840.10045.2.1",
+        f"constructed component shared: {constructed_shared}, simple component shared: {simple_shared}, "
+        f"SEQUENCE OF element shared: {element_shared}, original after the clone was changed: {original}",
+    )
+
+
+def copy_shares_component_list() -> tuple[bool, str]:
+    """Measure that an assignment to a field of copy.copy(sequence) changes the original."""
+    value = sequences()["untagged"]
+    duplicate = copy.copy(value)
+    duplicate["algorithm"] = univ.ObjectIdentifier("1.3.101.112")
+    original = str(value["algorithm"])
+    return original == "1.3.101.112", f"original after the copy was changed: {original}"
+
+
+def clone_of_all_optional_and_of_sequence_of() -> tuple[bool, str]:
+    """Measure the DER of clone() of a SEQUENCE with only OPTIONAL fields and of a filled SEQUENCE OF."""
+    template = rfc4211.CertTemplate()
+    template["version"] = 2
+    tagged_template = rfc4211.CertTemplate().subtype(implicitTag=IMPLICIT_1)
+    tagged_template["version"] = 2
+    results = {
+        "CertTemplate": template.clone(),
+        "CertTemplate IMPLICIT [1]": tagged_template.clone(),
+        **{f"RDNSequence {name}": value.clone() for name, value in tagged_rdn_sequences().items()},
+    }
+    ders = {name: der(value) for name, value in results.items()}
+    expected = {
+        "CertTemplate": "3000",
+        "CertTemplate IMPLICIT [1]": "a100",
+        "RDNSequence untagged": "3000",
+        "RDNSequence IMPLICIT [1]": "a100",
+        "RDNSequence EXPLICIT [0]": "a0023000",
+    }
+    return ders == expected, "; ".join(f"{name}: isValue {results[name].isValue}, DER {d}" for name, d in ders.items())
+
+
+add(
+    "clone(cloneValueFlag=True) of a filled RDNSequence raises PyAsn1Error, untagged, IMPLICIT and EXPLICIT",
+    clone_with_values_of_name,
+)
+add(
+    "clone(cloneValueFlag=True) raises for a GeneralName, a TBSCertificate and a Certificate that hold a filled Name",
+    clone_with_values_of_name_holder,
+)
+add(
+    "clone(cloneValueFlag=True) clones the constructed components again; only the simple components are shared",
+    clone_with_values_clones_constructed,
+)
+add(
+    "copy.copy of a SEQUENCE shares the component list: an assignment to a field of the copy changes the original",
+    copy_shares_component_list,
+)
+add(
+    "clone() of a SEQUENCE with only OPTIONAL fields and of a SEQUENCE OF encodes as an empty SEQUENCE",
+    clone_of_all_optional_and_of_sequence_of,
+)
 
 
 def main() -> int:

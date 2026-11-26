@@ -11,9 +11,12 @@ from the repository root with `.venv/bin/python`, the environment that `uv sync`
   `get_asn1_value_as_bytes`, `get_asn1_value_as_datetime`, `get_asn1_value_as_der`. The query is a path such as
   `header.sender.directoryName.rdnSequence/0`. Use them instead of new path logic, also for BIT STRING and OCTET
   STRING values.
-- Named bits: `is_bit_set(bitstring, "digitalSignature, keyEncipherment", exclusive=True)` is true only if exactly
-  these bits are set; `exclusive=False` is true if they are set among others. `get_set_bitstring_names(bitstring)`
-  returns the names of the set bits. `asn1_names_to_bitstring(type, "a,b")` builds the BIT STRING.
+- Named bits: `get_set_bitstring_names(bitstring)` returns the names of the set bits as one text, for example
+  `"digitalSignature, keyEncipherment"`. To test a set of bits, compare it with the expected names. Do not use
+  `is_bit_set(bitstring, "a,b", exclusive=...)` for that: with `exclusive=False` it is true if any one of the listed
+  bits is set, and with `exclusive=True` it is true if one listed bit is the only bit set, or if the set bits are
+  the listed ones and the list has no space after the comma (measured on a KeyUsage). `asn1_names_to_bitstring(type,
+  "a,b")` builds the BIT STRING.
 - Decode: `try_decode_pyasn1(data, asn1_spec)` returns `(decoded, rest)` like the pyasn1 decoder and raises
   `BadAsn1Data` if decoding fails. It does not refuse bytes after the structure: reject a non-empty `rest` yourself
   [31].
@@ -35,8 +38,9 @@ So pass `None` or a `datetime` in UTC, and do not pass a `float`.
 
 ## Tests
 
-- The unit tests are in `unit_tests/`: the files `test_*.py` at its top and in its folders `tests_*/`. The tests of
-  `prepare_*` builders are the files `test_prepare_*.py`, for example in `unit_tests/tests_prepare_cert_related_structures/`.
+- The unit tests are the files `test_*.py` below `unit_tests/`. The tests of `prepare_*` builders are the files
+  `test_prepare_*.py`, for example `unit_tests/tests_prepare_cert_related_structures/test_prepare_cert_status.py`.
+  Find them with `find unit_tests -name 'test_prepare_*.py'`.
 - `unit_tests/test_pyasn1_assumption.py` holds the tests of the repository about pyasn1 behaviour. A new claim of
   this skill does not belong there: it belongs in `scripts/check_pyasn1_facts.py`.
 - Run all tests with `make unittest`. Run one file with

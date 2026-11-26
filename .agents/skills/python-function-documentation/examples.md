@@ -1,6 +1,6 @@
 # Docstring examples
 
-Copy these patterns. They are real functions of the cmp-test-suite.
+Copy these patterns. They are functions of the cmp-test-suite.
 
 ## Private or `@not_keyword` function: one line
 
@@ -29,7 +29,8 @@ def _prepare_date_time_object(
 
 ## Keyword: all four sections
 
-`resources/keyutils.py`. The comment on the `def` line tells `ruff` that the docstring is written for RF.
+`resources/keyutils.py`, with the Examples shortened to the one line that matches the signature. The comment on the
+`def` line tells `ruff` that the docstring is written for RF.
 
 ```python
 def load_public_key_from_file(filepath: str) -> PublicKey:  # noqa: D417 for RF docs
@@ -53,7 +54,6 @@ def load_public_key_from_file(filepath: str) -> PublicKey:  # noqa: D417 for RF 
     Examples:
     --------
     | ${public_key}= | Load Public Key From File | /path/to/public_key.pem |
-    | ${x448_key}= | Load Public Key From File | /path/to/x448_public_key.pem | key_type=x448 |
 
     """
 ```

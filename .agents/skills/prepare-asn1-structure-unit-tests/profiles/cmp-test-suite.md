@@ -7,7 +7,7 @@ Use this with `SKILL.md` in the cmp-test-suite repository. Commands run from the
 
 - Builders: the `prepare_*` functions in `resources/` and `pq_logic/`. Find them with
   `grep -Rsn "def prepare_" resources pq_logic`.
-- Tests: `unit_tests/tests_*/test_prepare_*.py`. Find the test file of a builder with
+- Tests: the files `test_prepare_*.py` below `unit_tests/`. Find the test file of a builder with
   `find unit_tests -type f -name 'test_prepare_*.py' | sort`, and put a new one in the folder of its neighbors.
 - Calls a test uses: `encoder.encode` and `decoder.decode(..., asn1Spec=...)` from `pyasn1.codec.der`;
   `encode_to_der` and `try_decode_pyasn1` from `resources/asn1utils.py` (`try_decode_pyasn1` returns
