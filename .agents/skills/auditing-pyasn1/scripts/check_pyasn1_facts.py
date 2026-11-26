@@ -21,8 +21,8 @@ from collections.abc import Callable
 import pyasn1
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.error import PyAsn1Error
-from pyasn1.type import base, namedtype, tag, univ, useful
-from pyasn1_alt_modules import rfc4211, rfc5280
+from pyasn1.type import base, char, namedtype, tag, univ, useful
+from pyasn1_alt_modules import rfc4210, rfc4211, rfc5280
 
 Check = Callable[[], tuple[bool, str]]
 CLAIMS: list[tuple[str, Check]] = []
@@ -318,9 +318,13 @@ def decoded_copy() -> tuple[bool, str]:
     holds = True
     values = {f"AlgorithmIdentifier {name}": value for name, value in sequences().items()}
     values |= {f"RDNSequence {name}": value for name, value in tagged_rdn_sequences().items()}
+    name_value = rfc5280.Name()
+    name_value["rdnSequence"] = filled_rdn_sequence()
+    values["Name"] = name_value
     for name, value in values.items():
         copied, rest = decoder.decode(encoder.encode(value), asn1Spec=value.clone())
-        independent = copied is not value and copied[0] is not value[0]
+        first = (lambda v: v.getComponent()) if isinstance(value, univ.Choice) else (lambda v: v[0])
+        independent = copied is not value and first(copied) is not first(value)
         holds = holds and independent and not rest and der(copied) == der(value)
         results.append(f"{name}: {der(copied)}, shares nothing: {independent}")
     return holds, "; ".join(results)
@@ -519,26 +523,58 @@ def copy_shares_component_list() -> tuple[bool, str]:
     return original == "1.3.101.112", f"original after the copy was changed: {original}"
 
 
-def clone_of_all_optional_and_of_sequence_of() -> tuple[bool, str]:
-    """Measure the DER of clone() of a SEQUENCE with only OPTIONAL fields and of a filled SEQUENCE OF."""
+def clone_encodes_as_empty_or_raises() -> tuple[bool, str]:
+    """Measure the DER and isValue of clone() of SEQUENCEs without a simple required field and of SEQUENCE OF."""
     template = rfc4211.CertTemplate()
     template["version"] = 2
     tagged_template = rfc4211.CertTemplate().subtype(implicitTag=IMPLICIT_1)
     tagged_template["version"] = 2
+    constraints = rfc5280.BasicConstraints()
+    constraints["cA"] = True
+    response = rfc4210.CertResponse()
+    response["certReqId"] = 0
+    response["status"]["status"] = 0
+    cert_rep_message = rfc4210.CertRepMessage()
+    cert_rep_message["response"].append(response)
+    extensions = rfc5280.Extensions()
+    extension = rfc5280.Extension()
+    extension["extnID"] = rfc5280.id_ce_basicConstraints
+    extension["extnValue"] = b"\x30\x00"
+    extensions.append(extension)
+    general_names = rfc5280.GeneralNames()
+    general_name = rfc5280.GeneralName()
+    general_name["dNSName"] = "a.example"
+    general_names.append(general_name)
     results = {
-        "CertTemplate": template.clone(),
-        "CertTemplate IMPLICIT [1]": tagged_template.clone(),
-        **{f"RDNSequence {name}": value.clone() for name, value in tagged_rdn_sequences().items()},
+        "CertTemplate": template,
+        "CertTemplate IMPLICIT [1]": tagged_template,
+        "BasicConstraints cA": constraints,
+        "CertRepMessage": cert_rep_message,
+        **{f"RDNSequence {name}": value for name, value in tagged_rdn_sequences().items()},
+        "Extensions": extensions,
+        "GeneralNames": general_names,
     }
-    ders = {name: der(value) for name, value in results.items()}
+    filled = {name: der(value) for name, value in results.items()}
+    clones = {name: value.clone() for name, value in results.items()}
+    ders = {name: der(clone) for name, clone in clones.items()}
     expected = {
-        "CertTemplate": "3000",
-        "CertTemplate IMPLICIT [1]": "a100",
-        "RDNSequence untagged": "3000",
-        "RDNSequence IMPLICIT [1]": "a100",
-        "RDNSequence EXPLICIT [0]": "a0023000",
+        "CertTemplate": ("3000", True),
+        "CertTemplate IMPLICIT [1]": ("a100", True),
+        "BasicConstraints cA": ("3000", True),
+        "CertRepMessage": ("30023000", False),
+        "RDNSequence untagged": ("3000", False),
+        "RDNSequence IMPLICIT [1]": ("a100", False),
+        "RDNSequence EXPLICIT [0]": ("a0023000", False),
+        "Extensions": ("raises PyAsn1Error", False),
+        "GeneralNames": ("raises PyAsn1Error", False),
     }
-    return ders == expected, "; ".join(f"{name}: isValue {results[name].isValue}, DER {d}" for name, d in ders.items())
+    measured = {name: (ders[name], clones[name].isValue) for name in ders}
+    lines = [f"{name}: {filled[name]} -> isValue {valid}, DER {text}" for name, (text, valid) in measured.items()]
+    filled_ok = not any(text.startswith("raises") for text in filled.values())
+    return (
+        filled_ok and measured == expected,
+        "; ".join(lines),
+    )
 
 
 add(
@@ -558,8 +594,102 @@ add(
     copy_shares_component_list,
 )
 add(
-    "clone() of a SEQUENCE with only OPTIONAL fields and of a SEQUENCE OF encodes as an empty SEQUENCE",
-    clone_of_all_optional_and_of_sequence_of,
+    "clone() of a SEQUENCE without a simple required field and of a SEQUENCE OF without SIZE encodes as an empty "
+    "element; a SEQUENCE OF with SIZE raises on encode",
+    clone_encodes_as_empty_or_raises,
+)
+
+
+def clone_with_values_of_name_free_holders() -> tuple[bool, str]:
+    """Measure clone(cloneValueFlag=True) of structures that hold no Name, with and without the field that raises."""
+    status = rfc4210.PKIStatusInfo()
+    status["status"] = 0
+    status["statusString"].append(char.UTF8String("ok"))
+    status_failinfo = rfc4210.PKIStatusInfo()
+    status_failinfo["status"] = 2
+    status_failinfo["failInfo"] = "badAlg"
+    control = rfc4211.AttributeTypeAndValue()
+    control["type"] = rfc4211.id_regCtrl_regToken
+    control["value"] = b"\x0c\x01a"
+    request = rfc4211.CertRequest()
+    request["certReqId"] = 1
+    request["certTemplate"]["version"] = 2
+    request_controls = rfc4211.CertRequest()
+    request_controls["certReqId"] = 1
+    request_controls["certTemplate"]["version"] = 2
+    request_controls["controls"].append(control)
+    cases = {
+        "PKIStatusInfo statusString": status,
+        "CertRequest controls": request_controls,
+        "PKIStatusInfo failInfo": status_failinfo,
+        "CertRequest without controls": request,
+    }
+    results = {name: raises(lambda v=v: v.clone(cloneValueFlag=True)) for name, v in cases.items()}
+    raising = ("PKIStatusInfo statusString", "CertRequest controls")
+    holds = all("tag-incompatible" in results[n] for n in raising) and all(
+        results[n] == "no error" for n in cases if n not in raising
+    )
+    return holds and all(not der(v).startswith("raises") for v in cases.values()), "; ".join(
+        f"{n}: {r}" for n, r in results.items()
+    )
+
+
+def field_refuses_clone_and_decoded_value() -> tuple[bool, str]:
+    """Measure that a statusString field refuses a cloned or a decoded PKIFreeText, and accepts filled components."""
+    status = rfc4210.PKIStatusInfo()
+    status["status"] = 0
+    status["statusString"].append(char.UTF8String("ok"))
+    decoded, _ = decoder.decode(encoder.encode(status), asn1Spec=rfc4210.PKIStatusInfo())
+    target = rfc4210.PKIStatusInfo()
+    target["status"] = 0
+    outcomes = {}
+    for name, value in {"clone": rfc4210.PKIFreeText().clone(), "decoded": decoded["statusString"]}.items():
+        try:
+            target["statusString"] = value
+        except KeyError as error:
+            outcomes[name] = "KeyError" if "tag-incompatible" in str(error) else f"KeyError {error}"
+        else:
+            outcomes[name] = "no error"
+    target["statusString"].append(char.UTF8String("ok"))
+    return (
+        outcomes == {"clone": "KeyError", "decoded": "KeyError"} and der(target) == der(status),
+        f"assign PKIFreeText().clone(): {outcomes['clone']}; assign a decoded statusString: {outcomes['decoded']}; "
+        f"fill the field: DER {der(target)}",
+    )
+
+
+def clone_of_simple_values() -> tuple[bool, str]:
+    """Measure clone() and clone(value) of INTEGER and OCTET STRING, untagged, IMPLICIT and EXPLICIT."""
+    results = []
+    holds = True
+    makers = {"INTEGER": lambda: univ.Integer(5), "OCTET STRING": lambda: univ.OctetString(b"\x01")}
+    for type_name, make in makers.items():
+        for tag_name, spec in {
+            "untagged": make(),
+            "IMPLICIT [0]": make().subtype(implicitTag=IMPLICIT_0),
+            "EXPLICIT [0]": make().subtype(explicitTag=EXPLICIT_0),
+        }.items():
+            same = spec.clone() is spec
+            new = spec.clone(spec)
+            fresh = new is not spec and new.tagSet == spec.tagSet and der(new) == der(spec)
+            holds = holds and same and fresh
+            results.append(f"{type_name} {tag_name}: clone() is value {same}, clone(value) new with same tags {fresh}")
+    return holds, "; ".join(results)
+
+
+add(
+    "clone(cloneValueFlag=True) raises for a PKIStatusInfo with statusString and a CertRequest with controls, which "
+    "hold no Name; it does not raise with failInfo only or without controls",
+    clone_with_values_of_name_free_holders,
+)
+add(
+    "A statusString field refuses a cloned PKIFreeText and a decoded one with KeyError; filling it component by "
+    "component works",
+    field_refuses_clone_and_decoded_value,
+)
+add(
+    "clone() of INTEGER and OCTET STRING returns the same object; clone(value) is new with the same tags",
+    clone_of_simple_values,
 )
 
 

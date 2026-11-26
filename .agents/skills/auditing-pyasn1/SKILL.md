@@ -101,31 +101,36 @@ SEQUENCE OF [25]. An absent OPTIONAL field is a schema object: `is None` is fals
 `clone()` of a SEQUENCE or a SEQUENCE OF makes a new object with the type and the tags and no content.
 `clone()` of a single value, without arguments, returns the same object.
 
-- A SEQUENCE: `clone()` has the type and the tags, and no fields. It cannot be encoded if a field is required. This
-  holds untagged [7], with an IMPLICIT tag [10] and with an EXPLICIT tag [13]. If all fields are OPTIONAL,
-  the clone has a value and encodes as an empty SEQUENCE, so the fields are lost without an error: a `CertTemplate`
-  with `version` set gives `3000` [42] (rule 2 [28]). The clone of a SEQUENCE OF encodes as an empty SEQUENCE OF
-  [42].
-- `clone(cloneValueFlag=True)` is a new object with the same DER [8] [11] [14]. It clones the constructed components
-  again [40] and shares only the simple components, such as the OID `algorithm`: `clone["algorithm"] is
-  value["algorithm"]` [9] [12] [15]. An assignment to the clone replaces a component in the clone, and the original
-  keeps its value [40].
-- `clone(cloneValueFlag=True)` raises `PyAsn1Error` for a `Name` or an `RDNSequence` that holds an RDN, also with
-  an IMPLICIT or EXPLICIT tag [38], and so for a `GeneralName` with `directoryName`, a `TBSCertificate` and a
-  `Certificate` [39]. Do not use it for a structure that can hold a Name.
-- A single value such as NULL: `clone()` without arguments returns the same object, not a copy [1] [3] [5].
-  `clone(value)` returns a new object with the same type and tags [2] [4] [6].
+- A SEQUENCE: `clone()` has the type and the tags, and no fields. This holds untagged [7], with an IMPLICIT tag [10]
+  and with an EXPLICIT tag [13]. Whether the clone can be encoded depends on the fields. The clone of an
+  `AlgorithmIdentifier` raises, because the field `algorithm` is required [7]. The clone of a `CertTemplate` (all
+  fields OPTIONAL), of `BasicConstraints` (DEFAULT and OPTIONAL fields) and of a `CertRepMessage` (a required
+  SEQUENCE OF) encodes as an empty SEQUENCE without an error, so the fields are lost without a sign [42] (rule 2
+  [28]). Never encode a `clone()`.
+- A SEQUENCE OF: the clone of one without a SIZE constraint (`RDNSequence`) encodes as an empty SEQUENCE OF [42]. With
+  a SIZE constraint (`Extensions`, `GeneralNames`) the encoder raises [42].
+- `clone(cloneValueFlag=True)` of an `AlgorithmIdentifier` is a new object with the same DER [8] [11] [14]. It clones
+  the constructed components again [40] and shares only the simple components, such as the OID `algorithm`:
+  `clone["algorithm"] is value["algorithm"]` [9] [12] [15]. An assignment to the clone replaces a component in the
+  clone, and the original keeps its value [40].
+- `clone(cloneValueFlag=True)` raises `PyAsn1Error` for many filled structures: every holder of a Name (an
+  `RDNSequence` that holds an RDN, also with an IMPLICIT or EXPLICIT tag [38], a `GeneralName` with `directoryName`,
+  a `TBSCertificate` and a `Certificate` [39]), a `PKIStatusInfo` with `statusString` and a `CertRequest` with
+  `controls` [43]. Never use it as a copy.
+- A single value such as NULL, INTEGER or OCTET STRING: `clone()` without arguments returns the same object, not a
+  copy [1] [3] [5] [45]. `clone(value)` returns a new object with the same type and tags [2] [4] [6] [45].
 - The clone of a field of a structure keeps the tag of the field. The clone of `directoryName` ([4] EXPLICIT)
   encodes as `a4...`, and a new `rfc5280.Name` has no tag [16]. Assigning an untagged `Name` to the field raises
-  `KeyError` (tag-incompatible) [17]. Fill the components of the field instead.
+  `KeyError` (tag-incompatible) [17]. A cloned or a decoded `PKIFreeText` assigned to `statusString` raises `KeyError`
+  too [44]. Fill the components of the field instead.
 - A new, empty SEQUENCE OF in a field encodes, but `clone(cloneValueFlag=True)` of that field raises [18].
 - `copy.deepcopy` works for INTEGER and NULL values [19]. It raises `PyAsn1Error` for an `AlgorithmIdentifier` and for
   a SEQUENCE OF [20]. Do not use it for a structure.
 - `copy.copy` of a SEQUENCE has the same DER and is no copy: it shares the component list, so an assignment to a field
   of the copy changes the original [21] [41]. Never use it as a copy.
 - For a copy that shares nothing, decode the DER of the object with a clone of it as the spec:
-  `decoder.decode(encoder.encode(value), asn1Spec=value.clone())` [30]. It works untagged, IMPLICIT and EXPLICIT,
-  for a SEQUENCE, a SEQUENCE OF and a filled Name. Use it as the copy of a structure.
+  `decoder.decode(encoder.encode(value), asn1Spec=value.clone())` [30]. It works for a SEQUENCE and a SEQUENCE OF,
+  untagged, IMPLICIT and EXPLICIT, and for a filled Name. Use it as the copy of a structure.
 
 ### 6. BIT STRING and OCTET STRING
 
@@ -179,9 +184,9 @@ When you add or change a builder or a parser:
 | `.asOctets()` | `str()`, `prettyPrint()` | only it returns the bytes | [34] |
 | the named-bit helper of the profile | `.asOctets()` for named bits | the bytes differ from the DER content | [26] |
 | a decode that rejects a non-empty `rest` | ignoring `rest` | the decoder accepts bytes after the structure | [31] |
-| a decode of the DER with `value.clone()` as the spec for a copy of a structure | `clone()`, `clone(cloneValueFlag=True)`, `copy.copy`, `copy.deepcopy` | `clone()` has no fields and may encode as an empty SEQUENCE; `clone(cloneValueFlag=True)` raises for a filled Name; `copy.copy` shares the component list; deepcopy raises | [7] [42] [38] [41] [20] [30] |
-| the components of the tagged field filled one by one | an untagged object of the same type assigned to the field | the assignment raises `KeyError` | [17] |
-| `clone(new_value)` for a new single value | `clone()` as a copy of a single value | `clone()` returns the same object | [1] [2] |
+| a decode of the DER with `value.clone()` as the spec for a copy of a structure | `clone()`, `clone(cloneValueFlag=True)`, `copy.copy`, `copy.deepcopy` | `clone()` has no fields and may encode as an empty SEQUENCE; `clone(cloneValueFlag=True)` raises for a filled Name, a `statusString` and `controls`; `copy.copy` shares the component list; deepcopy raises | [7] [42] [38] [43] [41] [20] [30] |
+| the components of the tagged field filled one by one | an untagged, cloned or decoded object of the same type assigned to the field | the assignment raises `KeyError` | [17] [44] |
+| `clone(new_value)` for a new single value | `clone()` as a copy of a single value | `clone()` returns the same object | [1] [2] [45] |
 | a datetime in UTC with whole seconds | `datetime.now()` directly, a datetime with an offset | a fraction or `+HHMM` is written | [36] [37] |
 | the DER of two values compared | the objects compared | the tags show only in the DER | [35] |
 | types and OIDs from `pyasn1-alt-modules` | local classes, literal OIDs | one definition | none |

@@ -15,8 +15,8 @@ from the repository root with `.venv/bin/python`, the environment that `uv sync`
   `"digitalSignature, keyEncipherment"`. To test a set of bits, compare it with the expected names. Do not use
   `is_bit_set(bitstring, "a,b", exclusive=...)` for that: with `exclusive=False` it is true if any one of the listed
   bits is set, and with `exclusive=True` it is true if one listed bit is the only bit set, or if the set bits are
-  the listed ones and the list has no space after the comma (measured on a KeyUsage). `asn1_names_to_bitstring(type,
-  "a,b")` builds the BIT STRING.
+  the listed ones, in the order of the named bits, with no space after the comma. It raises `ValueError` if every
+  named bit is set (measured on a KeyUsage). `asn1_names_to_bitstring(type, "a,b")` builds the BIT STRING.
 - Decode: `try_decode_pyasn1(data, asn1_spec)` returns `(decoded, rest)` like the pyasn1 decoder and raises
   `BadAsn1Data` if decoding fails. It does not refuse bytes after the structure: reject a non-empty `rest` yourself
   [31].
