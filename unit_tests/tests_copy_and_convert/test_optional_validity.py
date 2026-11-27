@@ -8,13 +8,15 @@ import unittest
 from pyasn1_alt_modules import rfc4211, rfc5280
 from resources.convertutils import pyasn1_time_obj_to_py_datetime, validity_to_optional_validity
 
+from unit_tests.utils_for_test import utc_now
+
 
 def create_validity_object_with_generalized_time():
     """Prepare a validity object with as `generalTime` choice."""
     validity = rfc5280.Validity()
     not_before = rfc5280.Time()
     not_after = rfc5280.Time()
-    now = datetime.datetime.now()
+    now = utc_now()
     future = now + datetime.timedelta(days=365)
     not_before["generalTime"] = not_before["generalTime"].fromDateTime(now)
     not_after["generalTime"] = not_after["generalTime"].fromDateTime(future)
@@ -28,7 +30,7 @@ def create_validity_object_with_utc_time():
     validity = rfc5280.Validity()
     not_before = rfc5280.Time()
     not_after = rfc5280.Time()
-    now = datetime.datetime.now()
+    now = utc_now()
     future = now + datetime.timedelta(days=365)
     not_before["utcTime"] = not_before["utcTime"].fromDateTime(now)
     not_after["utcTime"] = not_after["utcTime"].fromDateTime(future)

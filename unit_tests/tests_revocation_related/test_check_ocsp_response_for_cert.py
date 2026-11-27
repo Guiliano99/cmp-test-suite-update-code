@@ -8,7 +8,7 @@ from unittest.mock import patch
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes, serialization
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from cryptography.x509 import ExtensionNotFound
 
@@ -17,6 +17,7 @@ from resources.certutils import build_ocsp_response, check_ocsp_response_for_cer
 from resources.keyutils import load_private_key_from_file
 from resources.utils import load_and_decode_pem_file
 
+from unit_tests.utils_for_test import utc_now
 
 
 def _create_cert_with_ocsp_extension(ca_key, ca_cert, ocsp_url):
@@ -35,8 +36,8 @@ def _create_cert_with_ocsp_extension(ca_key, ca_cert, ocsp_url):
         .issuer_name(ca_cert.subject)
         .public_key(ca_key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.now())
-        .not_valid_after(datetime.now() + timedelta(days=365))
+        .not_valid_before(utc_now())
+        .not_valid_after(utc_now() + timedelta(days=365))
         .add_extension(aia, critical=False)
         .sign(ca_key, hashes.SHA256())
     )

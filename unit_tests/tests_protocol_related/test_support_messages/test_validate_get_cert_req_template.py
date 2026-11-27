@@ -16,6 +16,7 @@ from unit_tests.prepare_support_message_structures import (
     prepare_cert_req_template_content,
     prepare_genp_controls,
 )
+from unit_tests.utils_for_test import utc_now
 
 
 def _prepare_ec_param():
@@ -78,8 +79,8 @@ class TestValidateGetCertificateRequestTemplate(unittest.TestCase):
         WHEN `validate_get_certificate_request_template` is called
         THEN no errors should be raised, indicating a valid certificate request template.
         """
-        validity = prepare_validity(datetime.datetime.now(),
-                                    datetime.datetime.now() + datetime.timedelta(days=365))
+        validity = prepare_validity(utc_now(),
+                                    utc_now() + datetime.timedelta(days=365))
         cert_template = prepare_cert_template(validity=validity, include_fields="validity")
         cert_req_template_value = prepare_cert_req_template_content(
             cert_template=cert_template, key_spec=prepare_genp_controls(alg_id=_prepare_ec_param())

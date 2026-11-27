@@ -290,10 +290,10 @@ def _generate_crl() -> None:
     ca_cert = convert_to_crypto_lib_cert(crl_sign_cert)
     builder = builder.issuer_name(ca_cert.subject)
 
-    builder = builder.last_update(datetime.now())
-    builder = builder.next_update(datetime.now() + timedelta(days=30))
+    builder = builder.last_update(utc_now())
+    builder = builder.next_update(utc_now() + timedelta(days=30))
 
-    revoked_cert = x509.RevokedCertificateBuilder().serial_number(1234567890).revocation_date(datetime.now()).build()
+    revoked_cert = x509.RevokedCertificateBuilder().serial_number(1234567890).revocation_date(utc_now()).build()
 
     builder = builder.add_revoked_certificate(revoked_cert)
     crl = builder.sign(private_key=ca1_key, algorithm=hashes.SHA256())
@@ -322,7 +322,7 @@ def load_or_generate_cert_chain() -> Tuple[List[rfc9480.CMPCertificate], List[Si
     cert_chain = load_certificate_chain("data/unittest/test_cert_chain_len6.pem")
 
     cert: x509.Certificate = convert_to_crypto_lib_cert(cert_chain[0])
-    if cert.not_valid_after_utc <= datetime.now(timezone.utc):
+    if cert.not_valid_after_utc <= utc_now():
         _gen_new_certs()
 
     cert_chain = load_certificate_chain("data/unittest/test_cert_chain_len6.pem")
@@ -1174,13 +1174,13 @@ def build_crl_crypto_lib(
     """Build a CRL with the given CA key, CA certificate, and revoked certificate."""
     builder = x509.CertificateRevocationListBuilder()
     builder = builder.issuer_name(ca_cert.subject)
-    builder = builder.last_update(datetime.now())
-    builder = builder.next_update(datetime.now() + timedelta(days=30))
+    builder = builder.last_update(utc_now())
+    builder = builder.next_update(utc_now() + timedelta(days=30))
 
     revoked_cert_entry = (
         x509.RevokedCertificateBuilder()
         .serial_number(revoked_cert.serial_number)
-        .revocation_date(datetime.now())
+        .revocation_date(utc_now())
         .build()
     )
     builder = builder.add_revoked_certificate(revoked_cert_entry)

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 from pyasn1.type import univ
 from pyasn1_alt_modules import rfc9480
@@ -15,6 +15,8 @@ from resources.certbuildutils import (
 )
 from resources.exceptions import BadAsn1Data, BadCertTemplate
 
+from unit_tests.utils_for_test import utc_now
+
 
 class TestValidatePrivateKeyUsagePeriodExtn(unittest.TestCase):
     def test_validate_private_key_usage_period_extn(self):
@@ -24,8 +26,8 @@ class TestValidatePrivateKeyUsagePeriodExtn(unittest.TestCase):
         THEN the validation should succeed.
         """
         extn = prepare_private_key_usage_period(
-            not_before=datetime.now(timezone.utc),
-            not_after=datetime.now(timezone.utc) + timedelta(days=30),
+            not_before=utc_now(),
+            not_after=utc_now() + timedelta(days=30),
             critical=False,
         )
 
@@ -41,13 +43,13 @@ class TestValidatePrivateKeyUsagePeriodExtn(unittest.TestCase):
         THEN the validation should succeed.
         """
         validity = prepare_validity(
-            not_before=datetime.now(timezone.utc) - timedelta(days=1),
-            not_after=datetime.now(timezone.utc) + timedelta(days=31),
+            not_before=utc_now() - timedelta(days=1),
+            not_after=utc_now() + timedelta(days=31),
         )
 
         extn = prepare_private_key_usage_period(
-            not_before=datetime.now(timezone.utc),
-            not_after=datetime.now(timezone.utc) + timedelta(days=30),
+            not_before=utc_now(),
+            not_after=utc_now() + timedelta(days=30),
             critical=False,
         )
 
@@ -63,13 +65,13 @@ class TestValidatePrivateKeyUsagePeriodExtn(unittest.TestCase):
         THEN the validation should succeed.
         """
         validity = prepare_validity(
-            not_before=datetime.now(timezone.utc),
-            not_after=datetime.now(timezone.utc) + timedelta(days=31),
+            not_before=utc_now(),
+            not_after=utc_now() + timedelta(days=31),
         )
 
         extn = prepare_private_key_usage_period(
-            not_before=datetime.now(timezone.utc),
-            not_after=datetime.now(timezone.utc) + timedelta(days=30),
+            not_before=utc_now(),
+            not_after=utc_now() + timedelta(days=30),
             critical=False,
         )
 
@@ -96,8 +98,8 @@ class TestValidatePrivateKeyUsagePeriodExtn(unittest.TestCase):
         THEN an exception should be raised.
         """
         extn = prepare_private_key_usage_period(
-            not_before=datetime.now(timezone.utc),
-            not_after=datetime.now(timezone.utc),
+            not_before=utc_now(),
+            not_after=utc_now(),
             critical=False,
         )
 
@@ -131,8 +133,8 @@ class TestValidatePrivateKeyUsagePeriodExtn(unittest.TestCase):
         WHEN the `notBefore` date is after the `notAfter` date,
         THEN an exception should be raised.
         """
-        nb = datetime.now(timezone.utc) + timedelta(days=1)
-        na = datetime.now(timezone.utc)
+        nb = utc_now() + timedelta(days=1)
+        na = utc_now()
 
         extn = prepare_private_key_usage_period(nb, na, critical=False)
         extns = rfc9480.Extensions()
@@ -148,7 +150,7 @@ class TestValidatePrivateKeyUsagePeriodExtn(unittest.TestCase):
         WHEN the `notBefore` date is equal to the `notAfter` date,
         THEN an exception should be raised.
         """
-        now = datetime.now(timezone.utc)
+        now = utc_now()
 
         extn = prepare_private_key_usage_period(now, now, critical=False)
         extns = rfc9480.Extensions()
@@ -164,7 +166,7 @@ class TestValidatePrivateKeyUsagePeriodExtn(unittest.TestCase):
         WHEN the `notBefore` date is before the validity period,
         THEN an exception should be raised.
         """
-        now = datetime.now(timezone.utc)
+        now = utc_now()
         validity = prepare_validity(
             not_before=now + timedelta(days=1),
             not_after=now + timedelta(days=30),
@@ -184,7 +186,7 @@ class TestValidatePrivateKeyUsagePeriodExtn(unittest.TestCase):
         WHEN the `notBefore` date is before the validity period,
         THEN an exception should be raised.
         """
-        now = datetime.now(timezone.utc)
+        now = utc_now()
         validity = prepare_validity(
             not_before=now + timedelta(days=1),
             not_after=now + timedelta(days=30),
@@ -204,7 +206,7 @@ class TestValidatePrivateKeyUsagePeriodExtn(unittest.TestCase):
         WHEN the `notAfter` date is after the validity period,
         THEN an exception should be raised.
         """
-        now = datetime.now(timezone.utc)
+        now = utc_now()
 
         validity = prepare_validity(
             not_before=now,
@@ -224,7 +226,7 @@ class TestValidatePrivateKeyUsagePeriodExtn(unittest.TestCase):
         WHEN the `notAfter` date is after the validity period,
         THEN an exception should be raised.
         """
-        now = datetime.now(timezone.utc)
+        now = utc_now()
 
         validity = prepare_validity(
             not_before=now,

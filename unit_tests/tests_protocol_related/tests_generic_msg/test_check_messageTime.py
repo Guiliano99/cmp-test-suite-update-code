@@ -11,6 +11,8 @@ from resources.cmputils import build_p10cr_from_csr, parse_csr, patch_messageTim
 from resources.exceptions import BadTime
 from resources.utils import decode_pem_string
 
+from unit_tests.utils_for_test import utc_now
+
 
 class TestCheckMessageTimeField(unittest.TestCase):
     @classmethod
@@ -29,7 +31,7 @@ class TestCheckMessageTimeField(unittest.TestCase):
         WHEN check_messagetime_field is called with a 60-second allowed interval
         THEN the function should pass without raising an exception.
         """
-        request_time = datetime.datetime.now(datetime.timezone.utc)
+        request_time = utc_now()
         response_time = request_time + datetime.timedelta(seconds=30)
         response_pki_message = patch_messageTime(pki_message=self.pki_message, new_time=response_time)
         with self.assertLogs(level="INFO") as log:
@@ -48,7 +50,7 @@ class TestCheckMessageTimeField(unittest.TestCase):
         WHEN check_messagetime_field is called with a 60-second allowed interval
         THEN the function should pass without raising an exception
         """
-        request_time = datetime.datetime.now(datetime.timezone.utc)
+        request_time = utc_now()
         response_time = request_time + datetime.timedelta(seconds=120)
         response_pki_message = patch_messageTime(pki_message=self.pki_message, new_time=response_time)
 

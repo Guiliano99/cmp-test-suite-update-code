@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import unittest
-from datetime import datetime, timedelta
+from datetime import timedelta
 from unittest.mock import patch
 from cryptography import x509
 from cryptography.hazmat.primitives.serialization import Encoding
@@ -19,7 +19,7 @@ from resources.certutils import (
 from resources.exceptions import CertRevoked
 from resources.keyutils import load_private_key_from_file
 from resources.utils import load_and_decode_pem_file
-from unit_tests.utils_for_test import build_crl_crypto_lib, convert_to_crypto_lib_cert
+from unit_tests.utils_for_test import build_crl_crypto_lib, convert_to_crypto_lib_cert, utc_now
 
 
 def _convert_to_pyasn1_cert(cert):
@@ -47,8 +47,8 @@ def _create_cert_with_crl_distribution(ca_key, ca_cert):
         .issuer_name(ca_cert.subject)
         .public_key(ca_key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.now())
-        .not_valid_after(datetime.now() + timedelta(days=365))
+        .not_valid_before(utc_now())
+        .not_valid_after(utc_now() + timedelta(days=365))
         .add_extension(crl_dp, critical=False)
         .sign(ca_key, hashes.SHA256())
     )

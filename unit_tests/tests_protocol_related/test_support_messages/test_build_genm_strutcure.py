@@ -17,7 +17,7 @@ from pyasn1_alt_modules import rfc9480
 from resources.certutils import parse_certificate
 from resources.general_msg_utils import build_cmp_general_message
 from resources.utils import load_and_decode_pem_file
-from unit_tests.utils_for_test import de_and_encode_pkimessage
+from unit_tests.utils_for_test import de_and_encode_pkimessage, utc_now
 
 
 def convert_to_asn1cert(cert: Union[rfc9480.CMPCertificate, x509.Certificate]) -> rfc9480.CMPCertificate:  # noqa D417 undocumented-param
@@ -62,8 +62,8 @@ def generate_certificate_with_idp():
         .issuer_name(issuer)
         .public_key(private_key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.now())
-        .not_valid_after(datetime.datetime.now() + datetime.timedelta(days=1))
+        .not_valid_before(utc_now())
+        .not_valid_after(utc_now() + datetime.timedelta(days=1))
     )
 
     idp_extension = x509.IssuingDistributionPoint(
@@ -94,8 +94,8 @@ def generate_certificate_with_crl_dp():
         .issuer_name(issuer)
         .public_key(private_key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(datetime.datetime.now())
-        .not_valid_after(datetime.datetime.now() + datetime.timedelta(days=1))
+        .not_valid_before(utc_now())
+        .not_valid_after(utc_now() + datetime.timedelta(days=1))
     )
 
     crl_distribution_points = x509.DistributionPoint(
@@ -127,10 +127,10 @@ def generate_crl():
 
     crl_builder = crl_builder.issuer_name(issuer)
 
-    revoked_certs = [{"serialNumber": 1, "revocation_date": datetime.datetime.now()}]
+    revoked_certs = [{"serialNumber": 1, "revocation_date": utc_now()}]
 
-    crl_builder = crl_builder.last_update(datetime.datetime.now())
-    crl_builder = crl_builder.next_update(datetime.datetime.now() + datetime.timedelta(days=7))
+    crl_builder = crl_builder.last_update(utc_now())
+    crl_builder = crl_builder.next_update(utc_now() + datetime.timedelta(days=7))
 
     for cert in revoked_certs:
         revoked_certificate = (

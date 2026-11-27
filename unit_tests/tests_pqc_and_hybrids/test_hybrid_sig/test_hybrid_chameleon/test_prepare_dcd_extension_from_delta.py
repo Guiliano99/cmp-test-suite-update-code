@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pq_logic.hybrid_sig.chameleon_logic import prepare_dcd_extension_from_delta
 from resources.asn1utils import encode_to_der
@@ -36,9 +36,9 @@ class TestPrepareDCDExtensionFromDelta(unittest.TestCase):
         WHEN preparing the DCD extension,
         THEN the validity period is correctly set.
         """
-        not_before = datetime(2023, 1, 1)
-        not_after = datetime(2023, 1, 2)
-        not_after_delta = datetime(2023, 1, 20)
+        not_before = datetime(2023, 1, 1, tzinfo=timezone.utc)
+        not_after = datetime(2023, 1, 2, tzinfo=timezone.utc)
+        not_after_delta = datetime(2023, 1, 20, tzinfo=timezone.utc)
         validity = prepare_validity(not_before=not_before, not_after=not_after)
         validity_delta = prepare_validity(
             not_before=not_before,
@@ -107,8 +107,8 @@ class TestPrepareDCDExtensionFromDelta(unittest.TestCase):
         WHEN preparing the DCD extension,
         THEN the extension is correctly prepared.
         """
-        not_before = datetime(2023, 1, 1)
-        not_after = datetime(2023, 1, 2)
+        not_before = datetime(2023, 1, 1, tzinfo=timezone.utc)
+        not_after = datetime(2023, 1, 2, tzinfo=timezone.utc)
         validity = prepare_validity(not_before, not_after)
 
         base_issuer_cert, _ = build_certificate("rsa", common_name="CN=Base Issuer")

@@ -3,12 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import unittest
-from datetime import datetime, timezone
 
 from pyasn1_alt_modules import rfc5280
 
 from resources.asn1utils import try_decode_pyasn1
 from resources.certbuildutils import prepare_private_key_usage_period
+
+from unit_tests.utils_for_test import utc_now
 
 
 class TestPreparePrivateKeyUsagePeriod(unittest.TestCase):
@@ -20,8 +21,8 @@ class TestPreparePrivateKeyUsagePeriod(unittest.TestCase):
         """
         extn = prepare_private_key_usage_period(
             critical=True,
-            not_before=datetime.now(timezone.utc),
-            not_after=datetime.now(timezone.utc),
+            not_before=utc_now(),
+            not_after=utc_now(),
         )
 
         self.assertEqual(rfc5280.id_ce_privateKeyUsagePeriod, extn["extnID"])
@@ -40,7 +41,7 @@ class TestPreparePrivateKeyUsagePeriod(unittest.TestCase):
         """
         extn = prepare_private_key_usage_period(
             critical=False,
-            not_before=datetime.now(timezone.utc),
+            not_before=utc_now(),
         )
 
         self.assertEqual(rfc5280.id_ce_privateKeyUsagePeriod, extn["extnID"])
@@ -59,7 +60,7 @@ class TestPreparePrivateKeyUsagePeriod(unittest.TestCase):
         """
         extn = prepare_private_key_usage_period(
             critical=False,
-            not_after=datetime.now(timezone.utc),
+            not_after=utc_now(),
         )
 
         self.assertEqual(rfc5280.id_ce_privateKeyUsagePeriod, extn["extnID"])

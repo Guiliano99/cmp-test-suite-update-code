@@ -7,7 +7,7 @@ from unittest.mock import patch
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes, serialization
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from pyasn1.type import univ
 from pyasn1_alt_modules import rfc5280
@@ -19,7 +19,7 @@ from resources.certutils import validate_if_certificate_is_revoked,  \
 from resources.exceptions import CertRevoked
 from resources.keyutils import load_private_key_from_file
 from resources.utils import load_and_decode_pem_file
-from unit_tests.utils_for_test import convert_to_crypto_lib_cert, build_crl_crypto_lib
+from unit_tests.utils_for_test import convert_to_crypto_lib_cert, build_crl_crypto_lib, utc_now
 
 
 class TestValidateIfCertificateIsRevoked(unittest.TestCase):
@@ -37,8 +37,8 @@ class TestValidateIfCertificateIsRevoked(unittest.TestCase):
             .issuer_name(subject_issuer)
             .public_key(cls.ca_key.public_key())
             .serial_number(x509.random_serial_number())
-            .not_valid_before(datetime.now())
-            .not_valid_after(datetime.now() + timedelta(days=365))
+            .not_valid_before(utc_now())
+            .not_valid_after(utc_now() + timedelta(days=365))
             .sign(cls.ca_key, hashes.SHA256())
         )
 
