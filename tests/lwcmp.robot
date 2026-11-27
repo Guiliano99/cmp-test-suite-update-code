@@ -604,7 +604,7 @@ CA MUST Reject PKIMessage With ImplicitConfirm And ConfirmWaitTime
 
 CA MUST Reject PKIMessage With Invalid Signature Protection Value
     [Documentation]    According to RFC 9483 Section 3.2, when using signature-based protection, PKIMessages must
-    ...    include a valid protection value that corresponds to the `protectionAlg` field. We send a `p10cr` PKIMessage
+    ...    include a valid protection value that corresponds to the `protectionAlg` field. We send an `ir` PKIMessage
     ...    with a signature-based `protectionAlg` set, but we modify the protection value to an invalid one. The CA MUST
     ...    reject this request and may respond with the optional `badMessageCheck`, as specified in Section 3.5.
     [Tags]    signature    negative    protection   minimal
@@ -616,9 +616,10 @@ CA MUST Reject PKIMessage With Invalid Signature Protection Value
 
 CA MUST Reject PKIMessage With Invalid MAC Protection Value
     [Documentation]    According to RFC 9483 Section 3.2, when using MAC-based protection, PKIMessages must include a
-    ...    valid protection value that corresponds to the `protectionAlg` field. We send a `p10cr` PKIMessage with a
-    ...    MAC-based `protectionAlg` set, but we modify the protection value to an invalid one. The CA MUST
-    ...    reject this request and may respond with the optional `badMessageCheck`, as specified in Section 3.5.
+    ...    valid protection value that corresponds to the `protectionAlg` field. We send an `ir`, `cr` or `p10cr`
+    ...    PKIMessage, depending on the configuration, with a MAC-based `protectionAlg` set, but we modify the
+    ...    protection value to an invalid one. The CA MUST reject this request and may respond with the optional
+    ...    `badMessageCheck`, as specified in Section 3.5.
     [Tags]    mac    negative    protection   minimal
     Skip If    not ${ALLOW_MAC_PROTECTION}    Skipped this test because MAC-based protection is disabled.
     ${pki_message}=    Generate Default MAC Protected PKIMessage
