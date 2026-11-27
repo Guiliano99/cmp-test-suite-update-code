@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make help)",
+      "Bash(make unittest)",
+      "Bash(make dryrun)",
+      "Bash(make verify)",
+      "Bash(make verifyformat)",
+      "Bash(make start-mock-ca)",
+      "Bash(make test env=mock_ca)",
+      "Bash(make test-pq-hybrid env=mock_ca)",
+      "Bash(make test-mock-ca)",
+      "Bash(uv run make help)",
+      "Bash(uv run make unittest)",
+      "Bash(uv run make dryrun)",
+      "Bash(uv run make verify)",
+      "Bash(uv run make verifyformat)",
+      "Bash(uv run make start-mock-ca)",
+      "Bash(uv run make test env=mock_ca)",
+      "Bash(uv run make test-pq-hybrid env=mock_ca)",
+      "Bash(uv run make test-mock-ca)"
+    ]
+  }
+}

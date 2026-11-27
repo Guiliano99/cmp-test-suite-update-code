@@ -1,0 +1,6 @@
+{
+  "chat.tools.terminal.autoApprove": {
+    "/^(uv run )?make (help|unittest|dryrun|verify|verifyformat|start-mock-ca|test-mock-ca)$/": true,
+    "/^(uv run )?make (test|test-pq-hybrid) env=mock_ca$/": true
+  }
+}

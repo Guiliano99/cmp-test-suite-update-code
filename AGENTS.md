@@ -41,22 +41,55 @@ uv sync --all-extras  # development dependencies
 source .venv/bin/activate
 ```
 
-## Common commands
+## Make targets
 
-- `make test` – run all tests for the default environment.
-- `make test env=mock_ca` – run against the Mock CA.
-- `make test-verbose` / `make testlog` – verbose or timestamped runs.
-- `make unittest` – run unit tests (`pytest` with `PYTHONPATH=./resources`).
-- `make docs` – generate keyword/function documentation.
+Use the `make` target for a task when one exists. The targets set `--pythonpath`, `PYTHONPATH`,
+the environment and the output folder, which hand-written `robot` or `pytest` calls often miss.
+`make` takes `python`, `robot` and `ruff` from `PATH`: activate `.venv` first, or run
+`uv run make <target>`.
+
+The targets marked "yes" are allowed in `.claude/settings.json` (Claude Code) and
+`.vscode/settings.json` (GitHub Copilot), so agents can run them without asking. They only read
+the checkout, write ignored output files, or talk to the Mock CA on `127.0.0.1`. Ask the user
+before running any other target.
+
+| Task | Command | Allowed |
+| --- | --- | --- |
+| List the targets | `make help` | yes |
+| Changed Python code in `resources/`, `pq_logic/` or `mock_ca/` | `make unittest` | yes |
+| Changed a `.robot` or `.resource` file: check that all suites load (several minutes) | `make dryrun` | yes |
+| Before a commit: reuse, ruff, pylint, pyright, codespell (needs the `dev` extra) | `make verify` | yes |
+| Ruff only (seconds) | `make verifyformat` | yes |
+| Start the Mock CA on `127.0.0.1:5000`; it runs until stopped | `make start-mock-ca` | yes |
+| CMP suite (`tests/`) against the running Mock CA | `make test env=mock_ca` | yes |
+| PQ and hybrid suite against the running Mock CA | `make test-pq-hybrid env=mock_ca` | yes |
+| All three suites against the running Mock CA | `make test-mock-ca` | yes |
+| Fix ruff findings; rewrites files in the whole repository | `make autoformat` | no |
+| Regenerate the HTML documentation in `doc/` | `make docs` | no |
+| Unit tests in Docker | `make unittest-docker` | no |
+| Run against a real CA from `config/<name>.resource` | `make test env=<name>`, `make testlog env=<name>` | no |
+| Verbose suites (long) | `make test-verbose`, `make test-mock-ca-verbose` | no |
+
+- Without `env=`, the test targets use `env ?= cloudpki`, an external CA. Never run them
+  without the user's go-ahead.
+- The Robot suites use post-quantum keys: install the `pq` extra (`uv sync --extra pq`) before
+  a test target. The unit tests do not need it.
+- Start the Mock CA in the background before a Mock CA test target and stop it afterwards. It
+  runs with the Flask debugger and reloader, so editing a `.py` file restarts it during a run.
+- Some unit tests start their own Mock CA on port 6002; they fail if that port is in use.
+- Robot writes its results to `reports/` (`make dryrun` to the repository root).
+  `reports/readme.md` is tracked: do not delete the folder.
+- `make` exits with 2 when a Robot test failed; the console output shows the counts.
+- For one suite file, call Robot directly:
+  `uv run robot --pythonpath=./ --variable environment:mock_ca --outputdir=reports tests/<file>.robot`
+  (add `--dryrun` to only load it).
 - `scripts/generate_*_tests.py` / `scripts/generate_alg_test_cases.py` – generate Robot test
   cases and algorithm matrices; regenerate outputs when referenced RFC/CMP behavior changes.
-- `make verify` / `make verifyformat` – sanity/formatting checks.
-- `make start-mock-ca` – start the local Mock CA server.
 
 ## Coding standards
 
 - Python: follow `ruff.toml` (line length 120) and `.pylintrc`. Run
-  `make autoformat` (`ruff`) on changed files.
+  `ruff check --fix <changed files>`; `make autoformat` fixes the whole repository.
 - Robot Framework: follow `robocop.toml`; run `robocop` where applicable.
 - Type checking: `pyright` is configured via `pyrightconfig.json`
   (includes `./resources`, `./pq_logic`, `./mock_ca`).
