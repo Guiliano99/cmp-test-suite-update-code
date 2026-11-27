@@ -1,6 +1,19 @@
 {
   "chat.tools.terminal.autoApprove": {
+    // make targets that stay on this machine (see AGENTS.md)
     "/^(uv run )?make (help|unittest|dryrun|verify|verifyformat|start-mock-ca|test-mock-ca)$/": true,
-    "/^(uv run )?make (test|test-pq-hybrid) env=mock_ca$/": true
+    "/^(uv run )?make (test|test-pq-hybrid) env=mock_ca$/": true,
+    // the tools these targets call; flags that write outside the checkout, delete
+    // folders or reach another server still ask
+    "/^(uv run )?robot\\s(.*\\s)?--dryrun(\\s|$)/": true,
+    "/^(uv run )?robot\\s(?!.*(--variablefile|\\s-V\\s))(?!.*(--variable|\\s-v)[\\s=](?!environment:mock_ca(\\s|$)))(?=.*[\\s=]environment:mock_ca(\\s|$))/": true,
+    "/^(uv run )?(PYTHONPATH=\\.\\/resources(:\\.\\/)? )?(\\.venv\\/bin\\/)?(python3? -m pytest|pytest)(?!.*--basetemp)(\\s.*)?$/": true,
+    "/^(uv run )?(\\.venv\\/bin\\/)?ruff check(?!.*--(unsafe-)?fix)(\\s.*)?$/": true,
+    "/^(uv run )?(\\.venv\\/bin\\/)?reuse lint(\\s.*)?$/": true,
+    "/^(uv run )?(\\.venv\\/bin\\/)?pylint(?!.*--output)(\\s.*)?$/": true,
+    "/^(uv run )?(PYTHONPATH=\\.\\/resources(:\\.\\/)? )?(\\.venv\\/bin\\/)?pyright(\\s.*)?$/": true,
+    "/^(uv run )?(\\.venv\\/bin\\/)?codespell(?!.*\\s(-\\w*w|--write-changes))(\\s.*)?$/": true,
+    "/^(uv run )?(\\.venv\\/bin\\/)?python3? (\\.\\/)?mock_ca\\/ca_handler\\.py( --port \\d+)?$/": true,
+    "/^uv tree(\\s.*)?$/": true
   }
 }

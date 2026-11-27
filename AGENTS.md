@@ -53,6 +53,12 @@ The targets marked "yes" are allowed in `.claude/settings.json` (Claude Code) an
 the checkout, write ignored output files, or talk to the Mock CA on `127.0.0.1`. Ask the user
 before running any other target.
 
+In VS Code, Copilot may also call the tools these targets run without asking: `robot` with
+`--dryrun` or `--variable environment:mock_ca`, `pytest`, `ruff check`, `reuse lint`, `pylint`,
+`pyright`, `codespell` and `mock_ca/ca_handler.py`. Flags that change files, delete folders or
+reach another server still ask: `--fix`, `--basetemp`, `--output`, `-w`, `--host`, and any other
+`--variable`.
+
 | Task | Command | Allowed |
 | --- | --- | --- |
 | List the targets | `make help` | yes |
