@@ -4352,8 +4352,9 @@ def patch_messageTime(  # noqa D417 undocumented-param pylint: disable=invalid-n
         - `pki_message`: The PKIMessage structure or raw DER-encoded data to be patched. \
         If a bytes object is provided, it is parsed into a PKIMessage structure before updating.
         - `new_time`: Specifies the new time to set for the `messageTime` field. If not provided, the current time
-        will be used as the default. This parameter can be a string representing the time in the default format used
-        by the operating system.
+        will be used as the default. The time must be UTC, e.g. from `Get Current Date    UTC`: a string or a
+        `datetime` without a time zone is written as UTC unchanged, and a `datetime` with another time zone is
+        not converted.
 
     Returns:
     -------
@@ -4366,6 +4367,7 @@ def patch_messageTime(  # noqa D417 undocumented-param pylint: disable=invalid-n
 
     Examples:
     --------
+    | ${today}= | Get Current Date | UTC |
     | ${patched_message}= | Patch messageTime | ${pki_message} | new_time=${today} |
     | ${patched_message}= | Patch messageTime | ${pki_message} |
 

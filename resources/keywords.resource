@@ -287,8 +287,8 @@ Load And Refresh PKIMessage From File
     ...            ---------
     ...            - `path` (string): PEM file path.
     ...            - `transaction_id` (bytes): New transaction ID. Default to `None`, which means a 16-byte random value.
-    ...            - `message_time` (datetime): New message time. Default to `None`, which means \
-    ...            the current time will be used.
+    ...            - `message_time` (datetime or string): New message time in UTC (e.g. `Get Current Date    UTC`). \
+    ...            Default to `None`, which means the current time will be used.
     ...
     ...            Returns:
     ...            -------
