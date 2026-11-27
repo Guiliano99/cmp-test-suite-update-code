@@ -2,6 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(make help)",
+      "Bash(make keywords)",
       "Bash(make unittest)",
       "Bash(make dryrun)",
       "Bash(make verify)",
@@ -11,6 +12,7 @@
       "Bash(make test-pq-hybrid env=mock_ca)",
       "Bash(make test-mock-ca)",
       "Bash(uv run make help)",
+      "Bash(uv run make keywords)",
       "Bash(uv run make unittest)",
       "Bash(uv run make dryrun)",
       "Bash(uv run make verify)",

@@ -26,28 +26,36 @@ Prefer existing keywords and helpers over adding new CMP logic. Commands run fro
 1. Choose the owning suite:
    - General CMP behavior: `tests/basic.robot`, `tests/lwcmp.robot`.
    - MAC protection: `tests/mac_alg_pki_prot_tests.robot`.
-   - Signature protection: `tests/trad_alg_pki_prot_tests.robot`.
+   - Signature protection: `tests/trad_alg_pki_prot_tests.robot` is a `Test Template` suite, so add a data row
+     there; free-form tests go to `tests/lwcmp.robot` (section 3.2).
+   - Search the suites for a test of the same behavior first, and extend it instead of adding a duplicate.
    - PQ and hybrid protection: `tests_pq_and_hybrid/pq_sig_pkiprotection.robot`.
-2. Search existing keywords before you write new ones:
-   - `resources/keywords.resource`
-   - `resources/protectionutils.py`
-   - `resources/checkutils.py`
-   - `resources/cmputils.py`
-   - `resources/certbuildutils.py`
-3. Check whether a generator writes the test cases you change. `scripts/generate_pki_prot_tests.py` writes
-   PKIProtection test cases; change the generator, not only the `.robot` file.
+2. Search existing keywords before you write new ones ("Finding existing keywords" in `AGENTS.md`):
+   - `uv run make keywords`, then `grep -i '<word>' doc/keywords.txt` finds the file that defines a keyword.
+   - `.venv/bin/libdoc --pythonpath=./ <file> show "<Keyword Name>"` shows its arguments and documentation.
+   - Most auth and protection keywords are in `resources/keywords.resource`, `resources/protectionutils.py`,
+     `resources/checkutils.py`, `resources/cmputils.py` and `resources/certbuildutils.py`.
+3. Check whether a generator writes the test cases you change. `scripts/generate_pki_prot_tests.py` writes the
+   data rows of `tests/trad_alg_pki_prot_tests.robot` (to `pki_protection_test.txt`) and
+   `tests_pq_and_hybrid/pq_sig_pkiprotection.robot` (to `pki_protection_test_pq.txt`). Change the generator,
+   then replace the rows with its output.
 4. Add or modify the test case with:
    - a descriptive test case name
    - `[Documentation]`
    - `[Tags]` from the table below
    - explicit assertions
    - RFC section or errata references in the documentation
+   - only the arguments the test needs, named as `libdoc show` lists them; the keyword defaults cover the rest.
+     Robot accepts a wrong name without an error in most cases (see step 2 of "Finding existing keywords" in
+     `AGENTS.md`).
 5. Keep tests deterministic: use existing key and certificate fixtures, avoid hidden state and implicit global
    variables, and reuse established protection patterns.
-6. Update the generated documentation when the coverage changes: `make docs`, and `make unittest` for the Python
-   code.
-7. Run the relevant Robot suites.
-8. Check the source files:
+6. Run `make unittest` when you changed Python code. `make docs` only writes the ignored `doc/` folder; skip it.
+7. Check the changed suite without a CA: `.venv/bin/robotcode analyze code <suite file>` must show no
+   `KeywordNotFound` or `DataError` on your lines (`VariableNotFound` for `Suite Setup` variables is expected).
+   Read the `Errors: N` summary line, not the exit code.
+8. Run the relevant Robot suites.
+9. Check the source files:
    - `.venv/bin/ruff check resources/`
    - `.venv/bin/robocop check <changed .robot and .resource files>`
 
@@ -150,9 +158,8 @@ Introduce a new tag only when it is a stable and useful selection dimension, and
    changes what is covered.
 3. Check that the selection works without running against a server:
    `.venv/bin/python -m robot --dryrun --include <new-tag> --output NONE --log NONE --report NONE <suite file>`.
-4. Regenerate the documentation with `make docs`.
-5. Change the generator in `scripts/` if it writes the tests that carry the tag.
-6. Run `.venv/bin/robocop check` on the changed files.
+4. Change the generator in `scripts/` if it writes the tests that carry the tag.
+5. Run `.venv/bin/robocop check` on the changed files.
 
 ## Completion checklist
 
@@ -162,6 +169,6 @@ Introduce a new tag only when it is a stable and useful selection dimension, and
 - [ ] Assertions are explicit and deterministic.
 - [ ] RFC or errata references are documented.
 - [ ] The targeted Robot suites pass.
-- [ ] The unit tests pass (`make unittest`).
-- [ ] The documentation is regenerated when it is relevant (`make docs`).
+- [ ] The unit tests pass (`make unittest`) when Python code changed.
+- [ ] `robotcode analyze code` shows no `KeywordNotFound` or `DataError` on the changed lines.
 - [ ] The source files pass `ruff` and `robocop`.

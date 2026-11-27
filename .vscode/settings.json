@@ -1,7 +1,7 @@
 {
   "chat.tools.terminal.autoApprove": {
     // make targets that stay on this machine (see AGENTS.md)
-    "/^(uv run )?make (help|unittest|dryrun|verify|verifyformat|start-mock-ca|test-mock-ca)$/": true,
+    "/^(uv run )?make (help|keywords|unittest|dryrun|verify|verifyformat|start-mock-ca|test-mock-ca)$/": true,
     "/^(uv run )?make (test|test-pq-hybrid) env=mock_ca$/": true,
     // the tools these targets call, only with the listed options and relative paths without
     // "..": any other option, an absolute path, a redirection or a $(...) still asks
@@ -14,6 +14,8 @@
     "/^(uv run )?(PYTHONPATH=\\.\\/resources(:\\.\\/)? )?(\\.venv\\/bin\\/)?pyright( +(?!\\S*\\.\\.)[\\w.][\\w.\\/-]*)*$/": true,
     "/^(uv run )?(\\.venv\\/bin\\/)?codespell( +(--check-filenames|--skip[ =](?!\\S*\\.\\.)(\"[\\w*.,\\/-]+\"|[\\w.][\\w.,\\/-]*)|(-L|--ignore-words-list)[ =][\\w,]+|(?!\\S*\\.\\.)[\\w.][\\w.\\/-]*))*$/": true,
     "/^(uv run )?(\\.venv\\/bin\\/)?python3? (\\.\\/)?mock_ca\\/ca_handler\\.py( --port \\d+)?$/": true,
+    "/^(uv run )?(\\.venv\\/bin\\/)?(libdoc|python3? -m robot\\.libdoc)( --pythonpath[ =]\\.\\/?)? (?!\\S*\\.\\.)[\\w.][\\w.\\/-]* (list|show)( +(\"[\\w .*-]+\"|'[\\w .*-]+'|[\\w.][\\w.-]*))*$/": true,
+    "/^(uv run )?(\\.venv\\/bin\\/)?robotcode analyze code( +(?!\\S*\\.\\.)[\\w.][\\w.\\/-]*)*$/": true,
     "/^uv tree( +(--outdated|--depth \\d+|--package [\\w-]+))*$/": true
   }
 }

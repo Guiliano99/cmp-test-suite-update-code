@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: Copyright 2024 Siemens AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# Read by robotcode (CLI and VS Code extension) and rf-mcp, so they resolve the libraries and
+# config/<environment>.resource like `make test env=mock_ca`. Plain `robot` and `make` ignore it.
+output-dir = "reports"
+python-path = ["./"]
+variables = { environment = "mock_ca" }

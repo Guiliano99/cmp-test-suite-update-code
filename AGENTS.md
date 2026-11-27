@@ -54,7 +54,9 @@ the checkout, write ignored output files, or talk to the Mock CA on `127.0.0.1`.
 before running any other target.
 
 In VS Code, Copilot may also call the tools these targets run without asking: `robot`, `pytest`,
-`ruff check`, `reuse lint`, `pylint`, `pyright`, `codespell` and `mock_ca/ca_handler.py`, but
+`ruff check`, `reuse lint`, `pylint`, `pyright`, `codespell`, `mock_ca/ca_handler.py`,
+`libdoc <file> list` / `show` and `robotcode analyze code` (see "Finding existing keywords"), with
+or without `uv run` or `.venv/bin/` in front, but
 only with relative paths inside the checkout and the options the targets use, plus `-k`, `-x`,
 `-q`, `-v` (pytest) and `--include`, `--exclude` (robot). `robot` needs `--dryrun` or
 `--variable environment:mock_ca`. Any other option, an absolute or `..` path, a redirection or a
@@ -63,6 +65,7 @@ only with relative paths inside the checkout and the options the targets use, pl
 | Task | Command | Allowed |
 | --- | --- | --- |
 | List the targets | `make help` | yes |
+| Find the file that defines a keyword: writes `doc/keywords.txt` (about 25 s) | `make keywords` | yes |
 | Changed Python code in `resources/`, `pq_logic/` or `mock_ca/` | `make unittest` | yes |
 | Changed a `.robot` or `.resource` file: check that all suites load (several minutes) | `make dryrun` | yes |
 | Before a commit: reuse, ruff, pylint, pyright, codespell (needs the `dev` extra) | `make verify` | yes |
@@ -81,8 +84,12 @@ only with relative paths inside the checkout and the options the targets use, pl
   without the user's go-ahead.
 - The Robot suites use post-quantum keys: install the `pq` extra (`uv sync --extra pq`) before
   a test target. The unit tests do not need it.
-- Start the Mock CA in the background before a Mock CA test target and stop it afterwards. It
-  runs with the Flask debugger and reloader, so editing a `.py` file restarts it during a run.
+- Start the Mock CA in the background before a Mock CA test target, wait for its port, and stop it
+  afterwards: `make start-mock-ca > /tmp/mock_ca.log 2>&1 &`, then
+  `until ss -ltn | grep -q ':5000 '; do sleep 1; done`. Stop it with `pkill -f '[c]a_handler.py'`:
+  the brackets keep the pattern from matching your own shell, and killing only the first process
+  leaves the reloader's child on port 5000. It runs with the Flask debugger and reloader, so editing
+  a `.py` file restarts it during a run.
 - Some unit tests start their own Mock CA on port 6002; they fail if that port is in use.
 - Robot writes its results to `reports/` (`make dryrun` to the repository root).
   `reports/readme.md` is tracked: do not delete the folder.
@@ -92,6 +99,40 @@ only with relative paths inside the checkout and the options the targets use, pl
   (add `--dryrun` to only load it).
 - `scripts/generate_*_tests.py` / `scripts/generate_alg_test_cases.py` – generate Robot test
   cases and algorithm matrices; regenerate outputs when referenced RFC/CMP behavior changes.
+
+## Finding existing keywords
+
+Reuse an existing keyword before you write a new one, and look it up instead of guessing its name.
+Robot turns a Python function into a keyword by its name (`generate_key` becomes `Generate Key`)
+unless `@keyword(name=...)` renames it or `@not_keyword` hides it, so a search for `def ` also
+finds helpers that tests cannot call. Ask Robot instead:
+
+1. Find the file: `make keywords` writes one line per keyword, `<file>: <name>`, to
+   `doc/keywords.txt`. Search it, e.g. `grep -i 'status' doc/keywords.txt`.
+2. Read the arguments and documentation of one keyword:
+   `uv run libdoc --pythonpath=./ resources/keyutils.py show "Generate Key"`
+   (`list '*status*'` instead of `show` lists the matching names in one file).
+   Pass only the arguments the test needs and leave the rest to the keyword's defaults: the
+   Python keywords set their own, and many take `**params`. Robot does not catch a wrong name in
+   most cases. With `**params` it is accepted and ignored. Without it, a misspelled first
+   `name=value` becomes the next positional argument as text (`invalid_key=True` sets `for_kga`
+   to the string `"invalid_key=True"`). Copy argument names from `libdoc show`.
+3. Start from the closest existing test case: same suite, message type and `[Tags]`. If one
+   already checks the behavior, extend it instead of adding a second test. Most tests build,
+   protect, send and check a message with `Build Ir From Key`, `Protect PKIMessage`,
+   `Exchange PKIMessage`, `PKIMessage Body Type Must Be` and `PKIStatus Must Be`.
+   `resources/keywords.resource` already imports the common libraries (`cmputils.py`,
+   `protectionutils.py`, `keyutils.py` and more, see its `*** Settings ***`); import only what is
+   missing.
+4. Check the file without a CA (about 15 s): `uv run robotcode analyze code tests/<file>.robot`.
+   `robot.toml` gives robotcode the Python path and `environment=mock_ca`. Read the last line,
+   `Files: 1, Errors: N, ...`, not the exit code, which is also non-zero for infos and hints. The
+   lines you wrote must have no `[ERROR] KeywordNotFound` or `DataError`. `VariableNotFound` for a
+   variable that `Suite Setup` sets at run time, such as `${RSA_KEY}`, is expected: the existing
+   suites have about 250. When you change an existing file, compare the output before and after.
+5. Load the file with `--dryrun` (`make dryrun` when you changed a shared `.resource` file), then
+   run it against the Mock CA (see "Make targets"). Always pass `--variable environment:mock_ca`:
+   every suite defaults to `cloudpki`, an external CA.
 
 ## Coding standards
 
@@ -111,7 +152,8 @@ The default license is `Apache-2.0` (Copyright Siemens AG, 2024).
 
 ## Agent notes
 
-- Prefer existing keywords in `resources/` over reimplementing CMP logic.
+- Prefer existing keywords in `resources/` over reimplementing CMP logic (see "Finding existing
+  keywords").
 - Do not regenerate or commit generated artifacts (`report.html`, `output.xml`,
   `log.html`, bytecode caches) unless explicitly required.
 - When adding IETF-derived structures, follow the repository's ASN.1/pyasn1
@@ -119,5 +161,5 @@ The default license is `Apache-2.0` (Copyright Siemens AG, 2024).
 - When changing referenced algorithms, RFCs, or external citations, check and update
   `REFERENCES.md` (where present) so version and source references stay current.
   Relevant CMP algorithm profiles include RFC 9481 and RFC 9483.
-- When adding new test cases, run the targeted Robot suites and `make unittest`
-  before claiming completion.
+- When adding new test cases, run the targeted Robot suites, and `make unittest` when Python code
+  changed, before claiming completion.

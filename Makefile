@@ -10,6 +10,7 @@ help:
 	@echo  '  test-pq-hybrid-verbose - Run all PQ and Hybrid compliance tests, including verbose tests (results will be in reports/)'
 	@echo  '  teslog       - Run all compliance tests, store results in timestamped subirectories in reports/'
 	@echo  '  docs          - Produce documentation files and store them in doc/'
+	@echo  '  keywords      - List every keyword as "<file>: <name>" in doc/keywords.txt, to search with grep'
 	@echo  '  unittest     - Run unit tests for the test suite itself '
 	@echo  '  unittest-docker    - Run unit tests in a docker container'
 	@echo  '  build-unittest    - Build the unittest docker image'
@@ -90,6 +91,14 @@ docs:
 	python -m robot.testdoc tests/ doc/test-suites.html
 	python -m robot.testdoc tests_pq_and_hybrid/ doc/test-pq-hybrid-suites.html
 	python -m robot.testdoc tests_mock_ca/ doc/test-mock-ca.html
+
+# libdoc applies @keyword(name=...) and @not_keyword, which a grep for "def " does not.
+keywords:
+	@mkdir -p doc
+	@for f in resources/*.resource resources/*.py pq_logic/*.py; do \
+		PYTHONWARNINGS=ignore python -m robot.libdoc --pythonpath=./ "$$f" list | sed "s|^|$$f: |"; \
+	done > doc/keywords.txt
+	@echo "$$(wc -l < doc/keywords.txt) keywords in doc/keywords.txt"
 
 autoformat:
 	ruff check --fix .
