@@ -283,6 +283,7 @@ Build IR Request KEMBasedMac Protected
     ...
     [Arguments]    ${tx_id}    ${ss}    ${for_mac}=False  ${cert_chain}=${None}   ${bad_message_check}=False
     ${cm}=    Get Next Common Name
+    ${key}=    Generate Default Key
     IF   ${for_mac}
         VAR   ${exclude_fields}=  ${None}
     ELSE
