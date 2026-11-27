@@ -7,12 +7,12 @@
     // "..": any other option, an absolute path, a redirection or a $(...) still asks
     "/^(uv run )?(\\.venv\\/bin\\/)?robot(?=.* --dryrun( |$))( +(--dryrun|--pythonpath[ =]\\.\\/?|(--outputdir|-d)[ =](?!\\S*\\.\\.)[\\w.][\\w.\\/-]*|(--include|-i|--exclude|-e)[ =][\\w-]+|(--variable|-v)[ =]environment:\\w+|(?!\\S*\\.\\.)[\\w.][\\w.\\/-]*))+$/": true,
     "/^(uv run )?(\\.venv\\/bin\\/)?robot(?=.* (--variable|-v)[ =]environment:mock_ca( |$))( +(--dryrun|--pythonpath[ =]\\.\\/?|(--outputdir|-d)[ =](?!\\S*\\.\\.)[\\w.][\\w.\\/-]*|(--include|-i|--exclude|-e)[ =][\\w-]+|(--variable|-v)[ =]environment:mock_ca|(?!\\S*\\.\\.)[\\w.][\\w.\\/-]*))+$/": true,
-    "/^(uv run )?(PYTHONPATH=\\.\\/resources(:\\.\\/)? )?(\\.venv\\/bin\\/)?(python3? -m pytest|pytest)( +(-[qvx]+|-n (auto|\\d+)|-k \\w+|(?!\\S*\\.\\.)[\\w.][\\w.\\/:-]*))*$/": true,
+    "/^(uv run )?(PYTHONPATH=\\.\\/resources(:\\.\\/)? )?(\\.venv\\/bin\\/)?(python3? -m pytest|pytest)( +(-[qvx]+|-n (auto|\\d+)|-k \\w+|(?!\\S*\\.\\.)[\\w.][\\w.\\/-]*(::\\w+)*))*$/": true,
     "/^(uv run )?(\\.venv\\/bin\\/)?ruff check( +(?!\\S*\\.\\.)[\\w.][\\w.\\/-]*)*$/": true,
     "/^(uv run )?(\\.venv\\/bin\\/)?reuse lint$/": true,
-    "/^(uv run )?(\\.venv\\/bin\\/)?pylint( +(--ignore-paths=(\"[\\w^.|\\/*-]+\"|[\\w^.\\/-]+)|(?!\\S*\\.\\.)[\\w.][\\w.\\/-]*))*$/": true,
+    "/^(uv run )?(\\.venv\\/bin\\/)?pylint( +(--ignore-paths=(\"[\\w^.|\\/*-]+\"|[\\w.\\/-]+)|(?!\\S*\\.\\.)[\\w.][\\w.\\/-]*))*$/": true,
     "/^(uv run )?(PYTHONPATH=\\.\\/resources(:\\.\\/)? )?(\\.venv\\/bin\\/)?pyright( +(?!\\S*\\.\\.)[\\w.][\\w.\\/-]*)*$/": true,
-    "/^(uv run )?(\\.venv\\/bin\\/)?codespell( +(--check-filenames|--skip[ =](?!\\S*\\.\\.)(\"[\\w*.,\\/-]+\"|[\\w*.][\\w*.,\\/-]*)|(-L|--ignore-words-list)[ =][\\w,]+|(?!\\S*\\.\\.)[\\w.][\\w.\\/-]*))*$/": true,
+    "/^(uv run )?(\\.venv\\/bin\\/)?codespell( +(--check-filenames|--skip[ =](?!\\S*\\.\\.)(\"[\\w*.,\\/-]+\"|[\\w.][\\w.,\\/-]*)|(-L|--ignore-words-list)[ =][\\w,]+|(?!\\S*\\.\\.)[\\w.][\\w.\\/-]*))*$/": true,
     "/^(uv run )?(\\.venv\\/bin\\/)?python3? (\\.\\/)?mock_ca\\/ca_handler\\.py( --port \\d+)?$/": true,
     "/^uv tree( +(--outdated|--depth \\d+|--package [\\w-]+))*$/": true
   }
