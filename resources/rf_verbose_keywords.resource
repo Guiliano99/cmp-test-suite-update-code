@@ -57,62 +57,6 @@ Validate PKI Failinfo For Verbose Testing
         PKIStatusInfo Failinfo Bit Must Be    ${response}    ${expected_failinfo}    ${exclusive}
     END
 
-Build Request With BadPOP
-    [Documentation]    Builds a request with a bad proof of possession (POP) for the given body name,
-    ...                key, and hash algorithm. Expects a signature algorithm to be provided.
-    ...                The request is built with the specified parameters and **unprotected** returned.
-    ...
-    ...                Arguments:
-    ...                ---------
-    ...                - `body_name`: The name of the body to be used in the request (e.g., "ir").
-    ...                - `alg_name`: The name of the signature algorithm to be used (e.g., "rsa"
-    ...                "ml-dsa-44-sha512") (the `by_name` flag is used to determine the key type).
-    ...                - `hash_alg`: The name of the hash algorithm to be used. Defaults to "sha256".
-    ...                - `use_rsa_pss`: Whether to use RSA-PSS. Defaults to `False`.
-    ...                - `use_pre_hash`: Whether to use pre-hashing for composite keys. Defaults to `False`.
-    ...
-    ...                Returns:
-    ...                -------
-    ...                - The built request with a bad POP, which is **unprotected**.
-    ...
-    ...                Examples:
-    ...                --------
-    ...                | Build Request With BadPOP | ir | rsa | sha256 |
-    ...                | Build Request With BadPOP | ir | ml-dsa-44-sha512 | sha512 |
-    ...                | Build Request With BadPOP | ir | rsa | sha256 | True |
-    ...
-    [Tags]    build_request    bad_pop
-    [Arguments]    ${body_name}    ${alg_name}   ${hash_alg}=sha256   ${use_rsa_pss}=${False}   ${use_pre_hash}=${False}
-    ${key}=   Generate Unique Key    ${alg_name}   by_name=True
-    ${spki}=   Prepare SubjectPublicKeyInfo    ${key}   use_rsa_pss=${use_rsa_pss}
-    ...        use_pre_hash=${use_pre_hash}
-    ${cm}=   Get Next Common Name
-    ${cert_req}=   Prepare CertRequest   ${key}   common_name=${cm}   spki=${spki}
-    ${popo}=   Prepare Signature POPO    ${key}   ${cert_req}    ${hash_alg}   bad_pop=True
-    ...        use_rsa_pss=${use_rsa_pss}    use_pre_hash=${use_pre_hash}
-    IF  '${body_name}' == 'ir'
-        ${body}=   Build Ir From Key    ${key}   ${cm}  sender=${SENDER}  recipient=${RECIPIENT}
-        ...      popo=${popo}   cert_request=${cert_req}
-    ELSE IF    '${body_name}' == 'cr'
-        ${body}=   Build Cr From Key    ${key}   ${cm}  sender=${SENDER}  recipient=${RECIPIENT}
-        ...      popo=${popo}   cert_request=${cert_req}
-    ELSE IF    '${body_name}' == 'ccr'
-        ${body}=   Build Ccr From Key    ${key}   ${cm}  sender=${SENDER}  recipient=${RECIPIENT}
-        ...      popo=${popo}  cert_request=${cert_req}
-    ELSE IF    '${body_name}' == 'kur'
-        ${body}=   Build Key Update Request      ${key}   common_name=${cm}   sender=${SENDER}  recipient=${RECIPIENT}
-        ...      popo=${popo}  cert_request=${cert_req}
-    ELSE IF    '${body_name}' == 'krr'
-        ${body}=   Build Krr From Key    ${key}   ${cm}  sender=${SENDER}  recipient=${RECIPIENT}
-        ...      popo=${popo}   cert_request=${cert_req}
-    ELSE IF    '${body_name}' == 'p10cr'
-        ${body}=   Build P10Cr From Key    ${key}   ${cm}  sender=${SENDER}  recipient=${RECIPIENT}
-        ...      popo=${popo}
-    ELSE
-        Fail    Invalid body name: '${body_name}', valid options are: ir, cr, ccr, kur, krr, p10cr.
-    END
-    RETURN    ${body}
-
 Build Added Protection Body Inner
     [Documentation]    Build a PKIMessage with added protection.
     [Arguments]    ${name}   &{params}

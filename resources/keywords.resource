@@ -508,36 +508,6 @@ Validate Certificate Was Issued For Expected Alg
     ${cert}=    Get Cert From PKIMessage    ${response}    ${index}
     Validate Migration OID In Certificate    ${cert}    ${expected_alg}
 
-Generate Key And CSR
-    [Documentation]    Generate a fresh private key and a signed Certificate Signing Request (CSR)
-    ...                for the given algorithm and subject. The CSR is returned in DER format.
-    ...
-    ...                Arguments:
-    ...                ---------
-    ...                - `key_algo_name` (string): Name of the key algorithm.
-    ...                - `CN` (string): Common Name for the CSR subject.
-    ...                - `key_params` (dict, mapping): Algorithm‑specific parameters.
-    ...
-    ...                Returns:
-    ...                -------
-    ...                - The CRS data in DER format.
-    ...                - Generated private key.
-    ...
-    ...                Raises:
-    ...                ------
-    ...                - `ValueError`: When key generation or CSR creation fails.
-    ...
-    ...                Examples:
-    ...                --------
-    ...                | ${csr_data}  ${key}= | Generate Key And CSR | rsa | ${cn} | length=2048 |
-    ...
-    [Tags]    csr  crypto  key
-    [Arguments]    ${key_algo_name}    ${cn}    ${key_params}
-    ${key}=    Generate Unique Key   ${key_algo_name}    ${key_params}
-    ${csr_signed}    ${key}=    Generate Signed CSR    ${cn}    ${key}
-    ${csr_data}=    Decode Pem String    ${csr_signed}
-    RETURN    ${csr_data}    ${key}
-
 PKIMessage Body Type Must Be
     [Documentation]    Ensure that the response type in a PKIMessage is of a certain type.
     ...
@@ -1418,49 +1388,6 @@ Exchange Migration PKIMessage
     VAR     ${APPEND_PKIBODY_URL_SUFFIX}=    ${False}     scope=TEST
     ${response}=    Exchange PKIMessage    ${ir}    ${url}
     RETURN    ${response}
-
-Exchange Hybrid PKIMessage
-    [Documentation]    Exchange a PKIMessage for a hybrid algorithm certificate.
-    ...
-    ...                Arguments:
-    ...                ---------
-    ...                - `name` (str): The hybrid algorithm name (e.g., composite-kem).
-    ...                - `pq_name` (str): The PQ KEM algorithm name (e.g., ml-kem-768, ml-kem-1024).
-    ...                - `trad_name` (str): The traditional algorithm name (e.g., rsa2048, ecdh-secp384r1, x25519).
-    ...                - `invalid_key_size` (bool): Whether to use an invalid key size. Defaults to `False`.
-    ...                - `extensions` (Extensions): Additional certificate extensions (default: None).
-    ...                - `optional_args` (dict, mapping): Optional key-value pairs to set variables for the protection.
-    ...                (for the key generation, the certificate request, and the protection).
-    ...
-    ...                Returns:
-    ...                -------
-    ...                - The response PKIMessage.
-    ...                - The key used to generate the request.
-    ...
-    ...                Examples:
-    ...                --------
-    ...                | ${response} ${key}= | Exchange Composite KEM PKIMessage | composite-kem | rsa | ml-kem-768 |  length=2048 |
-    ...                | ${response} ${key}= | Exchange Composite KEM PKIMessage | composite-kem | ecdh | ml-kem-768 |  curve=secp256r1 |
-    ...
-    [Arguments]    ${name}    ${pq_name}    ${trad_name}    ${invalid_key_size}=False    ${extensions}=${None}    &{optional_args}
-    ${length}=  Get From Dictionary    ${optional_args}    length   ${None}
-    ${curve}=  Get From Dictionary    ${optional_args}    curve   ${None}
-    ${key}=   Generate Key    algorithm=${name}    trad_name=${trad_name}    pq_name=${pq_name}
-    ...       length=${length}    curve=${curve}
-    ${cm}=    Get Next Common Name
-    ${spki}=  Prepare SubjectPublicKeyInfo    ${key}    invalid_key_size=${invalid_key_size}
-    ${use_pre_hash}=   Get From Dictionary    ${optional_args}    use_pre_hash    ${False}
-    ${use_rsa_pss}=    Get From Dictionary    ${optional_args}    use_rsa_pss    ${False}
-    ${cert_req_msg}=    Prepare CertReqMsg  ${key}  spki=${spki}    common_name=${cm}
-    ...           extensions=${extensions}
-    ...           use_pre_hash=${use_pre_hash}
-    ...           use_rsa_pss=${use_rsa_pss}
-    ${ir}=    Build Ir From Key    ${key}    cert_req_msg=${cert_req_msg}    exclude_fields=senderKID,sender
-    ${protected_ir}=    Default Protect PKIMessage    ${ir}
-    ${base_url}=   Get From Dictionary    ${optional_args}    base_url    ${CA_BASE_URL}
-    ${suffix}=   Get From Dictionary    ${optional_args}    suffix    ${ISSUING_SUFFIX}
-    ${response}=    Exchange Migration PKIMessage    ${protected_ir}    ${base_url}    ${suffix}
-    RETURN    ${response}   ${key}
 
 Validate EncrCert For KEM
     [Documentation]    Validate that the encrypted certificate for the KEM algorithm is correct.
