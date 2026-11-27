@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import unittest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import resources.certutils
@@ -11,13 +12,20 @@ from pq_logic.hybrid_sig.cert_binding_for_multi_auth import (
     get_related_cert_from_list,
     prepare_related_cert_extension,
     prepare_requester_certificate,
+    server_side_validate_cert_binding_for_multi_auth,
     validate_multi_auth_binding_csr,
 )
 from pq_logic.hybrid_structures import RequesterCertificate
 from pyasn1.codec.der import decoder, encoder
 
 from resources import utils
-from resources.certbuildutils import build_csr, generate_certificate, sign_csr
+from resources.certbuildutils import (
+    build_csr,
+    generate_certificate,
+    prepare_basic_constraints_extension,
+    prepare_validity,
+    sign_csr,
+)
 from resources.certutils import (
     build_cert_chain_from_dir,
     load_certificates_from_dir,
@@ -150,3 +158,61 @@ class TestCertBindingMultiAuth(unittest.TestCase):
             _ = validate_multi_auth_binding_csr(csr=csr, trustanchors="data/unittest",
                                                 crl_check=False,
                                                 load_chain=True)
+
+
+class TestServerSideValidateCertBindingForMultiAuth(unittest.TestCase):
+    """RFC 9763 Section 4.1: Cert B is an end-entity certificate, and the related certificate (Cert A)
+    SHOULD be valid at the time of issuance; the overlap of the two validity periods is a Subscriber concern."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.key = load_private_key_from_file("data/keys/private-key-rsa.pem", password=None)
+
+    def _cert(self, not_before_days: int, not_after_days: int, extensions=None):
+        now = datetime.now(timezone.utc)
+        validity = prepare_validity(now + timedelta(days=not_before_days), now + timedelta(days=not_after_days))
+        return generate_certificate(self.key, "CN=Hans the Tester", validity=validity, extensions=extensions)
+
+    def test_valid_certs_are_accepted(self):
+        """
+        GIVEN a related certificate (Cert A) and an issued certificate (Cert B), both valid now.
+        WHEN the server validates the binding,
+        THEN no exception is raised.
+        """
+        server_side_validate_cert_binding_for_multi_auth(self._cert(-1, 30), self._cert(-1, 30))
+
+    def test_expired_related_cert_is_rejected(self):
+        """
+        GIVEN a related certificate (Cert A) that expired yesterday.
+        WHEN the server validates the binding,
+        THEN a ValueError for Cert A is raised.
+        """
+        with self.assertRaisesRegex(ValueError, "Cert A is not valid"):
+            server_side_validate_cert_binding_for_multi_auth(self._cert(-1, 30), self._cert(-30, -1))
+
+    def test_not_yet_valid_related_cert_is_rejected(self):
+        """
+        GIVEN a related certificate (Cert A) that becomes valid tomorrow.
+        WHEN the server validates the binding,
+        THEN a ValueError for Cert A is raised.
+        """
+        with self.assertRaisesRegex(ValueError, "Cert A is not valid"):
+            server_side_validate_cert_binding_for_multi_auth(self._cert(-1, 30), self._cert(1, 30))
+
+    def test_future_dated_issued_cert_is_accepted(self):
+        """
+        GIVEN an issued certificate (Cert B) that becomes valid tomorrow and a related certificate valid now.
+        WHEN the server validates the binding,
+        THEN no exception is raised, because only the related certificate must be valid at issuance.
+        """
+        server_side_validate_cert_binding_for_multi_auth(self._cert(1, 30), self._cert(-1, 30))
+
+    def test_ca_cert_as_issued_cert_is_rejected(self):
+        """
+        GIVEN an issued certificate (Cert B) with basicConstraints cA=TRUE.
+        WHEN the server validates the binding,
+        THEN a ValueError is raised.
+        """
+        ca_cert = self._cert(-1, 30, extensions=[prepare_basic_constraints_extension(ca=True)])
+        with self.assertRaisesRegex(ValueError, "CA certificate"):
+            server_side_validate_cert_binding_for_multi_auth(ca_cert, self._cert(-1, 30))

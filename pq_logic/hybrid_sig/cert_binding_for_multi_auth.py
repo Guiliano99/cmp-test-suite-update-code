@@ -598,37 +598,22 @@ def server_side_validate_cert_binding_for_multi_auth(ee_cert, related_cert) -> N
     :param ee_cert: The certificate being issued (Cert B), which defines the required KU and EKU.
     :param related_cert: The related certificate (Cert A) being validated.
     """
-    # Only on ee-certificates
-    extn = certextractutils.get_extension(ee_cert["extensions"], rfc5280.id_ce_basicConstraints)
-
-    if extn is not None:
-        if extn["cA"]:
-            raise ValueError("The `Cert A` is a CA certificate.")
+    # RFC 9763 Section 4.1: "this extension MUST only be included in the end-entity certificate."
+    if _validate_is_ca_cert(ee_cert["tbsCertificate"]["extensions"]):
+        raise ValueError("The `Cert B` is a CA certificate.")
 
     # MUST ensure that the related certificate at least contains the KU bits and EKU
     # OIDs being asserted in the certificate being issued
     validate_ku_and_eku_related_cert(ee_cert, related_cert)
 
-    # SHOULD determine that all certificates are valid at the time of issuance.
-    # The usable overlap of validity periods is a Subscriber concern.
-
+    # "SHOULD determine that the related certificate is valid at the time of issuance. The usable
+    # overlap with the validity period of the newly issued certificate is a Subscriber concern."
     now = datetime.now(timezone.utc).replace(microsecond=0)
-
-    val_cert_a = related_cert["tbsCertificate"]["validity"]
-    cert_b = ee_cert["tbsCertificate"]["validity"]
-
-    rel_cert_not_valid_before = pyasn1_time_obj_to_py_datetime(val_cert_a["notBefore"])
-    rel_cert_not_valid_after = pyasn1_time_obj_to_py_datetime(val_cert_a["notAfter"])
-
-    cert_b_not_valid_before = pyasn1_time_obj_to_py_datetime(cert_b["notBefore"])
-    cert_b_not_valid_after = pyasn1_time_obj_to_py_datetime(cert_b["notAfter"])
-
-    if not rel_cert_not_valid_after <= now <= rel_cert_not_valid_before:
+    validity = related_cert["tbsCertificate"]["validity"]
+    not_before = pyasn1_time_obj_to_py_datetime(validity["notBefore"])
+    not_after = pyasn1_time_obj_to_py_datetime(validity["notAfter"])
+    if not not_before <= now <= not_after:
         raise ValueError("Cert A is not valid at the time of issuance.")
-    if not cert_b_not_valid_before <= now <= cert_b_not_valid_after:
-        raise ValueError("Cert B is not valid at the time of issuance.")
-    if rel_cert_not_valid_after < rel_cert_not_valid_before:
-        logging.info("Cert A and Cert B do not have an overlapping validity period.")
 
 
 def _convert_to_crypto_lib_cert(cert: rfc9480.CMPCertificate) -> x509.Certificate:
