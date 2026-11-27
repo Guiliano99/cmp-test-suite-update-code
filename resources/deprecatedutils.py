@@ -62,7 +62,7 @@ def _build_cert(
 
     # TODO change in the future. may allow str
     if not not_valid_before:
-        not_valid_before = datetime.datetime.now() - datetime.timedelta(days=1)
+        not_valid_before = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)
 
     # Create the certificate builder
     cert_builder = (

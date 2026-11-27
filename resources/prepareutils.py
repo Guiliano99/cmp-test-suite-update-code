@@ -161,7 +161,7 @@ def _prepare_date_time_object(
         new_time_obj = DateTime.convert_date(date, result_format="datetime")  # type: ignore
         new_time_obj: datetime
     elif isinstance(date, float):
-        new_time_obj = datetime.fromtimestamp(date)
+        new_time_obj = datetime.fromtimestamp(date, tz=timezone.utc)
 
     elif isinstance(date, datetime):
         new_time_obj = date

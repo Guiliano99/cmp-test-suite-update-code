@@ -21,6 +21,7 @@ select = [
     "D",  # docstring checker
     "T", # temporary rules.
     # As an example, show `print` statements in the code.
+    "DTZ", # flake8-datetimez: every datetime must carry a time zone (ASN.1 times are UTC).
 ]
 
 [lint.per-file-ignores]
