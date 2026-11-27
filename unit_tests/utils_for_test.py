@@ -60,6 +60,15 @@ else:
     oqs = None  # pylint: disable=invalid-name
 
 
+def utc_now() -> datetime:
+    """Return the current time in UTC, with the time zone set.
+
+    A naive `datetime.now()` is the local time, but pyasn1 and `cryptography` encode a `datetime`
+    without a time zone as UTC. Away from UTC, such a time is off by the local UTC offset.
+    """
+    return datetime.now(timezone.utc)
+
+
 def build_pkimessage(body_type="p10cr", **params):
     """Build a PKIMessage for test cases."""
     if body_type == "p10cr":

@@ -393,7 +393,7 @@ class CertRevStateDB:
 
         for serial_number in nums:
             builder = builder.add_revoked_certificate(
-                x509.RevokedCertificateBuilder(serial_number=serial_number, revocation_date=datetime.now()).build(),
+                x509.RevokedCertificateBuilder(serial_number=serial_number, revocation_date=_now).build(),
             )
 
         trad_sign_key = ensure_is_trad_sign_key(sign_key)
