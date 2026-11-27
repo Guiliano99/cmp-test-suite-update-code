@@ -18,7 +18,7 @@ from robot.api.deco import not_keyword
 from resources.oidutils import CURVE_NAME_2_OID
 
 
-def prepare_enc_key_pem(password: str, one_asym_key: bytes, key_name: bytes) -> bytes:
+def _prepare_enc_key_pem_legacy(password: str, one_asym_key: bytes, key_name: bytes) -> bytes:
     """Prepare PEM formatted encrypted key.
 
     :param password: Password for encryption.
@@ -26,9 +26,9 @@ def prepare_enc_key_pem(password: str, one_asym_key: bytes, key_name: bytes) -> 
     :param key_name: Name of the key.
     :return: PEM formatted encrypted key.
     """
-    from pq_logic.keys.key_pyasn1_utils import derive_and_encrypt_key
+    from pq_logic.keys.key_pyasn1_utils import _derive_and_encrypt_key_legacy
 
-    enc_data, iv = derive_and_encrypt_key(password=password, data=one_asym_key, decrypt=False)
+    enc_data, iv = _derive_and_encrypt_key_legacy(password=password, data=one_asym_key, decrypt=False)
 
     pem_lines = []
     pem_lines.append(b"-----BEGIN " + key_name + b" PRIVATE KEY-----")
@@ -44,6 +44,14 @@ def prepare_enc_key_pem(password: str, one_asym_key: bytes, key_name: bytes) -> 
     pem_lines.append(b"")
 
     return b"\n".join(pem_lines)
+
+
+def prepare_enc_key_pem(password: str, one_asym_key: bytes, key_name: bytes) -> bytes:
+    """Prepare PEM formatted encrypted key."""
+    from pq_logic.keys.key_pyasn1_utils import encrypt_private_key_pkcs8_pem
+
+    _ = key_name
+    return encrypt_private_key_pkcs8_pem(private_key_der=one_asym_key, password=password)
 
 
 @not_keyword

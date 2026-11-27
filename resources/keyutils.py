@@ -46,7 +46,7 @@ from pq_logic.keys.abstract_stateful_hash_sig import PQHashStatefulSigPrivateKey
 from pq_logic.keys.abstract_wrapper_keys import AbstractCompositePrivateKey
 from pq_logic.keys.composite_sig import CompositeSigPrivateKey
 from pq_logic.keys.kem_keys import MLKEMPrivateKey
-from pq_logic.keys.key_pyasn1_utils import load_enc_key
+from pq_logic.keys.key_pyasn1_utils import CUSTOM_KEY_TYPES, decrypt_private_key_pkcs8_pem, load_enc_key
 from pq_logic.keys.sig_keys import MLDSAPrivateKey, SLHDSAPrivateKey
 from pq_logic.keys.stateful_sig_keys import (
     HSSPrivateKey,
@@ -446,8 +446,23 @@ def load_private_key_from_file(  # noqa: D417 for RF docs
     with open(filepath, "rb") as key_file:
         data = key_file.read()
 
+    # Handle PKCS#8 EncryptedPrivateKeyInfo format (new standard format for all key types)
+    if b"-----BEGIN ENCRYPTED PRIVATE KEY-----" in data:
+        if password is not None:
+            decrypted_der = decrypt_private_key_pkcs8_pem(pem_data=data, password=password)
+        else:
+            raise ValueError("Password required to decrypt PKCS#8 encrypted private key.")
+
+        # Try loading as PQ/hybrid key first
+        try:
+            return pq_logic.combined_factory.CombinedKeyFactory.load_private_key_from_one_asym_key(data=decrypted_der)
+        except Exception:
+            pass
+
+        # Fall back to traditional key loading
+        return serialization.load_der_private_key(data=decrypted_der, password=None)
+
     out = _extract_pem_private_key_block(data)
-    from pq_logic.keys.key_pyasn1_utils import CUSTOM_KEY_TYPES
 
     if out != b"":
         is_custom = any((b"-----BEGIN " + key + b" PRIVATE KEY-----") in out for key in CUSTOM_KEY_TYPES)
